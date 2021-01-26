@@ -143,6 +143,16 @@ lemma lens_quotient_plus:
   apply (simp add: prod.case_eq_if)
 done
 
+text \<open>Laws for for lens plus on the denominator. These laws allow us to extract compositions
+  of @{term "fst\<^sub>L"} and @{term "snd\<^sub>L"} terms. \<close>
+
+lemma lens_quotient_plus_den1: 
+  "\<lbrakk> weak_lens x; weak_lens y; x \<bowtie> y \<rbrakk> \<Longrightarrow> x /\<^sub>L (x +\<^sub>L y) = fst\<^sub>L"
+  by (auto simp add: lens_defs prod.case_eq_if fun_eq_iff, metis (lifting) lens_indep_def weak_lens.put_get)
+
+lemma lens_quotient_plus_den2: "\<lbrakk> weak_lens x; weak_lens z; x \<bowtie> z; y \<subseteq>\<^sub>L z \<rbrakk> \<Longrightarrow> y /\<^sub>L (x +\<^sub>L z) = (y /\<^sub>L z) ;\<^sub>L snd\<^sub>L "
+  by (auto simp add: lens_defs prod.case_eq_if fun_eq_iff lens_indep.lens_put_irr2)
+
 text \<open>There follows a number of laws relating sublens and summation. Firstly, sublens is preserved
   by summation. \<close>
   
