@@ -6,7 +6,7 @@ theory Channel_Type
 begin
 
 text \<open> A channel type is a simplified algebraic datatype where each constructor has exactly 
-  one parameter, and it wrapped up as a prism. It a dual of the alphabet type. \<close>
+  one parameter, and it is wrapped up as a prism. It a dual of an alphabet type. \<close>
 
 definition ctor_prism :: "('a \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'a) \<Rightarrow> ('a \<Longrightarrow>\<^sub>\<triangle> 'd)" where
 [lens_defs]: 
