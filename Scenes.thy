@@ -407,6 +407,14 @@ definition lens_member :: "('a \<Longrightarrow> 'b) \<Rightarrow> 'b scene \<Ri
 "lens_member x A = ((\<forall> s\<^sub>1 s\<^sub>2 s\<^sub>3. s\<^sub>1 \<oplus>\<^sub>S s\<^sub>2 on A \<oplus>\<^sub>L s\<^sub>3 on x = s\<^sub>1 \<oplus>\<^sub>S (s\<^sub>2 \<oplus>\<^sub>L s\<^sub>3 on x) on A) \<and>
                       (\<forall> b b'. get\<^bsub>x\<^esub> (b \<oplus>\<^sub>S b' on A) = get\<^bsub>x\<^esub> b'))"
 
+lemma lens_member_override: "x \<in>\<^sub>S A \<Longrightarrow> s\<^sub>1 \<oplus>\<^sub>S s\<^sub>2 on A \<oplus>\<^sub>L s\<^sub>3 on x = s\<^sub>1 \<oplus>\<^sub>S (s\<^sub>2 \<oplus>\<^sub>L s\<^sub>3 on x) on A"
+  using lens_member_def by force
+
+lemma lens_member_put:
+  assumes "vwb_lens x" "idem_scene a" "x \<in>\<^sub>S a"
+  shows "put\<^bsub>x\<^esub> s v \<oplus>\<^sub>S s on a = s"
+  by (metis (full_types) assms lens_member_override lens_override_def scene_override_idem vwb_lens.put_eq)
+
 lemma lens_member_top: "x \<in>\<^sub>S \<top>\<^sub>S"
   by (auto simp add: lens_member_def)
 
