@@ -22,6 +22,8 @@ session "Optics" (AFP) = "HOL-Eisbach" +
     Lens_Instances
     Lenses
     Prisms
+    Channel_Type
+    Dataspace
     Scenes
     Optics
   theories [document = false]
