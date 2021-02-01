@@ -197,6 +197,12 @@ lemma idem_scene_union [simp]: "\<lbrakk> idem_scene A; idem_scene B \<rbrakk> \
   apply (metis overrider.ovr_overshadow_right)
   done
 
+lemma idem_scene_uminus [simp]: "idem_scene X \<Longrightarrow> idem_scene (- X)"
+  apply (transfer)
+  apply (unfold_locales)
+    apply (simp_all)
+  done
+
 lemma scene_union_annhil: "idem_scene X \<Longrightarrow> X \<squnion>\<^sub>S \<top>\<^sub>S = \<top>\<^sub>S"
   by (transfer, simp)
 
