@@ -169,6 +169,12 @@ where "top_scene \<equiv> top"
 abbreviation bot_scene :: "'s scene" ("\<bottom>\<^sub>S")
 where "bot_scene \<equiv> bot"
 
+lemma bot_idem_scene [simp]: "idem_scene \<bottom>\<^sub>S"
+  by (transfer, unfold_locales, simp_all)
+
+lemma top_idem_scene [simp]: "idem_scene \<top>\<^sub>S"
+  by (transfer, unfold_locales, simp_all)
+
 lemma uminus_top_scene [simp]: "- \<top>\<^sub>S = \<bottom>\<^sub>S"
   by (simp add: top_scene_def bot_scene_def uminus_scene_def)
      (metis top_scene.rep_eq top_scene_def)
@@ -194,7 +200,7 @@ lemma scene_override_union: "X ##\<^sub>S Y \<Longrightarrow> S\<^sub>1 \<oplus>
 lemma scene_equiv_bot [simp]: "a \<approx>\<^sub>S b on \<bottom>\<^sub>S"
   by (simp add: scene_equiv_def)
 
-lemma scene_union_unit: "X \<squnion>\<^sub>S \<bottom>\<^sub>S = X"
+lemma scene_union_unit [simp]: "X \<squnion>\<^sub>S \<bottom>\<^sub>S = X"
   by (transfer, simp)
 
 lemma idem_scene_union [simp]: "\<lbrakk> idem_scene A; idem_scene B \<rbrakk> \<Longrightarrow> idem_scene (A \<squnion>\<^sub>S B)"
@@ -242,7 +248,7 @@ lemma scene_inter_idem: "X \<sqinter>\<^sub>S X = X"
 
 lemma scene_union_commute: "X \<squnion>\<^sub>S Y = Y \<squnion>\<^sub>S X"
   by (transfer, auto)
-  
+
 lemma scene_inter_compl: "idem_scene X \<Longrightarrow> X \<sqinter>\<^sub>S - X = \<bottom>\<^sub>S"
   by (simp add: inf_scene_def, transfer, auto)
 
@@ -358,6 +364,12 @@ lemma zero_lens_scene: "\<lbrakk>0\<^sub>L\<rbrakk>\<^sub>\<sim> = \<bottom>\<^s
 
 lemma one_lens_scene: "\<lbrakk>1\<^sub>L\<rbrakk>\<^sub>\<sim> = \<top>\<^sub>S"
   by (transfer, simp)
+
+lemma scene_comp_top_scene [simp]: "vwb_lens x \<Longrightarrow> \<top>\<^sub>S ;\<^sub>S x = \<lbrakk>x\<rbrakk>\<^sub>\<sim>"
+  by (transfer, simp add: fun_eq_iff lens_override_def)
+
+lemma scene_comp_lens_scene_indep [simp]: "x \<bowtie> y \<Longrightarrow> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<bowtie>\<^sub>S a ;\<^sub>S y"
+  by (transfer, simp add: lens_indep.lens_put_comm lens_indep.lens_put_irr2 lens_override_def)
 
 lemma lens_scene_override: 
   "mwb_lens X \<Longrightarrow> s\<^sub>1 \<oplus>\<^sub>S s\<^sub>2 on \<lbrakk>X\<rbrakk>\<^sub>\<sim> = s\<^sub>1 \<oplus>\<^sub>L s\<^sub>2 on X"
