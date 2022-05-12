@@ -57,7 +57,7 @@ struct
     val ch_par = (Binding.name CHAN, SOME (Term.itselfT achanT), NoSyn)
   in
   (Local_Theory.exit_global o snd o 
-  Expression.add_locale (Binding.name nm) Binding.empty (locexs, []) 
+  Expression.add_locale (Binding.name nm) Binding.empty [] (locexs, []) 
   (mk_constant_elements cds 
    @ [Element.Assumes assms]
    @ Lens_Statespace.mk_statespace_elements vds exts thy

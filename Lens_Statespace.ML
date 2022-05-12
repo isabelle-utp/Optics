@@ -45,7 +45,7 @@ struct
     val locexs = map (fn i => (i, (("", false), (Expression.Positional [], [])))) imps
   in
   (Local_Theory.exit_global o snd o 
-  Expression.add_locale (Binding.name ssn) Binding.empty (locexs,[]) 
+  Expression.add_locale (Binding.name ssn) Binding.empty [] (locexs,[]) 
   (mk_statespace_elements vds exts thy)) thy
   end
 
