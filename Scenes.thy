@@ -222,6 +222,14 @@ lemma scene_indep_self_compl: "A \<bowtie>\<^sub>S -A"
 lemma scene_compat_self_compl: "A ##\<^sub>S -A"
   by (transfer, simp)
 
+lemma scene_compat_bot [simp]: "a ##\<^sub>S \<bottom>\<^sub>S" "\<bottom>\<^sub>S ##\<^sub>S a"
+  by (transfer, simp)+
+
+lemma scene_compat_top [simp]: 
+  "idem_scene a \<Longrightarrow> a ##\<^sub>S \<top>\<^sub>S" 
+  "idem_scene a \<Longrightarrow> \<top>\<^sub>S ##\<^sub>S a"
+  by (transfer, simp)+
+
 lemma scene_union_assoc: 
   assumes "X ##\<^sub>S Y" "X ##\<^sub>S Z" "Y ##\<^sub>S Z"
   shows "X \<squnion>\<^sub>S (Y \<squnion>\<^sub>S Z) = (X \<squnion>\<^sub>S Y) \<squnion>\<^sub>S Z"
@@ -257,9 +265,6 @@ lemma scene_demorgan1: "-(X \<squnion>\<^sub>S Y) = -X \<sqinter>\<^sub>S -Y"
 
 lemma scene_demorgan2: "-(X \<sqinter>\<^sub>S Y) = -X \<squnion>\<^sub>S -Y"
   by (simp add: inf_scene_def, transfer, auto)
-
-lemma scene_compat_top: "idem_scene X \<Longrightarrow> X ##\<^sub>S \<top>\<^sub>S"
-  by (transfer, simp)
 
 lemma idem_scene_uminus [simp]: "idem_scene X \<Longrightarrow> idem_scene (- X)"
   by (simp add: uminus_scene_def idem_scene_def Abs_scene_inverse idem_overrider_axioms_def idem_overrider_def overrider.intro)
@@ -334,6 +339,12 @@ lemma scene_comp_lens_indep [simp]: "X \<bowtie> Y \<Longrightarrow> (A ;\<^sub>
 
 lemma scene_comp_indep [simp]: "A \<bowtie>\<^sub>S B \<Longrightarrow> (A ;\<^sub>S X) \<bowtie>\<^sub>S (B ;\<^sub>S X)"
   by (transfer, auto)
+
+lemma scene_comp_bot [simp]: "\<bottom>\<^sub>S ;\<^sub>S x = \<bottom>\<^sub>S"
+  by (transfer, auto)
+
+lemma scene_union_comp_distl: "a ##\<^sub>S b \<Longrightarrow> (a \<squnion>\<^sub>S b) ;\<^sub>S x = (a ;\<^sub>S x) \<squnion>\<^sub>S (b ;\<^sub>S x)"
+  by (transfer, auto simp add: fun_eq_iff)
 
 subsection \<open> Linking Scenes and Lenses \<close>
 
@@ -432,6 +443,13 @@ next
   show "X \<approx>\<^sub>L Y"
     by (simp add: assms b lens_equiv_def sublens_iff_subscene subscene_refl)
 qed
+
+lemma lens_scene_top_iff_bij_lens: "mwb_lens x \<Longrightarrow> \<lbrakk>x\<rbrakk>\<^sub>\<sim> = \<top>\<^sub>S \<longleftrightarrow> bij_lens x"
+  apply (transfer)
+  apply (auto simp add: fun_eq_iff lens_override_def)
+  apply (unfold_locales)
+  apply auto
+  done
 
 definition lens_insert :: "('a \<Longrightarrow> 'b) \<Rightarrow> 'b scene \<Rightarrow> 'b scene" ("insert\<^sub>S") where
 "lens_insert x A = (if (\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<le> A) then \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<squnion>\<^sub>S A else A)"
