@@ -1,8 +1,23 @@
 section \<open> Scene Spaces \<close>
 
 theory Scene_Spaces
-  imports "Optics.Optics" "HOL.Vector_Spaces"
+  imports Scenes
 begin
+
+lemma pairwise_compat_foldr: 
+  "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> b \<in> set as. a ##\<^sub>S b \<rbrakk> \<Longrightarrow> a ##\<^sub>S foldr (\<squnion>\<^sub>S) as \<bottom>\<^sub>S"
+  apply (induct as)
+   apply (simp)
+  apply (auto simp add: pairwise_insert scene_union_pres_compat)
+  done
+
+lemma foldr_compat_dist:
+  "pairwise (##\<^sub>S) (set as) \<Longrightarrow> foldr (\<squnion>\<^sub>S) (map (\<lambda>a. a ;\<^sub>S x) as) \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) as \<bottom>\<^sub>S ;\<^sub>S x"
+  apply (induct as)
+   apply (simp)
+  apply (auto simp add: pairwise_insert)
+  apply (metis pairwise_compat_foldr scene_compat_refl scene_union_comp_distl)
+  done  
 
 definition scene_indeps :: "'s scene set \<Rightarrow> bool" where
 "scene_indeps = pairwise (\<bowtie>\<^sub>S)"
@@ -126,18 +141,35 @@ find_theorems Finite_Set.fold insert
 
 find_theorems "(\<squnion>\<^sub>S)"
 
+declare [[show_sorts]]
+
+find_theorems lens_scene
+
 instantiation test_ext :: (scene_space) scene_space
 begin
 
 definition Vars_test_ext :: "'a test_scheme scene list" where
 "Vars_test_ext = [\<lbrakk>x\<rbrakk>\<^sub>\<sim>, \<lbrakk>y\<rbrakk>\<^sub>\<sim>] @ (map (\<lambda> x. x ;\<^sub>S more\<^sub>L) Vars)"
 
-instance 
-  apply (intro_classes)
-  thm Vars_test_ext_def
-  apply (simp add: Vars_test_ext_def)
-   apply (auto simp add: scene_indeps_def scene_span_def Vars_test_ext_def scene_indep_sym idem_scene_Vars pairwise_def)
-   apply (metis indep_Vars pairwiseD scene_comp_indep scene_indeps_def)
-  oops
+instance proof
+  have ft: "foldr (\<squnion>\<^sub>S) Vars (\<bottom>\<^sub>S :: 'a scene) = \<top>\<^sub>S"
+    using scene_span_def span_Vars by auto
+  show "\<And> x::'a test_scheme scene. x \<in> set Vars \<Longrightarrow> idem_scene x"
+   apply (simp add: Vars_test_ext_def)
+    apply (auto simp add: scene_indeps_def scene_span_def Vars_test_ext_def scene_indep_sym idem_scene_Vars pairwise_def)
+    done
+  show "scene_indeps (set Vars :: 'a test_scheme scene set)"
+    apply (auto simp add: scene_indeps_def Vars_test_ext_def scene_indep_sym idem_scene_Vars pairwise_def)
+    apply (metis indep_Vars pairwiseD scene_comp_indep scene_indeps_def)
+    done
+  show "scene_span (Vars :: 'a test_scheme scene list)"
+    apply (simp add: scene_span_def Vars_test_ext_def)
+    apply (subst foldr_compat_dist)
+     apply (simp add: pairwise_def scene_space_class.scene_space.Vars_scene_space scene_space_compat)
+    apply (simp add: ft lens_plus_scene[THEN sym] lens_scene_top_iff_bij_lens)
+    apply (meson base_more_bij_lens bij_lens_equiv equivs(1) indeps(7) lens_plus_assoc lens_plus_eq_left)
+    done
+qed
+end
 
 end
