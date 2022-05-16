@@ -429,6 +429,10 @@ lemma lens_scene_indep_compl [simp]:
   shows "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<bowtie>\<^sub>S - \<lbrakk>y\<rbrakk>\<^sub>\<sim> \<longleftrightarrow> x \<subseteq>\<^sub>L y"
   by (simp add: assms scene_le_iff_indep_inv sublens_iff_subscene)
 
+lemma scene_comp_pres_indep: "\<lbrakk> idem_scene a; idem_scene b; a \<bowtie>\<^sub>S \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<rbrakk> \<Longrightarrow> a \<bowtie>\<^sub>S b ;\<^sub>S x"
+  by (transfer, auto)
+     (metis (no_types, opaque_lifting) lens_override_def lens_override_idem vwb_lens_def wb_lens_weak weak_lens.put_get)
+
 text \<open> Equality on scenes is sound and complete with respect to lens equivalence. \<close>
 
 lemma lens_equiv_scene:
