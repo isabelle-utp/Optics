@@ -4,6 +4,8 @@ theory Scene_Spaces
   imports Scenes
 begin
 
+subsection \<open> Preliminaries \<close>
+
 lemma pairwise_compat_foldr: 
   "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> b \<in> set as. a ##\<^sub>S b \<rbrakk> \<Longrightarrow> a ##\<^sub>S foldr (\<squnion>\<^sub>S) as \<bottom>\<^sub>S"
   apply (induct as)
@@ -19,16 +21,28 @@ lemma foldr_compat_dist:
   apply (metis pairwise_compat_foldr scene_compat_refl scene_union_comp_distl)
   done  
 
+lemma foldr_scene_union_add_tail:
+  "\<lbrakk> pairwise (##\<^sub>S) (set xs); \<forall> x\<in>set xs. x ##\<^sub>S b \<rbrakk> \<Longrightarrow> foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S \<squnion>\<^sub>S b = foldr (\<squnion>\<^sub>S) xs b"
+  apply (induct xs)
+   apply (simp)
+  apply (simp)
+  apply (subst scene_union_assoc[THEN sym])
+  apply (auto simp add: pairwise_insert)
+  using pairwise_compat_foldr scene_compat_refl apply blast
+  apply (meson pairwise_compat_foldr scene_compat_sym)
+  done
+
+subsection \<open> Predicates \<close>
+
 definition scene_indeps :: "'s scene set \<Rightarrow> bool" where
 "scene_indeps = pairwise (\<bowtie>\<^sub>S)"
-find_theorems  "Finite_Set.fold" insert
 
 definition scene_span :: "'s scene list \<Rightarrow> bool" where
 "scene_span S = (foldr (\<squnion>\<^sub>S) S \<bottom>\<^sub>S = \<top>\<^sub>S)"
 
 text \<open> cf. @{term finite_dimensional_vector_space}, which scene spaces are based on. \<close>  
 
-find_theorems map fold
+subsection \<open> Scene space class \<close>
 
 class scene_space = 
   fixes Vars :: "'a scene list"
@@ -36,6 +50,9 @@ class scene_space =
   and indep_Vars: "scene_indeps (set Vars)"
   and span_Vars: "scene_span Vars"
 begin
+
+lemma scene_space_compats [simp]: "pairwise (##\<^sub>S) (set Vars)"
+  by (metis local.indep_Vars pairwise_alt scene_indep_compat scene_indeps_def)
 
 inductive_set scene_space :: "'a scene set" where
 bot_scene_space [intro]: "\<bottom>\<^sub>S \<in> scene_space" | 
@@ -95,7 +112,6 @@ qed
 lemma "fold (\<squnion>\<^sub>S) (map (\<lambda>x. x ;\<^sub>S a) Vars) b = \<lbrakk>a\<rbrakk>\<^sub>\<sim> \<squnion>\<^sub>S b"
   oops
 
-
 lemma "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
   oops
 
@@ -104,6 +120,7 @@ lemma "\<lbrakk> a \<in> scene_space \<rbrakk> \<Longrightarrow> - a \<in> scene
 
 end
 
+subsection \<open> Frame type \<close>
 
 typedef (overloaded) 'a::scene_space frame = "scene_space :: 'a scene set"
   by blast
@@ -126,50 +143,63 @@ instance
 
 end
 
+subsection \<open> Alphabet Scene Spaces \<close>
+
+definition alpha_scene_space :: "'s scene list \<Rightarrow> ('a \<Longrightarrow> 's) \<Rightarrow> ('b::scene_space \<Longrightarrow> 's) \<Rightarrow> 's scene list" where
+"alpha_scene_space xs b\<^sub>L m\<^sub>L = xs @ map (\<lambda> x. x ;\<^sub>S m\<^sub>L) Vars"
+
+lemma scene_space_class_intro:
+  assumes 
+    "\<forall> x\<in>set xs. idem_scene x"
+    "scene_indeps (set xs)"
+    "vwb_lens b\<^sub>L" \<comment> \<open> The base lens \<close>
+    "vwb_lens m\<^sub>L" \<comment> \<open> The more lens \<close>
+    "b\<^sub>L \<bowtie> m\<^sub>L"
+    "\<forall> x\<in>set xs. x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"  
+    "foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S = \<lbrakk>b\<^sub>L\<rbrakk>\<^sub>\<sim>"
+    "bij_lens (b\<^sub>L +\<^sub>L m\<^sub>L)"
+  shows "class.scene_space (alpha_scene_space xs b\<^sub>L m\<^sub>L)"
+proof (simp add: alpha_scene_space_def, unfold_locales)
+  from assms(5-7) have 1: "(foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>) = \<top>\<^sub>S"
+    by (metis assms(2) assms(3) assms(4) assms(8) foldr_scene_union_add_tail lens_plus_scene lens_scene_top_iff_bij_lens pairwise_alt plus_mwb_lens scene_indep_compat scene_indeps_def vwb_lens_mwb)
+
+  show "\<And>x. x \<in> set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars) \<Longrightarrow> idem_scene x"
+    using assms(1) idem_scene_Vars by fastforce
+  show "scene_indeps (set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars))"
+    apply (auto simp add: scene_indeps_def pairwise_def)
+    apply (metis assms(2) pairwiseD scene_indeps_def)
+    using assms(1) assms(6) idem_scene_Vars scene_comp_pres_indep apply blast
+    using assms(1) assms(6) idem_scene_Vars scene_comp_pres_indep scene_indep_sym apply blast
+    apply (metis indep_Vars pairwiseD scene_comp_indep scene_indeps_def)
+    done
+  show "scene_span (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars)"
+    apply (simp add: scene_span_def)
+    apply (subst foldr_compat_dist)
+    apply (simp)
+    apply (metis "1" assms(4) scene_comp_top_scene scene_span_def span_Vars)    
+    done
+qed
+
+method alpha_scene_space uses defs =
+  (rule scene_space_class.intro
+  ,(intro_classes)[1]
+  ,unfold defs
+  ,rule scene_space_class_intro
+  ,simp_all add: scene_indeps_def pairwise_def lens_plus_scene[THEN sym] lens_equiv_scene[THEN sym] lens_equiv_sym)
+  
 alphabet test = 
   x :: int
   y :: int 
-
-find_theorems bij_lens
-
-thm test.equivs
-thm test.base_more_bij_lens
-
-print_theorems
-
-find_theorems Finite_Set.fold insert
-
-find_theorems "(\<squnion>\<^sub>S)"
-
-declare [[show_sorts]]
-
-find_theorems lens_scene
+  z :: int
 
 instantiation test_ext :: (scene_space) scene_space
 begin
 
 definition Vars_test_ext :: "'a test_scheme scene list" where
-"Vars_test_ext = [\<lbrakk>x\<rbrakk>\<^sub>\<sim>, \<lbrakk>y\<rbrakk>\<^sub>\<sim>] @ (map (\<lambda> x. x ;\<^sub>S more\<^sub>L) Vars)"
+"Vars_test_ext = alpha_scene_space [\<lbrakk>x\<rbrakk>\<^sub>\<sim>, \<lbrakk>y\<rbrakk>\<^sub>\<sim>, \<lbrakk>z\<rbrakk>\<^sub>\<sim>] base\<^sub>L more\<^sub>L"
+  
+instance by (alpha_scene_space defs: Vars_test_ext_def)
 
-instance proof
-  have ft: "foldr (\<squnion>\<^sub>S) Vars (\<bottom>\<^sub>S :: 'a scene) = \<top>\<^sub>S"
-    using scene_span_def span_Vars by auto
-  show "\<And> x::'a test_scheme scene. x \<in> set Vars \<Longrightarrow> idem_scene x"
-   apply (simp add: Vars_test_ext_def)
-    apply (auto simp add: scene_indeps_def scene_span_def Vars_test_ext_def scene_indep_sym idem_scene_Vars pairwise_def)
-    done
-  show "scene_indeps (set Vars :: 'a test_scheme scene set)"
-    apply (auto simp add: scene_indeps_def Vars_test_ext_def scene_indep_sym idem_scene_Vars pairwise_def)
-    apply (metis indep_Vars pairwiseD scene_comp_indep scene_indeps_def)
-    done
-  show "scene_span (Vars :: 'a test_scheme scene list)"
-    apply (simp add: scene_span_def Vars_test_ext_def)
-    apply (subst foldr_compat_dist)
-     apply (simp add: pairwise_def scene_space_class.scene_space.Vars_scene_space scene_space_compat)
-    apply (simp add: ft lens_plus_scene[THEN sym] lens_scene_top_iff_bij_lens)
-    apply (meson base_more_bij_lens bij_lens_equiv equivs(1) indeps(7) lens_plus_assoc lens_plus_eq_left)
-    done
-qed
 end
 
 end
