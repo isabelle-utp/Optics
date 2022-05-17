@@ -176,8 +176,10 @@ lemma top_idem_scene [simp]: "idem_scene \<top>\<^sub>S"
   by (transfer, unfold_locales, simp_all)
 
 lemma uminus_top_scene [simp]: "- \<top>\<^sub>S = \<bottom>\<^sub>S"
-  by (simp add: top_scene_def bot_scene_def uminus_scene_def)
-     (metis top_scene.rep_eq top_scene_def)
+  by (transfer, simp)
+
+lemma uminus_bot_scene [simp]: "- \<bottom>\<^sub>S = \<top>\<^sub>S"
+  by (transfer, simp)
 
 lemma uminus_scene_twice: "- (- (X :: 's scene)) = X"
   by (transfer, simp)
