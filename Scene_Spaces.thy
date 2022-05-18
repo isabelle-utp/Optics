@@ -156,7 +156,17 @@ lemma "fold (\<squnion>\<^sub>S) (map (\<lambda>x. x ;\<^sub>S a) Vars) b = \<lb
   oops
 
 lemma scene_space_inter: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
-  sorry
+proof (induction rule: scene_space.induct)
+  case bot_scene_space
+  then show ?case
+    by (simp add: idem_scene_space scene_indep_sym scene_inter_indep scene_space.bot_scene_space)
+next
+  case (Vars_scene_space x)
+  then show ?case sorry
+next
+  case (union_scene_space x y)
+  then show ?case sorry
+qed
 
 lemma scene_space_uminus: "\<lbrakk> a \<in> scene_space \<rbrakk> \<Longrightarrow> - a \<in> scene_space"
 proof (induction rule: scene_space.induct)
@@ -165,6 +175,7 @@ proof (induction rule: scene_space.induct)
     by (metis top_scene_space uminus_scene_twice uminus_top_scene)
 next
   case (Vars_scene_space x)
+  (* The argument here is that -x = (foldr (\<squnion>\<^sub>S) (remove1 x Vars) \<bottom>\<^sub>S), which is in the scene space *)
   have indep_foldr: "x \<bowtie>\<^sub>S foldr (\<squnion>\<^sub>S) (remove1 x Vars) \<bottom>\<^sub>S"
   proof (rule foldr_scene_indep)
     show "pairwise (##\<^sub>S) (set (remove1 x Vars))"
@@ -178,11 +189,11 @@ next
     by (metis foldr_scene_union_remove1 local.Vars_scene_space scene_space_compats scene_union_commute)
   have "(foldr (\<squnion>\<^sub>S) (remove1 x Vars) \<bottom>\<^sub>S) = - x"
     apply (rule scene_union_indep_uniq[where Z="x"])
-         apply (meson idem_scene_space order_trans scene_space_foldr set_Vars_scene_space set_remove1_subset)
-    using local.Vars_scene_space local.idem_scene_Vars apply auto
-    using indep_foldr scene_indep_sym apply blast
-    using scene_indep_self_compl scene_indep_sym apply blast
-    apply (simp add: remove1_eq calculation scene_union_commute scene_union_compl)
+      apply (meson idem_scene_space order_trans scene_space_foldr set_Vars_scene_space set_remove1_subset)
+      using local.Vars_scene_space local.idem_scene_Vars apply auto
+      using indep_foldr scene_indep_sym apply blast
+      using scene_indep_self_compl scene_indep_sym apply blast
+      apply (simp add: remove1_eq calculation scene_union_commute scene_union_compl)
     done
   then show ?case
     by (metis order_trans scene_space_foldr set_Vars_scene_space set_remove1_subset)
@@ -252,6 +263,8 @@ proof (simp add: alpha_scene_space_def, unfold_locales)
     apply (simp)
     apply (metis "1" assms(4) scene_comp_top_scene scene_span_def span_Vars)    
     done
+  show "distinct (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars)"
+    sorry
 qed
 
 method alpha_scene_space uses defs =
