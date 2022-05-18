@@ -39,14 +39,17 @@ lemma foldr_scene_union_add_tail:
   apply (meson pairwise_compat_foldr scene_compat_sym)
   done
 
-corollary foldr_scene_union_remove1:
-"\<lbrakk> pairwise (##\<^sub>S) (set xs); x \<in> set xs \<rbrakk> \<Longrightarrow> foldr (\<squnion>\<^sub>S) (remove1 x xs) \<bottom>\<^sub>S \<squnion>\<^sub>S x = foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"
+corollary foldr_scene_union_removeAll:
+"\<lbrakk> pairwise (##\<^sub>S) (set xs); x \<in> set xs \<rbrakk> \<Longrightarrow> foldr (\<squnion>\<^sub>S) (removeAll x xs) \<bottom>\<^sub>S \<squnion>\<^sub>S x = foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"
   apply (induct xs)
    apply simp
   apply (auto simp add: pairwise_insert scene_union_commute)
-  by (smt (verit, del_insts) Un_iff le_iff_sup pairwise_compat_foldr pairwise_def 
-      scene_compat.rep_eq scene_union_assoc scene_union_commute set_remove1_subset)
-
+    apply (smt (verit, ccfv_threshold) member_remove pairwise_compat_foldr pairwise_def removeAll_id 
+      remove_code(1) scene_compat_refl scene_union_assoc scene_union_idem)
+   apply (metis Diff_subset pairwise_alt pairwise_compat_foldr pairwise_mono scene_compat_refl
+      scene_union_assoc scene_union_idem set_removeAll)
+  by (smt (z3) Diff_subset pairwise_alt pairwise_compat_foldr pairwise_mono scene_compat.rep_eq 
+      scene_union_assoc scene_union_commute set_removeAll subset_code(1))
 subsection \<open> Predicates \<close>
 
 definition scene_indeps :: "'s scene set \<Rightarrow> bool" where
@@ -64,7 +67,6 @@ class scene_space =
   assumes idem_scene_Vars: "\<And> x. x \<in> set Vars \<Longrightarrow> idem_scene x"
   and indep_Vars: "scene_indeps (set Vars)"
   and span_Vars: "scene_span Vars"
-  and distinct_Vars: "distinct Vars"
 begin
 
 lemma scene_space_compats [simp]: "pairwise (##\<^sub>S) (set Vars)"
@@ -175,28 +177,28 @@ proof (induction rule: scene_space.induct)
     by (metis top_scene_space uminus_scene_twice uminus_top_scene)
 next
   case (Vars_scene_space x)
-  (* The argument here is that -x = (foldr (\<squnion>\<^sub>S) (remove1 x Vars) \<bottom>\<^sub>S), which is in the scene space *)
-  have indep_foldr: "x \<bowtie>\<^sub>S foldr (\<squnion>\<^sub>S) (remove1 x Vars) \<bottom>\<^sub>S"
+  (* The argument here is that -x = (foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S), which is in the scene space *)
+  have indep_foldr: "x \<bowtie>\<^sub>S foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S"
   proof (rule foldr_scene_indep)
-    show "pairwise (##\<^sub>S) (set (remove1 x Vars))"
-      by (meson pairwise_subset scene_space_compats set_remove1_subset)
-    show "\<forall>b\<in>set (remove1 x Vars). x \<bowtie>\<^sub>S b"
-      by (metis local.Vars_scene_space local.distinct_Vars local.indep_Vars pairwise_alt scene_indeps_def set_remove1_eq)
-  qed
+    show "pairwise (##\<^sub>S) (set (removeAll x Vars))"
+      by (metis Diff_subset pairwise_subset scene_space_compats set_removeAll)
+    show "\<forall>b\<in>set (removeAll x Vars). x \<bowtie>\<^sub>S b"
+      by (metis local.Vars_scene_space local.indep_Vars pairwise_alt scene_indeps_def set_removeAll)
+    qed
   have "\<top>\<^sub>S = foldr (\<squnion>\<^sub>S) Vars \<bottom>\<^sub>S"
     using scene_span_def span_Vars by metis
-  also have remove1_eq: "... = x \<squnion>\<^sub>S (foldr (\<squnion>\<^sub>S) (remove1 x Vars) \<bottom>\<^sub>S)"
-    by (metis foldr_scene_union_remove1 local.Vars_scene_space scene_space_compats scene_union_commute)
-  have "(foldr (\<squnion>\<^sub>S) (remove1 x Vars) \<bottom>\<^sub>S) = - x"
+  also have removeAll_eq: "... = x \<squnion>\<^sub>S (foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S)"
+    by (metis foldr_scene_union_removeAll local.Vars_scene_space scene_space_compats scene_union_commute)
+  have "(foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S) = - x"
     apply (rule scene_union_indep_uniq[where Z="x"])
-      apply (meson idem_scene_space order_trans scene_space_foldr set_Vars_scene_space set_remove1_subset)
-      using local.Vars_scene_space local.idem_scene_Vars apply auto
+     using local.Vars_scene_space local.idem_scene_Vars apply auto
+    apply (metis (no_types, lifting) idem_scene_space insert_Diff insert_subset scene_space_foldr set_Vars_scene_space set_removeAll)
       using indep_foldr scene_indep_sym apply blast
       using scene_indep_self_compl scene_indep_sym apply blast
-      apply (simp add: remove1_eq calculation scene_union_commute scene_union_compl)
+      apply (simp add: removeAll_eq calculation scene_union_commute scene_union_compl)
     done
   then show ?case
-    by (metis order_trans scene_space_foldr set_Vars_scene_space set_remove1_subset)
+    by (metis insert_Diff insert_subset local.Vars_scene_space scene_space_foldr set_Vars_scene_space set_removeAll)
 next
   case (union_scene_space x y)
   then show ?case
@@ -263,9 +265,9 @@ proof (simp add: alpha_scene_space_def, unfold_locales)
     apply (simp)
     apply (metis "1" assms(4) scene_comp_top_scene scene_span_def span_Vars)    
     done
-  show "distinct (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars)"
-    sorry
 qed
+
+find_theorems lens_comp
 
 method alpha_scene_space uses defs =
   (rule scene_space_class.intro
@@ -273,7 +275,7 @@ method alpha_scene_space uses defs =
   ,unfold defs
   ,rule scene_space_class_intro
   ,simp_all add: scene_indeps_def pairwise_def lens_plus_scene[THEN sym] lens_equiv_scene[THEN sym] lens_equiv_sym)
-  
+
 alphabet test = 
   x :: int
   y :: int 
