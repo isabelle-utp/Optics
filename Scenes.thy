@@ -247,6 +247,12 @@ lemma scene_inter_indep:
   apply (metis (no_types, opaque_lifting) idem_overrider.ovr_idem overrider.ovr_overshadow_right)
   done
 
+lemma scene_union_indep_uniq:
+  assumes "idem_scene X" "idem_scene Y" "idem_scene Z" "X \<bowtie>\<^sub>S Z" "Y \<bowtie>\<^sub>S Z" "X \<squnion>\<^sub>S Z = Y \<squnion>\<^sub>S Z"
+  shows "X = Y"
+  using assms apply (transfer, simp)
+  by (metis (no_types, opaque_lifting) ext idem_overrider.ovr_idem overrider_def)
+
 lemma scene_union_idem: "X \<squnion>\<^sub>S X = X"
   by (transfer, simp)
 

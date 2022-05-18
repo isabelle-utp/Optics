@@ -32,6 +32,14 @@ lemma foldr_scene_union_add_tail:
   apply (meson pairwise_compat_foldr scene_compat_sym)
   done
 
+corollary foldr_scene_union_remove1:
+"\<lbrakk> pairwise (##\<^sub>S) (set xs); x \<in> set xs \<rbrakk> \<Longrightarrow> foldr (\<squnion>\<^sub>S) (remove1 x xs) \<bottom>\<^sub>S \<squnion>\<^sub>S x = foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"
+  apply (induct xs)
+   apply simp
+  apply (auto simp add: pairwise_insert scene_union_commute)
+  by (smt (verit, del_insts) Un_iff le_iff_sup pairwise_compat_foldr pairwise_def 
+      scene_compat.rep_eq scene_union_assoc scene_union_commute set_remove1_subset)
+
 subsection \<open> Predicates \<close>
 
 definition scene_indeps :: "'s scene set \<Rightarrow> bool" where
@@ -82,7 +90,7 @@ lemma Vars_compat_scene_space: "\<lbrakk> b \<in> scene_space; x \<in> set Vars 
 proof (induct b rule: scene_space.induct)
   case bot_scene_space
   then show ?case
-    by (metis scene_compat_refl scene_union_incompat scene_union_unit) 
+    by (metis scene_compat_refl scene_union_incompat scene_union_unit(1)) 
 next
   case (Vars_scene_space a)
   then show ?case
@@ -109,14 +117,65 @@ next
     using scene_compat_sym scene_union_pres_compat by blast 
 qed
 
+corollary scene_space_union_assoc:
+  assumes "x \<in> scene_space" "y \<in> scene_space" "z \<in> scene_space"
+  shows "x \<squnion>\<^sub>S (y \<squnion>\<^sub>S z) = (x \<squnion>\<^sub>S y) \<squnion>\<^sub>S z"
+  by (simp add: assms scene_space_compat scene_union_assoc)
+
+lemma scene_space_vars_decomp: "a \<in> scene_space \<Longrightarrow> \<exists>xs. set xs \<subseteq> set Vars \<and> foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S = a"
+proof (induct rule: scene_space.induct)
+  case bot_scene_space
+  then show ?case
+    by (metis bot.extremum foldr.simps(1) id_apply list.set(1))
+next
+  case (Vars_scene_space x)
+  show ?case
+    apply (rule exI [where x="[x]"])
+    using Vars_scene_space by simp
+next
+  case (union_scene_space x y)
+  then obtain xs ys where xsys: "set xs \<subseteq> set Vars \<and> foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S = x"
+                                "set ys \<subseteq> set Vars \<and> foldr (\<squnion>\<^sub>S) ys \<bottom>\<^sub>S = y"
+    by blast+
+  show ?case
+    apply (rule exI [where x="xs @ ys"])
+    apply (auto simp: xsys)
+    by (metis (no_types, lifting) Vars_compat_scene_space foldr_scene_union_add_tail local.indep_Vars
+        pairwise_mono scene_indep_compat scene_indeps_def subsetD union_scene_space.hyps(3) xsys(1))
+ qed
+
 lemma "fold (\<squnion>\<^sub>S) (map (\<lambda>x. x ;\<^sub>S a) Vars) b = \<lbrakk>a\<rbrakk>\<^sub>\<sim> \<squnion>\<^sub>S b"
   oops
 
-lemma "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
-  oops
+lemma scene_space_inter: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
+  sorry
 
-lemma "\<lbrakk> a \<in> scene_space \<rbrakk> \<Longrightarrow> - a \<in> scene_space"
-  oops
+lemma scene_space_uminus: "\<lbrakk> a \<in> scene_space \<rbrakk> \<Longrightarrow> - a \<in> scene_space"
+proof (induction rule: scene_space.induct)
+  case bot_scene_space
+  then show ?case
+    by (metis top_scene_space uminus_scene_twice uminus_top_scene)
+next
+  case (Vars_scene_space x)
+  have "\<top>\<^sub>S = foldr (\<squnion>\<^sub>S) Vars \<bottom>\<^sub>S"
+    using scene_span_def span_Vars by metis
+  also have "... = x \<squnion>\<^sub>S (foldr (\<squnion>\<^sub>S) (remove1 x Vars) \<bottom>\<^sub>S)"
+    by (metis foldr_scene_union_remove1 local.Vars_scene_space scene_space_compats scene_union_commute)
+  have "(foldr (\<squnion>\<^sub>S) (remove1 x Vars) \<bottom>\<^sub>S) = - x"
+    apply (rule scene_union_indep_uniq[where Z=x])
+         apply (meson idem_scene_space order_trans scene_space_foldr set_Vars_scene_space set_remove1_subset)
+    using local.Vars_scene_space local.idem_scene_Vars apply auto
+    defer
+    using scene_indep_self_compl scene_indep_sym apply blast
+     apply (simp add: \<open>foldr (\<squnion>\<^sub>S) Vars \<bottom>\<^sub>S = x \<squnion>\<^sub>S foldr (\<squnion>\<^sub>S) (remove1 x Vars) \<bottom>\<^sub>S\<close> calculation scene_union_commute scene_union_compl)
+    sorry (* need to prove foldr (\<squnion>\<^sub>S) (remove1 x Vars) \<bottom>\<^sub>S \<bowtie>\<^sub>S x *)
+  then show ?case
+    by (metis order_trans scene_space_foldr set_Vars_scene_space set_remove1_subset)
+next
+  case (union_scene_space x y)
+  then show ?case
+    by (simp add: scene_demorgan1 scene_space_inter)
+qed
 
 end
 
