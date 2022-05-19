@@ -327,6 +327,9 @@ lemma scene_union_ub: "\<lbrakk> idem_scene Y; X \<bowtie>\<^sub>S Y \<rbrakk> \
   by (simp add: less_eq_scene_def, transfer, auto)
      (metis (no_types, opaque_lifting) idem_overrider.ovr_idem overrider.ovr_overshadow_right)
 
+lemma scene_union_mono: "\<lbrakk> a \<subseteq>\<^sub>S c; b \<subseteq>\<^sub>S c; a ##\<^sub>S b; idem_scene a; idem_scene b \<rbrakk> \<Longrightarrow> a \<squnion>\<^sub>S b \<subseteq>\<^sub>S c"
+  by (simp add: less_eq_scene_def, transfer, auto)
+
 lemma scene_le_then_compat: "\<lbrakk> idem_scene X; idem_scene Y; X \<le> Y \<rbrakk> \<Longrightarrow> X ##\<^sub>S Y"
   unfolding less_eq_scene_def
   by (transfer, auto, metis (no_types, lifting) idem_overrider.ovr_idem overrider_def)
