@@ -6,22 +6,25 @@ begin
 
 subsection \<open> Preliminaries \<close>
 
+abbreviation foldr_scene :: "'a scene list \<Rightarrow> 'a scene" ("\<Squnion>\<^sub>S") where
+"foldr_scene as \<equiv> foldr (\<squnion>\<^sub>S) as \<bottom>\<^sub>S"
+
 lemma pairwise_compat_foldr: 
-  "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> b \<in> set as. a ##\<^sub>S b \<rbrakk> \<Longrightarrow> a ##\<^sub>S foldr (\<squnion>\<^sub>S) as \<bottom>\<^sub>S"
+  "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> b \<in> set as. a ##\<^sub>S b \<rbrakk> \<Longrightarrow> a ##\<^sub>S \<Squnion>\<^sub>S as"
   apply (induct as)
    apply (simp)
   apply (auto simp add: pairwise_insert scene_union_pres_compat)
   done
 
 lemma foldr_scene_indep:
-  "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> b \<in> set as. a \<bowtie>\<^sub>S b \<rbrakk> \<Longrightarrow> a \<bowtie>\<^sub>S foldr (\<squnion>\<^sub>S) as \<bottom>\<^sub>S"
+  "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> b \<in> set as. a \<bowtie>\<^sub>S b \<rbrakk> \<Longrightarrow> a \<bowtie>\<^sub>S \<Squnion>\<^sub>S as"
   apply (induct as)
    apply (simp)
   apply (auto simp add: pairwise_insert)
   by (smt (verit, ccfv_threshold) scene_indep_bot scene_indep_override scene_override_union scene_union_incompat)
 
 lemma foldr_compat_dist:
-  "pairwise (##\<^sub>S) (set as) \<Longrightarrow> foldr (\<squnion>\<^sub>S) (map (\<lambda>a. a ;\<^sub>S x) as) \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) as \<bottom>\<^sub>S ;\<^sub>S x"
+  "pairwise (##\<^sub>S) (set as) \<Longrightarrow> foldr (\<squnion>\<^sub>S) (map (\<lambda>a. a ;\<^sub>S x) as) \<bottom>\<^sub>S = \<Squnion>\<^sub>S as ;\<^sub>S x"
   apply (induct as)
    apply (simp)
   apply (auto simp add: pairwise_insert)
@@ -29,7 +32,7 @@ lemma foldr_compat_dist:
   done  
 
 lemma foldr_scene_union_add_tail:
-  "\<lbrakk> pairwise (##\<^sub>S) (set xs); \<forall> x\<in>set xs. x ##\<^sub>S b \<rbrakk> \<Longrightarrow> foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S \<squnion>\<^sub>S b = foldr (\<squnion>\<^sub>S) xs b"
+  "\<lbrakk> pairwise (##\<^sub>S) (set xs); \<forall> x\<in>set xs. x ##\<^sub>S b \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S xs \<squnion>\<^sub>S b = foldr (\<squnion>\<^sub>S) xs b"
   apply (induct xs)
    apply (simp)
   apply (simp)
@@ -40,7 +43,7 @@ lemma foldr_scene_union_add_tail:
   done
 
 corollary foldr_scene_union_removeAll:
-"\<lbrakk> pairwise (##\<^sub>S) (set xs); x \<in> set xs \<rbrakk> \<Longrightarrow> foldr (\<squnion>\<^sub>S) (removeAll x xs) \<bottom>\<^sub>S \<squnion>\<^sub>S x = foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"
+"\<lbrakk> pairwise (##\<^sub>S) (set xs); x \<in> set xs \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S (removeAll x xs) \<squnion>\<^sub>S x = \<Squnion>\<^sub>S xs"
   apply (induct xs)
    apply simp
   apply (auto simp add: pairwise_insert scene_union_commute)
@@ -53,7 +56,7 @@ corollary foldr_scene_union_removeAll:
 
 lemma foldr_scene_union_eq_sets:
   assumes "pairwise (##\<^sub>S) (set xs)" "set xs = set ys"
-  shows "foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) ys \<bottom>\<^sub>S"
+  shows "\<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S ys"
 using assms proof (induct xs arbitrary: ys)
   case Nil
   then show ?case
@@ -66,10 +69,29 @@ next
     by (metis (no_types, lifting) Cons.hyps Cons.prems(1) Cons.prems(2) Diff_insert_absorb foldr_scene_union_removeAll insertCI insert_absorb list.simps(15) pairwise_insert set_removeAll)
 qed
 
+lemma pairwise_Diff: "pairwise R A \<Longrightarrow> pairwise R (A - B)"
+  using pairwise_mono by fastforce
+
+lemma foldr_scene_removeAll:
+  assumes "pairwise (##\<^sub>S) (set xs)"
+  shows "x \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x xs) = x \<squnion>\<^sub>S \<Squnion>\<^sub>S xs"
+  by (smt (verit) assms foldr_scene_union_removeAll pairwise_Diff pairwise_alt pairwise_compat_foldr removeAll_id scene_compat_refl scene_union_assoc scene_union_commute scene_union_idem set_removeAll)
+
+lemma pairwise_Collect: "pairwise R A \<Longrightarrow> pairwise R {x \<in> A. P x}"
+  by (simp add: pairwise_def)
+
+lemma removeAll_overshadow_filter: 
+  "removeAll x (filter (\<lambda>xa. xa \<notin> A - {x}) xs) = removeAll x (filter (\<lambda> xa. xa \<notin> A) xs)"
+  apply (simp add: removeAll_filter_not_eq)
+  apply (rule filter_cong)
+   apply (simp)
+  apply auto
+  done
+
 corollary foldr_scene_union_filter:
   assumes "pairwise (##\<^sub>S) (set xs)" "set ys \<subseteq> set xs"
-  shows "foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) (filter (\<lambda> x. x \<notin> set ys) xs) \<bottom>\<^sub>S \<squnion>\<^sub>S foldr (\<squnion>\<^sub>S) ys \<bottom>\<^sub>S"
-using assms(2) proof (induct xs arbitrary: ys)
+  shows "\<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set ys) xs) \<squnion>\<^sub>S \<Squnion>\<^sub>S ys"
+using assms proof (induct xs arbitrary: ys)
   case Nil
   then show ?case by (simp)
 next
@@ -77,34 +99,60 @@ next
   show ?case
   proof (cases "x \<in> set ys")
     case True
-    with Cons(2) have 1: "set ys - {x} \<subseteq> set xs"
+    with Cons have 1: "set ys - {x} \<subseteq> set xs"
       by (auto)
-    have "foldr (\<squnion>\<^sub>S) (x # xs) \<bottom>\<^sub>S = x \<squnion>\<^sub>S foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"
+    have "\<Squnion>\<^sub>S (x # xs) = x \<squnion>\<^sub>S \<Squnion>\<^sub>S xs"
       by simp
-    also have "... = x \<squnion>\<^sub>S (foldr (\<squnion>\<^sub>S) (filter (\<lambda>xa. xa \<notin> set ys - {x}) xs) \<bottom>\<^sub>S \<squnion>\<^sub>S foldr (\<squnion>\<^sub>S) (removeAll x ys) \<bottom>\<^sub>S)"
-      using 1 Cons(1)[where ys="removeAll x ys"] by simp
-    also have "... = (x \<squnion>\<^sub>S x) \<squnion>\<^sub>S (foldr (\<squnion>\<^sub>S) (filter (\<lambda>xa. xa \<notin> set ys - {x}) xs) \<bottom>\<^sub>S \<squnion>\<^sub>S foldr (\<squnion>\<^sub>S) (removeAll x ys) \<bottom>\<^sub>S)"
-      by (simp add: scene_union_idem)
-    also have "... = x \<squnion>\<^sub>S (foldr (\<squnion>\<^sub>S)  (filter (\<lambda>xa. xa \<notin> set ys) xs) \<bottom>\<^sub>S \<squnion>\<^sub>S foldr (\<squnion>\<^sub>S) (removeAll x ys) \<bottom>\<^sub>S)"
-    also have "... = foldr (\<squnion>\<^sub>S) (filter (\<lambda>x. x \<notin> set ys) (x # xs)) \<bottom>\<^sub>S \<squnion>\<^sub>S foldr (\<squnion>\<^sub>S) ys \<bottom>\<^sub>S"
-      apply (simp add: True)
-      apply auto
-      apply (simp add: Cons)
-    with Cons show ?thesis
-    
-      apply (simp)
-      apply (subgoal_tac "set ys \<subseteq> set xs")
+    also have "... = x \<squnion>\<^sub>S (\<Squnion>\<^sub>S (filter (\<lambda>xa. xa \<notin> set ys - {x}) xs) \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys))"
+      using 1 Cons(1)[where ys="removeAll x ys"] Cons(2) by (simp add: pairwise_insert)    
+    also have "... = (x \<squnion>\<^sub>S \<Squnion>\<^sub>S (filter (\<lambda>xa. xa \<notin> set ys - {x}) xs)) \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys)"
+      apply (subst scene_union_assoc)
+         apply (rule pairwise_compat_foldr)
+      apply (simp add: pairwise_Collect Cons)
+      apply (smt (verit, ccfv_threshold) Cons.prems(1) mem_Collect_eq pairwise_def pairwise_subset set_subset_Cons)
+      apply (metis Cons.prems(1) filter_is_subset list.simps(15) pairwise_insert scene_compat_refl subsetD)
+      apply (metis Cons.prems(1) Cons.prems(2) True foldr_scene_removeAll foldr_scene_union_removeAll pairwise_subset scene_compat_bot(2) scene_union_commute scene_union_incompat scene_union_unit(1))
+      apply (smt (z3) Cons.prems(1) Cons.prems(2) Diff_subset filter_is_subset pairwise_compat_foldr pairwise_def scene_compat_refl scene_compat_sym set_removeAll set_subset_Cons subset_code(1))
       apply simp
+      done
+    also have "... = (x \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x (filter (\<lambda>xa. xa \<notin> set ys - {x}) xs))) \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys)"
+      apply (subst foldr_scene_removeAll[THEN sym])
+       apply (meson Cons.prems(1) filter_is_subset pairwise_subset set_subset_Cons)
+      apply (simp)
+      done
+    also have "... = (x \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x (filter (\<lambda>xa. xa \<notin> set ys) xs))) \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys)"
+      by (simp only: removeAll_overshadow_filter)
+    also have "... = (x \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x (filter (\<lambda>xa. xa \<notin> set ys) (x # xs)))) \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys)"
+      by simp
+    also have "... = (x \<squnion>\<^sub>S \<Squnion>\<^sub>S (filter (\<lambda>xa. xa \<notin> set ys) (x # xs))) \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys)"
+      by (simp add: True)
+    also have "... = (\<Squnion>\<^sub>S (filter (\<lambda>xa. xa \<notin> set ys) (x # xs)) \<squnion>\<^sub>S x) \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys)"
+      by (simp add: scene_union_commute)
+    also have "... = \<Squnion>\<^sub>S (filter (\<lambda>xa. xa \<notin> set ys) (x # xs)) \<squnion>\<^sub>S (x \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys))"
+      apply (subst scene_union_assoc)
+      apply (simp_all add: True)
+      apply (metis (no_types, lifting) Cons.prems(1) filter_is_subset list.simps(15) pairwise_compat_foldr pairwise_insert pairwise_subset scene_compat_refl scene_compat_sym subsetD)
+      apply (smt (z3) Cons.prems(1) Cons.prems(2) DiffE filter_is_subset pairwise_compat_foldr pairwise_def scene_compat_refl scene_compat_sym set_removeAll set_subset_Cons subset_code(1))
+      apply (metis Cons.prems(1) Cons.prems(2) True foldr_scene_removeAll foldr_scene_union_removeAll pairwise_subset scene_compat_bot(2) scene_union_commute scene_union_incompat scene_union_unit(1))
+      done
+    also have "... = \<Squnion>\<^sub>S (filter (\<lambda>xa. xa \<notin> set ys) (x # xs)) \<squnion>\<^sub>S \<Squnion>\<^sub>S ys"
+      by (metis (no_types, lifting) Cons.prems(1) Cons.prems(2) True foldr_scene_union_removeAll pairwise_subset scene_union_commute)
+    finally show ?thesis .
+  next
   next
     case False
-    then show ?thesis sorry
+    with Cons(2-3) have "set ys \<subseteq> set xs"
+      by auto
+    with False Cons(1)[of ys] Cons(2-3) show ?thesis 
+      apply (auto simp add: pairwise_insert)
+      apply (subst scene_union_assoc)
+      apply (simp_all)
+      apply (metis (no_types, lifting) filter_is_subset filter_set member_filter pairwise_compat_foldr pairwise_subset scene_compat_refl)
+      apply (metis pairwise_compat_foldr pairwise_subset subset_code(1))
+      apply (metis (no_types, lifting) foldr_append foldr_scene_union_eq_sets scene_indep_bot scene_indep_compat scene_union_incompat set_append subset_Un_eq)
+      done
   qed
-    apply (simp)
 qed
-  oops
-
-  
-
 
 subsection \<open> Predicates \<close>
 
@@ -219,14 +267,14 @@ lemma "fold (\<squnion>\<^sub>S) (map (\<lambda>x. x ;\<^sub>S a) Vars) b = \<lb
   oops
 
 lemma Vars_indep_foldr: 
-  assumes "x \<in> set Vars"
-  shows "x \<bowtie>\<^sub>S foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S"
+  assumes "x \<in> set Vars" "set xs \<subseteq> set Vars"
+  shows "x \<bowtie>\<^sub>S foldr (\<squnion>\<^sub>S) (removeAll x xs) \<bottom>\<^sub>S"
 proof (rule foldr_scene_indep)
-  show "pairwise (##\<^sub>S) (set (removeAll x Vars))"
-    by (simp, meson Diff_subset pairwise_subset scene_space_compats)
-  from assms show "\<forall>b\<in>set (removeAll x Vars). x \<bowtie>\<^sub>S b"
+  show "pairwise (##\<^sub>S) (set (removeAll x xs))"
+    by (simp, metis Diff_subset assms(2) pairwise_mono scene_space_compats)
+  from assms show "\<forall>b\<in>set (removeAll x xs). x \<bowtie>\<^sub>S b"
     by (simp)
-       (metis local.indep_Vars pairwise_alt scene_indeps_def)
+       (metis DiffE insertI1 local.indep_Vars pairwiseD scene_indeps_def subset_iff)
 qed
 
 lemma Vars_indeps_foldr:
@@ -256,13 +304,9 @@ proof (rule scene_union_indep_uniq[where Z="x"])
       by (metis \<open>idem_scene (- x)\<close> assms foldr_scene_union_removeAll local.span_Vars scene_space_compats scene_span_def scene_union_compl uminus_scene_twice)
 qed
 
-find_theorems filter "(\<and>)"
-
-find_theorems filter removeAll
-
 lemma uminus_vars_other_vars:
   assumes "set xs \<subseteq> set Vars"
-  shows "- (foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S)  = foldr (\<squnion>\<^sub>S) (filter (\<lambda> x. x \<notin> set xs) Vars) \<bottom>\<^sub>S"
+  shows "- \<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set xs) Vars)"
 proof (rule scene_union_indep_uniq[where Z="foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"])
   show "idem_scene (- foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S)" "idem_scene (foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S)"
     using assms idem_scene_space idem_scene_uminus scene_space_vars_decomp_iff by blast+
@@ -272,80 +316,18 @@ proof (rule scene_union_indep_uniq[where Z="foldr (\<squnion>\<^sub>S) xs \<bott
     by (metis scene_indep_self_compl uminus_scene_twice)
   show "foldr (\<squnion>\<^sub>S) (filter (\<lambda>x. x \<notin> set xs) Vars) \<bottom>\<^sub>S \<bowtie>\<^sub>S foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"
     using Vars_indeps_foldr assms scene_indep_sym by blast
-  show "- foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S \<squnion>\<^sub>S foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) (filter (\<lambda>x. x \<notin> set xs) Vars) \<bottom>\<^sub>S \<squnion>\<^sub>S foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"
-proof (induct xs)
-  case Nil
-  then show ?case
-    using local.span_Vars scene_span_def by force
-next
-  case (Cons a xs)
-  then show ?case
-  proof -
-    have "foldr (\<squnion>\<^sub>S) (filter (\<lambda>x. x \<notin> set (a # xs)) Vars) \<bottom>\<^sub>S 
-          = foldr (\<squnion>\<^sub>S) (filter (\<lambda>x. x \<noteq> a) (filter (\<lambda>x. x \<notin> set xs) Vars)) \<bottom>\<^sub>S"
-      by simp meson
-    also have "... = foldr (\<squnion>\<^sub>S) (removeAll a (filter (\<lambda>x. x \<notin> set xs) Vars)) \<bottom>\<^sub>S"
-      by (simp add: removeAll_filter_not_eq, metis)
-
-    apply (simp add: filter_filter[THEN sym] del: filter_filter)
+  show "- \<Squnion>\<^sub>S xs \<squnion>\<^sub>S \<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set xs) Vars) \<squnion>\<^sub>S \<Squnion>\<^sub>S xs"
+    using foldr_scene_union_filter[of Vars xs, THEN sym]
+    by (simp add: assms)
+       (metis \<open>idem_scene (- \<Squnion>\<^sub>S xs)\<close> local.span_Vars scene_span_def scene_union_compl uminus_scene_twice)
 qed
-
-
-
-lemma scene_space_inter: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
-proof (induction rule: scene_space.induct)
-  case bot_scene_space
-  then show ?case
-    by (simp add: idem_scene_space scene_indep_sym scene_inter_indep scene_space.bot_scene_space)
-next
-  case (Vars_scene_space x)
-  then show ?case sorry
-next
-  case (union_scene_space x y)
-  then show ?case sorry
-qed
-
-term removeAll
 
 lemma scene_space_uminus: "\<lbrakk> a \<in> scene_space \<rbrakk> \<Longrightarrow> - a \<in> scene_space"
-proof (induction rule: scene_space.induct)
-  case bot_scene_space
-  then show ?case
-    by (metis top_scene_space uminus_scene_twice uminus_top_scene)
-next
-  case (Vars_scene_space x)
-  (* The argument here is that -x = (foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S), which is in the scene space *)
-  have indep_foldr: "x \<bowtie>\<^sub>S foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S"
-  proof (rule foldr_scene_indep)
-    show "pairwise (##\<^sub>S) (set (removeAll x Vars))"
-      by (simp, meson Diff_subset pairwise_subset scene_space_compats)
-    show "\<forall>b\<in>set (removeAll x Vars). x \<bowtie>\<^sub>S b"
-      by (simp, metis local.Vars_scene_space local.indep_Vars pairwise_alt scene_indeps_def)
-    qed
-  have "\<top>\<^sub>S = foldr (\<squnion>\<^sub>S) Vars \<bottom>\<^sub>S"
-    using scene_span_def span_Vars by metis
-  also have removeAll_eq: "... = x \<squnion>\<^sub>S (foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S)"
-    by (metis foldr_scene_union_removeAll local.Vars_scene_space scene_space_compats scene_union_commute)
-  have "(foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S) = - x"
-  proof (rule scene_union_indep_uniq[where Z="x"])
-    show "idem_scene (foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S)"
-      by (metis Diff_subset idem_scene_space order_trans scene_space_foldr set_Vars_scene_space set_removeAll)
-    show "idem_scene x" "idem_scene (-x)"
-      by (auto simp: local.Vars_scene_space local.idem_scene_Vars)
-    show "foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S \<bowtie>\<^sub>S x"
-      using indep_foldr scene_indep_sym by blast
-    show "- x \<bowtie>\<^sub>S x"
-      using scene_indep_self_compl scene_indep_sym by blast
-    show "foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S \<squnion>\<^sub>S x = - x \<squnion>\<^sub>S x"
-      by (simp add: \<open>idem_scene x\<close> calculation removeAll_eq scene_union_commute scene_union_compl)
-  qed
-  then show ?case
-    by (metis insert_Diff insert_subset local.Vars_scene_space scene_space_foldr set_Vars_scene_space set_removeAll)
-next
-  case (union_scene_space x y)
-  then show ?case
-    by (simp add: scene_demorgan1 scene_space_inter)
-qed
+  by (auto simp add: scene_space_vars_decomp_iff uminus_vars_other_vars)
+     (metis filter_is_subset)
+
+lemma scene_space_inter: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
+  by (simp add: inf_scene_def scene_space.union_scene_space scene_space_uminus)
 
 lemma scene_union_foldr_remove_element:
   assumes "set xs \<subseteq> set Vars"
@@ -366,11 +348,23 @@ lemma scene_union_foldr_Cons_removeAll:
   shows "foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) (a # removeAll a xs) \<bottom>\<^sub>S"
   by (metis assms(1) assms(2) foldr_scene_union_eq_sets insert_Diff list.simps(15) pairwise_subset scene_space_compats set_removeAll)
 
+lemma scene_union_foldr_Cons_removeAll':
+  assumes "set xs \<subseteq> set Vars" "a \<in> set Vars"
+  shows "foldr (\<squnion>\<^sub>S) (a # xs) \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) (a # removeAll a xs) \<bottom>\<^sub>S"
+  by (simp add: assms(1) scene_union_foldr_remove_element)
+
 lemma scene_in_foldr: "\<lbrakk> a \<in> set xs; set xs \<subseteq> set Vars \<rbrakk> \<Longrightarrow> a \<subseteq>\<^sub>S foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"
   apply (induct xs)
    apply (simp)
-  sorry  
-
+  apply (subst scene_union_foldr_Cons_removeAll')
+    apply simp
+   apply simp
+  apply (auto)
+  apply (rule scene_union_ub)
+    apply (metis Diff_subset dual_order.trans idem_scene_space scene_space_vars_decomp_iff set_removeAll)
+  using Vars_indep_foldr apply blast
+  apply (metis Vars_indep_foldr foldr_scene_union_removeAll idem_scene_space local.idem_scene_Vars order.trans pairwise_mono removeAll_id scene_indep_sym scene_space_compats scene_space_foldr scene_union_commute scene_union_ub set_Vars_scene_space subscene_trans)
+  done
 
 lemma scene_union_foldr_subset:
   assumes "set xs \<subseteq> set ys" "set ys \<subseteq> set Vars"
@@ -421,8 +415,6 @@ lemma scene_space_ub:
   apply (auto simp add: scene_space_vars_decomp_iff union_scene_space_foldrs)
   by (smt (verit, ccfv_SIG) foldr_append scene_union_foldr_subset set_append sup.bounded_iff sup_commute sup_ge2)
   
-  
-
 end
 
 subsection \<open> Frame type \<close>
