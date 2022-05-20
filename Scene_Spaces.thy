@@ -42,17 +42,42 @@ lemma foldr_scene_union_add_tail:
   apply (meson pairwise_compat_foldr scene_compat_sym)
   done
 
+lemma pairwise_Diff: "pairwise R A \<Longrightarrow> pairwise R (A - B)"
+  using pairwise_mono by fastforce
+
+lemma scene_compats_members: "\<lbrakk> pairwise (##\<^sub>S) A; x \<in> A; y \<in> A \<rbrakk> \<Longrightarrow> x ##\<^sub>S y"
+  by (metis pairwise_def scene_compat_refl)
+
 corollary foldr_scene_union_removeAll:
-"\<lbrakk> pairwise (##\<^sub>S) (set xs); x \<in> set xs \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S (removeAll x xs) \<squnion>\<^sub>S x = \<Squnion>\<^sub>S xs"
-  apply (induct xs)
-   apply simp
-  apply (auto simp add: pairwise_insert scene_union_commute)
-    apply (smt (verit, ccfv_threshold) member_remove pairwise_compat_foldr pairwise_def removeAll_id 
-      remove_code(1) scene_compat_refl scene_union_assoc scene_union_idem)
-   apply (metis Diff_subset pairwise_alt pairwise_compat_foldr pairwise_mono scene_compat_refl
-      scene_union_assoc scene_union_idem set_removeAll)
-  by (smt (z3) Diff_subset pairwise_alt pairwise_compat_foldr pairwise_mono scene_compat.rep_eq 
-      scene_union_assoc scene_union_commute set_removeAll subset_code(1))
+  assumes "pairwise (##\<^sub>S) (set xs)" "x \<in> set xs"
+  shows "\<Squnion>\<^sub>S (removeAll x xs) \<squnion>\<^sub>S x = \<Squnion>\<^sub>S xs"
+using assms proof (induct xs)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a xs)
+  have x_compat: "\<And> z. z \<in> set xs \<Longrightarrow> x ##\<^sub>S z"
+    using Cons.prems(1) Cons.prems(2) scene_compats_members by auto
+
+  from Cons have x_compats: "x ##\<^sub>S \<Squnion>\<^sub>S (removeAll x xs)"
+    by (metis (no_types, lifting) insert_Diff list.simps(15) pairwise_compat_foldr pairwise_insert removeAll_id set_removeAll x_compat)
+
+  from Cons have a_compats: "a ##\<^sub>S \<Squnion>\<^sub>S (removeAll x xs)"
+    by (metis (no_types, lifting) insert_Diff insert_iff list.simps(15) pairwise_compat_foldr pairwise_insert scene_compat_refl set_removeAll x_compats)
+
+  from Cons show ?case 
+  proof (cases "x \<in> set xs")
+    case True
+    with Cons show ?thesis
+      by (auto simp add: pairwise_insert scene_union_commute)
+         (metis a_compats scene_compats_members scene_union_assoc scene_union_idem,
+          metis (full_types) a_compats scene_union_assoc scene_union_commute x_compats)
+  next
+    case False
+    with Cons show ?thesis
+      by (simp add: scene_union_commute)
+  qed
+qed
 
 lemma foldr_scene_union_eq_sets:
   assumes "pairwise (##\<^sub>S) (set xs)" "set xs = set ys"
@@ -68,9 +93,6 @@ next
   then show ?case
     by (metis (no_types, lifting) Cons.hyps Cons.prems(1) Cons.prems(2) Diff_insert_absorb foldr_scene_union_removeAll insertCI insert_absorb list.simps(15) pairwise_insert set_removeAll)
 qed
-
-lemma pairwise_Diff: "pairwise R A \<Longrightarrow> pairwise R (A - B)"
-  using pairwise_mono by fastforce
 
 lemma foldr_scene_removeAll:
   assumes "pairwise (##\<^sub>S) (set xs)"
@@ -101,25 +123,22 @@ next
     case True
     with Cons have 1: "set ys - {x} \<subseteq> set xs"
       by (auto)
+    have 2: "x ##\<^sub>S \<Squnion>\<^sub>S (removeAll x ys)"
+      by (metis Cons.prems(1) Cons.prems(2) True foldr_scene_removeAll foldr_scene_union_removeAll pairwise_subset scene_compat_bot(2) scene_compat_sym scene_union_incompat scene_union_unit(1))
+    have 3: "\<And> P. x ##\<^sub>S \<Squnion>\<^sub>S (filter P xs)"
+      by (meson Cons.prems(1) Cons.prems(2) True filter_is_subset in_mono pairwise_compat_foldr pairwise_subset scene_compats_members set_subset_Cons)    
+    have 4: "\<And> P. \<Squnion>\<^sub>S (filter P xs) ##\<^sub>S \<Squnion>\<^sub>S (removeAll x ys)"
+      by (rule pairwise_compat_foldr)
+         (metis Cons.prems(1) Cons.prems(2) pairwise_Diff pairwise_subset set_removeAll,
+          metis (no_types, lifting) "1" Cons.prems(1) filter_is_subset pairwise_compat_foldr pairwise_subset scene_compat_sym scene_compats_members set_removeAll set_subset_Cons subsetD)
     have "\<Squnion>\<^sub>S (x # xs) = x \<squnion>\<^sub>S \<Squnion>\<^sub>S xs"
       by simp
     also have "... = x \<squnion>\<^sub>S (\<Squnion>\<^sub>S (filter (\<lambda>xa. xa \<notin> set ys - {x}) xs) \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys))"
       using 1 Cons(1)[where ys="removeAll x ys"] Cons(2) by (simp add: pairwise_insert)    
     also have "... = (x \<squnion>\<^sub>S \<Squnion>\<^sub>S (filter (\<lambda>xa. xa \<notin> set ys - {x}) xs)) \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys)"
-      apply (subst scene_union_assoc)
-         apply (rule pairwise_compat_foldr)
-      apply (simp add: pairwise_Collect Cons)
-      apply (smt (verit, ccfv_threshold) Cons.prems(1) mem_Collect_eq pairwise_def pairwise_subset set_subset_Cons)
-      apply (metis Cons.prems(1) filter_is_subset list.simps(15) pairwise_insert scene_compat_refl subsetD)
-      apply (metis Cons.prems(1) Cons.prems(2) True foldr_scene_removeAll foldr_scene_union_removeAll pairwise_subset scene_compat_bot(2) scene_union_commute scene_union_incompat scene_union_unit(1))
-      apply (smt (z3) Cons.prems(1) Cons.prems(2) Diff_subset filter_is_subset pairwise_compat_foldr pairwise_def scene_compat_refl scene_compat_sym set_removeAll set_subset_Cons subset_code(1))
-      apply simp
-      done
+      by (simp add: scene_union_assoc 1 2 3 4)
     also have "... = (x \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x (filter (\<lambda>xa. xa \<notin> set ys - {x}) xs))) \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys)"
-      apply (subst foldr_scene_removeAll[THEN sym])
-       apply (meson Cons.prems(1) filter_is_subset pairwise_subset set_subset_Cons)
-      apply (simp)
-      done
+      by (metis (no_types, lifting) Cons.prems(1) filter_is_subset foldr_scene_removeAll pairwise_subset set_subset_Cons)
     also have "... = (x \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x (filter (\<lambda>xa. xa \<notin> set ys) xs))) \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys)"
       by (simp only: removeAll_overshadow_filter)
     also have "... = (x \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x (filter (\<lambda>xa. xa \<notin> set ys) (x # xs)))) \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys)"
@@ -129,28 +148,24 @@ next
     also have "... = (\<Squnion>\<^sub>S (filter (\<lambda>xa. xa \<notin> set ys) (x # xs)) \<squnion>\<^sub>S x) \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys)"
       by (simp add: scene_union_commute)
     also have "... = \<Squnion>\<^sub>S (filter (\<lambda>xa. xa \<notin> set ys) (x # xs)) \<squnion>\<^sub>S (x \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x ys))"
-      apply (subst scene_union_assoc)
-      apply (simp_all add: True)
-      apply (metis (no_types, lifting) Cons.prems(1) filter_is_subset list.simps(15) pairwise_compat_foldr pairwise_insert pairwise_subset scene_compat_refl scene_compat_sym subsetD)
-      apply (smt (z3) Cons.prems(1) Cons.prems(2) DiffE filter_is_subset pairwise_compat_foldr pairwise_def scene_compat_refl scene_compat_sym set_removeAll set_subset_Cons subset_code(1))
-      apply (metis Cons.prems(1) Cons.prems(2) True foldr_scene_removeAll foldr_scene_union_removeAll pairwise_subset scene_compat_bot(2) scene_union_commute scene_union_incompat scene_union_unit(1))
-      done
+      by (simp add: scene_union_assoc True 2 3 4 scene_compat_sym)
     also have "... = \<Squnion>\<^sub>S (filter (\<lambda>xa. xa \<notin> set ys) (x # xs)) \<squnion>\<^sub>S \<Squnion>\<^sub>S ys"
       by (metis (no_types, lifting) Cons.prems(1) Cons.prems(2) True foldr_scene_union_removeAll pairwise_subset scene_union_commute)
     finally show ?thesis .
   next
-  next
     case False
-    with Cons(2-3) have "set ys \<subseteq> set xs"
+    with Cons(2-3) have 1: "set ys \<subseteq> set xs"
       by auto
-    with False Cons(1)[of ys] Cons(2-3) show ?thesis 
-      apply (auto simp add: pairwise_insert)
-      apply (subst scene_union_assoc)
-      apply (simp_all)
-      apply (metis (no_types, lifting) filter_is_subset filter_set member_filter pairwise_compat_foldr pairwise_subset scene_compat_refl)
-      apply (metis pairwise_compat_foldr pairwise_subset subset_code(1))
-      apply (metis (no_types, lifting) foldr_append foldr_scene_union_eq_sets scene_indep_bot scene_indep_compat scene_union_incompat set_append subset_Un_eq)
-      done
+    have 2: "x ##\<^sub>S \<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set ys) xs)"
+      by (metis (no_types, lifting) Cons.prems(1) filter_is_subset filter_set list.simps(15) member_filter pairwise_compat_foldr pairwise_insert pairwise_subset scene_compat_refl)
+    have 3: "x ##\<^sub>S \<Squnion>\<^sub>S ys"
+      by (meson Cons.prems(1) Cons.prems(2) list.set_intros(1) pairwise_compat_foldr pairwise_subset scene_compats_members subset_code(1))
+    from Cons(1)[of ys] Cons(2-3) have 4: "\<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set ys) xs) ##\<^sub>S \<Squnion>\<^sub>S ys"
+      by (auto simp add: pairwise_insert)
+         (metis (no_types, lifting) "1" foldr_append foldr_scene_union_eq_sets scene_compat_bot(1) scene_union_incompat set_append subset_Un_eq)
+
+    with 1 False Cons(1)[of ys] Cons(2-3) show ?thesis
+      by (auto simp add: pairwise_insert scene_union_assoc 2 3 4)
   qed
 qed
 
@@ -251,11 +266,13 @@ next
                                 "set ys \<subseteq> set Vars \<and> foldr (\<squnion>\<^sub>S) ys \<bottom>\<^sub>S = y"
     by blast+
   show ?case
-    apply (rule exI[where x="xs @ ys"])
-    apply (auto simp: xsys)
-    by (metis (full_types) Vars_compat_scene_space foldr_scene_union_add_tail pairwise_subset 
-        scene_space_compats subsetD union_scene_space.hyps(3) xsys(1))
- qed
+  proof (rule exI[where x="xs @ ys"])
+    show "set (xs @ ys) \<subseteq> set Vars \<and> \<Squnion>\<^sub>S (xs @ ys) = x \<squnion>\<^sub>S y"
+      by (auto simp: xsys)
+         (metis (full_types) Vars_compat_scene_space foldr_scene_union_add_tail pairwise_subset 
+          scene_space_compats subsetD union_scene_space.hyps(3) xsys(1))
+  qed
+qed
 
 lemma scene_space_vars_decomp_iff: "a \<in> scene_space \<longleftrightarrow> (\<exists>xs. set xs \<subseteq> set Vars \<and> a = foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S)"
   apply (auto simp add: scene_space_vars_decomp scene_space.Vars_scene_space scene_space_foldr)
@@ -414,7 +431,14 @@ lemma scene_space_ub:
   using assms
   apply (auto simp add: scene_space_vars_decomp_iff union_scene_space_foldrs)
   by (smt (verit, ccfv_SIG) foldr_append scene_union_foldr_subset set_append sup.bounded_iff sup_commute sup_ge2)
-  
+
+find_theorems "- ?A \<subseteq>  ?B"
+
+lemma scene_compl_subset_iff:
+  assumes "a \<in> scene_space" "b \<in> scene_space"
+  shows "- a \<subseteq>\<^sub>S -b \<longleftrightarrow> b \<subseteq>\<^sub>S a"
+  by (metis scene_indep_sym scene_le_iff_indep_inv uminus_scene_twice)
+
 end
 
 subsection \<open> Frame type \<close>
@@ -442,21 +466,34 @@ end
 
 find_theorems "(\<squnion>\<^sub>S)" "(\<subseteq>\<^sub>S)"
 
-instantiation frame :: (scene_space) semilattice_sup
+instantiation frame :: (scene_space) lattice
 begin
 
 lift_definition sup_frame :: "'a frame \<Rightarrow> 'a frame \<Rightarrow> 'a frame" is "(\<squnion>\<^sub>S)"
   by (simp add: union_scene_space)
 
+lift_definition inf_frame :: "'a frame \<Rightarrow> 'a frame \<Rightarrow> 'a frame" is "(\<sqinter>\<^sub>S)"
+  by (simp add: scene_space_inter)
+
 instance
-  apply intro_classes
-  apply transfer
-  using scene_space_ub apply auto[1]
-  apply transfer
-   apply (simp add: scene_space_ub scene_union_commute)
-  apply transfer
-  apply (metis idem_scene_space scene_bot_least scene_union_incompat scene_union_mono)
+  apply (intro_classes; transfer)
+  apply (metis scene_compl_subset_iff scene_demorgan2 scene_space_inter scene_space_ub scene_space_uminus)
+  apply (metis inf_scene_def scene_indep_sym scene_le_iff_indep_inv scene_space_ub scene_space_uminus scene_union_commute)
+  apply (metis idem_scene_space scene_compl_subset_iff scene_demorgan2 scene_space_compat scene_space_inter scene_space_uminus scene_union_mono)
+  using scene_space_ub apply blast
+  apply (simp add: scene_space_ub scene_union_commute)
+  apply (meson idem_scene_space scene_space_compat scene_union_mono)
   done
+
+end
+
+instantiation frame :: (scene_space) bounded_lattice
+begin
+
+lift_definition bot_frame :: "'a frame" is "\<bottom>\<^sub>S" by (simp add: bot_scene_space)
+lift_definition top_frame :: "'a frame" is "\<top>\<^sub>S" by (simp add: top_scene_space)
+
+instance by (intro_classes; transfer; simp add: scene_bot_least scene_top_greatest)
 
 end
 

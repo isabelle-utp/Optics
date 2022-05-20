@@ -277,6 +277,14 @@ lemma scene_demorgan1: "-(X \<squnion>\<^sub>S Y) = -X \<sqinter>\<^sub>S -Y"
 lemma scene_demorgan2: "-(X \<sqinter>\<^sub>S Y) = -X \<squnion>\<^sub>S -Y"
   by (simp add: inf_scene_def, transfer, auto)
 
+lemma scene_union_inter_distrib:
+  "\<lbrakk> idem_scene x; x \<bowtie>\<^sub>S y; x \<bowtie>\<^sub>S z; y ##\<^sub>S z \<rbrakk> \<Longrightarrow> x \<squnion>\<^sub>S y \<sqinter>\<^sub>S z = (x \<squnion>\<^sub>S y) \<sqinter>\<^sub>S (x \<squnion>\<^sub>S z)"
+  apply (simp add: inf_scene_def, transfer)
+  apply (auto simp add: fun_eq_iff)
+     apply (unfold overrider_def idem_overrider_def idem_overrider_axioms_def)
+  apply metis+
+  done  
+
 lemma idem_scene_uminus [simp]: "idem_scene X \<Longrightarrow> idem_scene (- X)"
   by (simp add: uminus_scene_def idem_scene_def Abs_scene_inverse idem_overrider_axioms_def idem_overrider_def overrider.intro)
 
