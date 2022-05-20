@@ -1,6 +1,6 @@
 section \<open> Scene Spaces \<close>
 
-theory Scene_Spaces
+theory Scene_Spaces            
   imports Scenes
 begin
 
@@ -202,6 +202,9 @@ lemma idem_scene_space: "a \<in> scene_space \<Longrightarrow> idem_scene a"
 
 lemma set_Vars_scene_space [simp]: "set Vars \<subseteq> scene_space"
   by blast
+
+lemma pairwise_compat_Vars_subset: "set xs \<subseteq> set Vars \<Longrightarrow> pairwise (##\<^sub>S) (set xs)"
+  using pairwise_subset scene_space_compats by blast
 
 lemma scene_space_foldr: "set xs \<subseteq> scene_space \<Longrightarrow> foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S \<in> scene_space"
   by (induction xs, auto)
@@ -439,6 +442,95 @@ lemma scene_compl_subset_iff:
   shows "- a \<subseteq>\<^sub>S -b \<longleftrightarrow> b \<subseteq>\<^sub>S a"
   by (metis scene_indep_sym scene_le_iff_indep_inv uminus_scene_twice)
 
+lemma inter_scene_space_foldrs:
+  assumes "set xs \<subseteq> set Vars" "set ys \<subseteq> set Vars"
+  shows "\<Squnion>\<^sub>S xs \<sqinter>\<^sub>S \<Squnion>\<^sub>S ys = \<Squnion>\<^sub>S (filter (\<lambda> x. x \<in> set xs \<inter> set ys) Vars)"
+proof -
+  have "\<Squnion>\<^sub>S xs \<sqinter>\<^sub>S \<Squnion>\<^sub>S ys = - (- \<Squnion>\<^sub>S xs \<squnion>\<^sub>S - \<Squnion>\<^sub>S ys)"
+    by (simp add: inf_scene_def)
+  also have "... = - (\<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set xs) Vars) \<squnion>\<^sub>S \<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set ys) Vars))"
+    by (simp add: uminus_vars_other_vars assms)
+  also have "... = - \<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set xs) Vars @ filter (\<lambda>x. x \<notin> set ys) Vars)"
+    by (simp add: union_scene_space_foldrs assms)
+  also have "... =  \<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set (filter (\<lambda>x. x \<notin> set xs) Vars @ filter (\<lambda>x. x \<notin> set ys) Vars)) Vars)"
+    by (subst uminus_vars_other_vars, simp_all)
+  also have "... = \<Squnion>\<^sub>S (filter (\<lambda> x. x \<in> set xs \<inter> set ys) Vars)"
+  proof -
+    have "\<And>x. x \<in> set Vars \<Longrightarrow> ((x \<in> set Vars \<longrightarrow> x \<in> set xs) \<and> (x \<in> set Vars \<longrightarrow> x \<in> set ys)) = (x \<in> set xs \<and> x \<in> set ys)"
+      by auto
+    thus ?thesis
+      by (simp cong: arg_cong[where f="\<Squnion>\<^sub>S"] filter_cong add: assms)
+  qed
+  finally show ?thesis .
+qed
+
+lemma scene_inter_distrib_lemma:
+  assumes "set xs \<subseteq> set Vars" "set ys \<subseteq> set Vars" "set zs \<subseteq> set Vars"
+  shows "\<Squnion>\<^sub>S xs \<squnion>\<^sub>S (\<Squnion>\<^sub>S ys \<sqinter>\<^sub>S \<Squnion>\<^sub>S zs) = (\<Squnion>\<^sub>S xs \<squnion>\<^sub>S \<Squnion>\<^sub>S ys) \<sqinter>\<^sub>S (\<Squnion>\<^sub>S xs \<squnion>\<^sub>S \<Squnion>\<^sub>S zs)"
+  using assms
+  apply (simp only: union_scene_space_foldrs inter_scene_space_foldrs)
+  apply (subst union_scene_space_foldrs)
+    apply (simp add: assms)
+   apply (simp add: assms)
+  apply (subst inter_scene_space_foldrs)
+    apply (simp)
+   apply (simp)
+  apply (rule foldr_scene_union_eq_sets)
+  apply (simp)
+   apply (smt (verit, ccfv_threshold) Un_subset_iff mem_Collect_eq pairwise_subset scene_space_compats subset_iff)
+  apply (auto)
+  done
+
+lemma scene_union_inter_distrib:
+  assumes "a \<in> scene_space" "b \<in> scene_space" "c \<in> scene_space"
+  shows "a \<squnion>\<^sub>S b \<sqinter>\<^sub>S c = (a \<squnion>\<^sub>S b) \<sqinter>\<^sub>S (a \<squnion>\<^sub>S c)"
+  using assms
+  by (auto simp add: scene_space_vars_decomp_iff scene_inter_distrib_lemma)
+
+lemma finite_distinct_lists_subset:
+  assumes "finite A"
+  shows "finite {xs. distinct xs \<and> set xs \<subseteq> A}"
+proof -
+  from assms have 1: "{xs. distinct xs \<and> set xs \<subseteq> A} = {xs. distinct xs \<and> length xs \<le> card A \<and> set xs \<subseteq> A}"
+    by (auto, metis card_mono distinct_card)
+  have 2: "... \<subseteq> {xs. set xs \<subseteq> A \<and> length xs \<le> card A}"
+    by auto
+  have 3: "finite ..."
+    using assms finite_lists_length_le by blast
+  show ?thesis
+    by (metis (mono_tags, lifting) "1" "2" "3" infinite_super)
+qed
+
+lemma foldr_scene_union_remdups: "set xs \<subseteq> set Vars \<Longrightarrow> \<Squnion>\<^sub>S (remdups xs) = \<Squnion>\<^sub>S xs"
+  by (auto intro: foldr_scene_union_eq_sets simp add: pairwise_compat_Vars_subset)
+
+lemma scene_space_as_lists:
+  "scene_space = {\<Squnion>\<^sub>S xs | xs. distinct xs \<and> set xs \<subseteq> set Vars}"
+proof (rule set_eqI, rule iffI)
+  fix a
+  assume "a \<in> scene_space"
+  then obtain xs where xs: "set xs \<subseteq> set Vars" "\<Squnion>\<^sub>S xs = a"
+    using scene_space_vars_decomp_iff by auto
+  thus "a \<in> {\<Squnion>\<^sub>S xs |xs. distinct xs \<and> set xs \<subseteq> set Vars}"
+    by auto (metis distinct_remdups foldr_scene_union_remdups set_remdups)
+next
+  fix a
+  assume "a \<in> {\<Squnion>\<^sub>S xs |xs. distinct xs \<and> set xs \<subseteq> set Vars}"
+  thus "a \<in> scene_space"
+    using scene_space_vars_decomp_iff by auto
+qed
+
+lemma finite_scene_space: "finite scene_space"
+proof -
+  have "scene_space = {\<Squnion>\<^sub>S xs | xs. distinct xs \<and> set xs \<subseteq> set Vars}"
+    by (simp add: scene_space_as_lists)
+  also have "... = \<Squnion>\<^sub>S ` {xs. distinct xs \<and> set xs \<subseteq> set Vars}"
+    by auto
+  also have "finite ..."
+    by (rule finite_imageI, simp add: finite_distinct_lists_subset)
+  finally show ?thesis .
+qed
+
 end
 
 subsection \<open> Frame type \<close>
@@ -494,6 +586,25 @@ lift_definition bot_frame :: "'a frame" is "\<bottom>\<^sub>S" by (simp add: bot
 lift_definition top_frame :: "'a frame" is "\<top>\<^sub>S" by (simp add: top_scene_space)
 
 instance by (intro_classes; transfer; simp add: scene_bot_least scene_top_greatest)
+
+end
+
+instance frame :: (scene_space) distrib_lattice
+  by (intro_classes; transfer)
+     (simp add: scene_space_class.scene_union_inter_distrib)
+
+instantiation frame :: (scene_space) boolean_algebra
+begin
+
+lift_definition minus_frame :: "'a frame \<Rightarrow> 'a frame \<Rightarrow> 'a frame" is "\<lambda> a b. a \<sqinter>\<^sub>S - b"
+  by (simp add: scene_space_inter scene_space_uminus)
+
+lift_definition uminus_frame :: "'a frame \<Rightarrow> 'a frame" is "uminus"
+  by (simp add: scene_space_uminus)
+
+instance
+  by (intro_classes; transfer)
+     (simp_all add: idem_scene_space scene_inter_indep scene_union_compl scene_le_iff_indep_inv subscene_refl)
 
 end
 
