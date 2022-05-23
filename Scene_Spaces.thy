@@ -16,12 +16,14 @@ lemma pairwise_compat_foldr:
   apply (auto simp add: pairwise_insert scene_union_pres_compat)
   done
 
+find_theorems "(\<bowtie>\<^sub>S)" "(\<squnion>\<^sub>S)"
+
 lemma foldr_scene_indep:
   "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> b \<in> set as. a \<bowtie>\<^sub>S b \<rbrakk> \<Longrightarrow> a \<bowtie>\<^sub>S \<Squnion>\<^sub>S as"
   apply (induct as)
    apply (simp)
-  apply (auto simp add: pairwise_insert)
-  by (smt (verit, ccfv_threshold) scene_indep_bot scene_indep_override scene_override_union scene_union_incompat)
+  apply (auto intro: scene_indep_pres_compat simp add: pairwise_insert )
+  done
 
 lemma foldr_compat_dist:
   "pairwise (##\<^sub>S) (set as) \<Longrightarrow> foldr (\<squnion>\<^sub>S) (map (\<lambda>a. a ;\<^sub>S x) as) \<bottom>\<^sub>S = \<Squnion>\<^sub>S as ;\<^sub>S x"
@@ -97,7 +99,7 @@ qed
 lemma foldr_scene_removeAll:
   assumes "pairwise (##\<^sub>S) (set xs)"
   shows "x \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll x xs) = x \<squnion>\<^sub>S \<Squnion>\<^sub>S xs"
-  by (smt (verit) assms foldr_scene_union_removeAll pairwise_Diff pairwise_alt pairwise_compat_foldr removeAll_id scene_compat_refl scene_union_assoc scene_union_commute scene_union_idem set_removeAll)
+  by (metis (mono_tags, opaque_lifting) assms foldr_Cons foldr_scene_union_eq_sets insertCI insert_Diff list.simps(15) o_apply removeAll.simps(2) removeAll_id set_removeAll)
 
 lemma pairwise_Collect: "pairwise R A \<Longrightarrow> pairwise R {x \<in> A. P x}"
   by (simp add: pairwise_def)
@@ -529,9 +531,13 @@ proof -
   also have "finite ..."
     by (rule finite_imageI, simp add: finite_distinct_lists_subset)
   finally show ?thesis .
-qed
+qed 
 
 end
+
+lemma foldr_scene_union_eq_scene_space: 
+  "\<lbrakk> set xs \<subseteq> scene_space; set xs = set ys \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S ys"
+  by (metis foldr_scene_union_eq_sets pairwise_def pairwise_subset scene_space_compat)
 
 subsection \<open> Frame type \<close>
 
@@ -621,6 +627,56 @@ instance
      (simp_all add: idem_scene_space scene_inter_indep scene_union_compl scene_le_iff_indep_inv subscene_refl)
 
 end
+
+lemma UNIV_frame_scene_space: "UNIV = Abs_frame ` scene_space"
+  by (metis Rep_frame Rep_frame_inverse UNIV_eq_I imageI)
+
+instance frame :: (scene_space) finite
+  by (intro_classes, simp add: UNIV_frame_scene_space finite_scene_space)
+
+instantiation frame :: (scene_space) "{Inf, Sup}"
+begin
+
+lift_definition Sup_frame :: "'a frame set \<Rightarrow> 'a frame" is "\<lambda> A. \<Squnion>\<^sub>S (SOME xs. set xs = A)"
+proof -
+  fix A :: "'a scene set"
+  assume a: "\<And>x. x \<in> A \<Longrightarrow> x \<in> scene_space"
+  have A_ss: "A \<subseteq> scene_space"
+    by (simp add: a subsetI)
+  hence "finite A"
+    using finite_scene_space rev_finite_subset by blast
+  then obtain xs where A: "A = set xs"
+    using finite_list by blast
+  hence "\<Squnion>\<^sub>S xs \<in> scene_space"
+    using A_ss scene_space_foldr by blast
+  moreover have "\<Squnion>\<^sub>S (SOME xs. set xs = A) = \<Squnion>\<^sub>S xs"
+    by (metis (mono_tags, lifting) A A_ss foldr_scene_union_eq_scene_space someI)
+  ultimately show "\<Squnion>\<^sub>S (SOME xs. set xs = A) \<in> scene_space"
+    by simp
+qed
+
+definition Inf_frame :: "'a frame set \<Rightarrow> 'a frame" where "Inf_frame A = - (Sup (uminus ` A))"
+
+instance ..
+
+end
+
+(*
+
+instance frame :: (scene_space) complete_lattice
+proof
+  show Sup: "Sup ({} :: 'a frame set) = bot"
+    by (transfer, simp)
+  show "Inf ({} :: 'a frame set) = top"
+    by (simp add: Inf_frame_def Sup)
+  fix x and A :: "'a frame set"
+  assume "x \<in> A"
+  show "x \<le> Sup A"
+    apply (transfer)
+
+qed
+
+*)
 
 subsection \<open> Alphabet Scene Spaces \<close>
 

@@ -221,6 +221,9 @@ lemma scene_union_annhil: "idem_scene X \<Longrightarrow> X \<squnion>\<^sub>S \
 lemma scene_union_pres_compat: "\<lbrakk> A ##\<^sub>S B; A ##\<^sub>S C \<rbrakk> \<Longrightarrow> A ##\<^sub>S (B \<squnion>\<^sub>S C)"
   by (transfer, auto)
 
+lemma scene_indep_pres_compat: "\<lbrakk> A \<bowtie>\<^sub>S B; A \<bowtie>\<^sub>S C \<rbrakk> \<Longrightarrow> A \<bowtie>\<^sub>S (B \<squnion>\<^sub>S C)"
+  by (transfer, auto)
+
 lemma scene_indep_self_compl: "A \<bowtie>\<^sub>S -A"
   by (transfer, simp)
 
