@@ -546,19 +546,11 @@ typedef (overloaded) 'a::scene_space frame = "scene_space :: 'a scene set"
 
 setup_lifting type_definition_frame
 
-instantiation frame :: (scene_space) finite
-begin
-instance
-proof
-  have "finite (range Rep_frame)"
-    by (metis finite_scene_space type_definition.Rep_range type_definition_frame)
-  moreover have "inj Rep_frame"
-    apply (rule injI)
-    using Rep_frame_inject by blast
-  ultimately show "finite (UNIV :: 'a frame set)"
-    by (rule finite_imageD)
-qed
-end
+lemma UNIV_frame_scene_space: "UNIV = Abs_frame ` scene_space"
+  by (metis Rep_frame Rep_frame_inverse UNIV_eq_I imageI)
+
+instance frame :: (scene_space) finite
+  by (intro_classes, simp add: UNIV_frame_scene_space finite_scene_space)
 
 instantiation frame :: (scene_space) order
 begin
@@ -627,12 +619,6 @@ instance
      (simp_all add: idem_scene_space scene_inter_indep scene_union_compl scene_le_iff_indep_inv subscene_refl)
 
 end
-
-lemma UNIV_frame_scene_space: "UNIV = Abs_frame ` scene_space"
-  by (metis Rep_frame Rep_frame_inverse UNIV_eq_I imageI)
-
-instance frame :: (scene_space) finite
-  by (intro_classes, simp add: UNIV_frame_scene_space finite_scene_space)
 
 instantiation frame :: (scene_space) "{Inf, Sup}"
 begin
