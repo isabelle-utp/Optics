@@ -540,6 +540,20 @@ typedef (overloaded) 'a::scene_space frame = "scene_space :: 'a scene set"
 
 setup_lifting type_definition_frame
 
+instantiation frame :: (scene_space) finite
+begin
+instance
+proof
+  have "finite (range Rep_frame)"
+    by (metis finite_scene_space type_definition.Rep_range type_definition_frame)
+  moreover have "inj Rep_frame"
+    apply (rule injI)
+    using Rep_frame_inject by blast
+  ultimately show "finite (UNIV :: 'a frame set)"
+    by (rule finite_imageD)
+qed
+end
+
 instantiation frame :: (scene_space) order
 begin
 
