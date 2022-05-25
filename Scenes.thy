@@ -280,6 +280,9 @@ lemma scene_demorgan1: "-(X \<squnion>\<^sub>S Y) = -X \<sqinter>\<^sub>S -Y"
 lemma scene_demorgan2: "-(X \<sqinter>\<^sub>S Y) = -X \<squnion>\<^sub>S -Y"
   by (simp add: inf_scene_def, transfer, auto)
 
+lemma scene_inter_commute: "X \<sqinter>\<^sub>S Y = Y \<sqinter>\<^sub>S X"
+  by (simp add: inf_scene_def scene_union_commute)
+
 lemma scene_union_inter_distrib:
   "\<lbrakk> idem_scene x; x \<bowtie>\<^sub>S y; x \<bowtie>\<^sub>S z; y ##\<^sub>S z \<rbrakk> \<Longrightarrow> x \<squnion>\<^sub>S y \<sqinter>\<^sub>S z = (x \<squnion>\<^sub>S y) \<sqinter>\<^sub>S (x \<squnion>\<^sub>S z)"
   apply (simp add: inf_scene_def, transfer)
@@ -290,6 +293,12 @@ lemma scene_union_inter_distrib:
 
 lemma idem_scene_uminus [simp]: "idem_scene X \<Longrightarrow> idem_scene (- X)"
   by (simp add: uminus_scene_def idem_scene_def Abs_scene_inverse idem_overrider_axioms_def idem_overrider_def overrider.intro)
+
+lemma scene_minus_cancel: "\<lbrakk> a \<bowtie>\<^sub>S b; idem_scene a; idem_scene b \<rbrakk> \<Longrightarrow> a \<squnion>\<^sub>S (b \<sqinter>\<^sub>S - a) = a \<squnion>\<^sub>S b"
+  apply (simp add: lens_defs, transfer, auto simp add: fun_eq_iff)
+  apply (metis (mono_tags, lifting) overrider.ovr_overshadow_left)
+  apply (metis (no_types, opaque_lifting) idem_overrider.ovr_idem overrider.ovr_overshadow_right)
+  done
 
 instantiation scene :: (type) ord
 begin

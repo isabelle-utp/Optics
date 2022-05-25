@@ -1,7 +1,7 @@
 section \<open> Scene Spaces \<close>
 
 theory Scene_Spaces            
-  imports Scenes
+  imports Scenes "HOL-Algebra.Complete_Lattice"
 begin
 
 subsection \<open> Preliminaries \<close>
@@ -290,7 +290,7 @@ lemma "fold (\<squnion>\<^sub>S) (map (\<lambda>x. x ;\<^sub>S a) Vars) b = \<lb
 
 lemma Vars_indep_foldr: 
   assumes "x \<in> set Vars" "set xs \<subseteq> set Vars"
-  shows "x \<bowtie>\<^sub>S foldr (\<squnion>\<^sub>S) (removeAll x xs) \<bottom>\<^sub>S"
+  shows "x \<bowtie>\<^sub>S \<Squnion>\<^sub>S (removeAll x xs)"
 proof (rule foldr_scene_indep)
   show "pairwise (##\<^sub>S) (set (removeAll x xs))"
     by (simp, metis Diff_subset assms(2) pairwise_mono scene_space_compats)
@@ -353,7 +353,7 @@ lemma scene_space_inter: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<r
 
 lemma scene_union_foldr_remove_element:
   assumes "set xs \<subseteq> set Vars"
-  shows "a \<squnion>\<^sub>S foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S = a \<squnion>\<^sub>S foldr (\<squnion>\<^sub>S) (removeAll a xs) \<bottom>\<^sub>S"
+  shows "a \<squnion>\<^sub>S \<Squnion>\<^sub>S xs = a \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll a xs)"
 using assms proof (induct xs)
   case Nil
   then show ?case by simp
@@ -375,7 +375,7 @@ lemma scene_union_foldr_Cons_removeAll':
   shows "foldr (\<squnion>\<^sub>S) (a # xs) \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) (a # removeAll a xs) \<bottom>\<^sub>S"
   by (simp add: assms(1) scene_union_foldr_remove_element)
 
-lemma scene_in_foldr: "\<lbrakk> a \<in> set xs; set xs \<subseteq> set Vars \<rbrakk> \<Longrightarrow> a \<subseteq>\<^sub>S foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"
+lemma scene_in_foldr: "\<lbrakk> a \<in> set xs; set xs \<subseteq> set Vars \<rbrakk> \<Longrightarrow> a \<subseteq>\<^sub>S \<Squnion>\<^sub>S xs"
   apply (induct xs)
    apply (simp)
   apply (subst scene_union_foldr_Cons_removeAll')
@@ -390,7 +390,7 @@ lemma scene_in_foldr: "\<lbrakk> a \<in> set xs; set xs \<subseteq> set Vars \<r
 
 lemma scene_union_foldr_subset:
   assumes "set xs \<subseteq> set ys" "set ys \<subseteq> set Vars"
-  shows "foldr(\<squnion>\<^sub>S) xs \<bottom>\<^sub>S \<subseteq>\<^sub>S foldr (\<squnion>\<^sub>S) ys \<bottom>\<^sub>S"
+  shows "\<Squnion>\<^sub>S xs \<subseteq>\<^sub>S \<Squnion>\<^sub>S ys"
 using assms proof (induct xs arbitrary: ys)
   case Nil
   then show ?case 
@@ -508,7 +508,7 @@ lemma foldr_scene_union_remdups: "set xs \<subseteq> set Vars \<Longrightarrow> 
 
 lemma scene_space_as_lists:
   "scene_space = {\<Squnion>\<^sub>S xs | xs. distinct xs \<and> set xs \<subseteq> set Vars}"
-proof (rule set_eqI, rule iffI)
+proof (rule Set.set_eqI, rule iffI)
   fix a
   assume "a \<in> scene_space"
   then obtain xs where xs: "set xs \<subseteq> set Vars" "\<Squnion>\<^sub>S xs = a"
@@ -533,12 +533,139 @@ proof -
   finally show ?thesis .
 qed 
 
+lemma scene_space_inter_assoc:
+  assumes "x \<in> scene_space" "y \<in> scene_space" "z \<in> scene_space"
+  shows "(x \<sqinter>\<^sub>S y) \<sqinter>\<^sub>S z = x \<sqinter>\<^sub>S (y \<sqinter>\<^sub>S z)"
+proof -
+  have "(x \<sqinter>\<^sub>S y) \<sqinter>\<^sub>S z = - (- x \<squnion>\<^sub>S - y \<squnion>\<^sub>S - z)"
+    by (simp add: scene_demorgan1 uminus_scene_twice)
+  also have "... = - (- x \<squnion>\<^sub>S (- y \<squnion>\<^sub>S - z))"
+    by (simp add: assms scene_space_uminus scene_space_union_assoc)
+  also have "... = x \<sqinter>\<^sub>S (y \<sqinter>\<^sub>S z)"
+    by (simp add: scene_demorgan1 uminus_scene_twice)
+  finally show ?thesis .
+qed
+
+lemma scene_inter_union_distrib:
+  assumes "x \<in> scene_space" "y \<in> scene_space" "z \<in> scene_space"
+  shows "x \<sqinter>\<^sub>S (y \<squnion>\<^sub>S z) = (x \<sqinter>\<^sub>S y) \<squnion>\<^sub>S (x \<sqinter>\<^sub>S z)"
+proof-
+  have "x \<sqinter>\<^sub>S (y \<squnion>\<^sub>S z) = (x \<sqinter>\<^sub>S (x \<squnion>\<^sub>S z)) \<sqinter>\<^sub>S (y \<squnion>\<^sub>S z)"
+    by (metis assms(1) assms(3) idem_scene_space local.scene_union_inter_distrib scene_indep_bot scene_inter_commute scene_inter_indep scene_space.simps scene_union_unit(1))
+  also have "... = (y \<squnion>\<^sub>S z) \<sqinter>\<^sub>S (x \<sqinter>\<^sub>S (x \<squnion>\<^sub>S z))"
+    by (simp add: scene_union_inter_distrib assms scene_inter_commute scene_union_assoc union_scene_space scene_space_inter scene_union_commute)  
+  also have "\<dots> = x \<sqinter>\<^sub>S ((y \<squnion>\<^sub>S z) \<sqinter>\<^sub>S (x \<squnion>\<^sub>S z))"
+    by (metis assms scene_inter_commute scene_space.union_scene_space scene_space_inter_assoc)
+  also have "\<dots> = x \<sqinter>\<^sub>S (z \<squnion>\<^sub>S (x \<sqinter>\<^sub>S y))"
+    by (simp add: assms scene_union_inter_distrib scene_inter_commute scene_union_commute)
+    
+  also have "\<dots> = ((x \<sqinter>\<^sub>S y) \<squnion>\<^sub>S x) \<sqinter>\<^sub>S ((x \<sqinter>\<^sub>S y) \<squnion>\<^sub>S z)"
+    by (metis (no_types, opaque_lifting) assms(1) assms(2) idem_scene_space local.scene_union_inter_distrib scene_indep_bot scene_inter_commute scene_inter_indep scene_space.bot_scene_space scene_union_commute scene_union_idem scene_union_unit(1))
+  also have "\<dots> = (x \<sqinter>\<^sub>S y) \<squnion>\<^sub>S (x \<sqinter>\<^sub>S z)"
+    by (simp add: assms scene_union_inter_distrib scene_space_inter)
+  finally show ?thesis .
+qed
+
+(*
+lemma 
+  assumes "x \<in> set Vars" "set xs \<subseteq> set Vars"
+  shows "(\<Squnion>\<^sub>S xs) \<sqinter>\<^sub>S (- x) = \<Squnion>\<^sub>S (removeAll x xs)"
+using assms proof (induct xs)
+  case Nil
+  then show ?case
+    by (simp add: idem_scene_Vars scene_indep_sym scene_inter_indep)
+next
+  case (Cons y ys)
+  then show ?case
+    apply auto
+    apply (smt (verit, del_insts) dual_order.trans foldr_scene_union_add_tail foldr_scene_union_removeAll local.idem_scene_Vars pairwise_compat_Vars_subset removeAll_id scene_compat_bot(1) scene_demorgan1 scene_inter_commute scene_inter_union_distrib scene_space.Vars_scene_space scene_space_foldr scene_space_uminus scene_union_compl scene_union_foldr_remove_element set_Vars_scene_space uminus_scene_twice uminus_top_scene)
+    apply (subst scene_inter_commute)
+    thm scene_union_inter_distrib
+qed
+*)
+
+lemma prop1:
+  assumes "a \<in> scene_space" "b \<in> scene_space"
+  shows "a \<squnion>\<^sub>S (b \<sqinter>\<^sub>S - a) = a \<squnion>\<^sub>S b"
+  by (metis assms(1) assms(2) bot_idem_scene idem_scene_space idem_scene_uminus local.scene_union_inter_distrib scene_demorgan1 scene_space_uminus scene_union_compl scene_union_unit(1) uminus_scene_twice)
+
+find_theorems "(##\<^sub>S)" "\<Squnion>\<^sub>S"
+
+(*
+lemma scene_union_foldr_remove_element:
+  assumes "a \<in> scene_space" "set xs \<subseteq> scene_space"
+  shows "a \<squnion>\<^sub>S \<Squnion>\<^sub>S xs = a \<squnion>\<^sub>S \<Squnion>\<^sub>S (map (\<lambda> x. x \<sqinter>\<^sub>S - a) xs)"
+using assms proof (induct xs)
+  case Nil
+  then show ?case by (simp)
+next
+  case (Cons y ys)
+  have "a \<squnion>\<^sub>S (y \<squnion>\<^sub>S \<Squnion>\<^sub>S ys) = y \<squnion>\<^sub>S (a \<squnion>\<^sub>S \<Squnion>\<^sub>S ys)"
+    by (metis Cons.prems(2) assms(1) insert_subset list.simps(15) scene_space_foldr scene_space_union_assoc scene_union_commute)
+  also have "... = y \<squnion>\<^sub>S (a \<squnion>\<^sub>S \<Squnion>\<^sub>S (map (\<lambda>x. x \<sqinter>\<^sub>S - a) ys))"
+    using Cons.hyps Cons.prems(2) assms(1) by auto
+  also have "... = y \<squnion>\<^sub>S a \<squnion>\<^sub>S \<Squnion>\<^sub>S (map (\<lambda>x. x \<sqinter>\<^sub>S - a) ys)"
+    apply (subst scene_union_assoc)
+    using Cons.prems(2) assms(1) scene_space_compat apply auto[1]
+      apply (rule pairwise_compat_foldr)
+       apply (simp)
+       apply (rule pairwise_imageI)
+    apply (meson Cons.prems(2) assms(1) scene_space_compat scene_space_inter scene_space_uminus set_subset_Cons subsetD)
+    apply simp
+    apply (meson Cons.prems(2) assms(1) in_mono list.set_intros(1) scene_space_compat scene_space_inter scene_space_uminus set_subset_Cons)
+     apply (rule pairwise_compat_foldr)
+    apply (simp)
+       apply (rule pairwise_imageI)
+    apply (meson Cons.prems(2) assms(1) in_mono scene_space_compat scene_space_inter scene_space_uminus set_subset_Cons)
+    apply (simp)
+     apply (meson Cons.prems(2) assms(1) in_mono scene_space_compat scene_space_inter scene_space_uminus set_subset_Cons)
+    apply simp
+    done
+  also have "... = a \<squnion>\<^sub>S (y \<sqinter>\<^sub>S - a \<squnion>\<^sub>S \<Squnion>\<^sub>S (map (\<lambda>x. x \<sqinter>\<^sub>S - a) ys))"
+    apply (subst scene_union_assoc)
+    using Cons.prems(2) assms(1) scene_space_compat scene_space_inter scene_space_uminus apply force
+    apply (metis (no_types, lifting) Cons.hyps Cons.prems(2) assms(1) insert_subset list.simps(15) scene_compat_sym scene_space_compat scene_space_foldr scene_union_assoc scene_union_idem scene_union_incompat scene_union_unit(1))
+  finally show ?case using Cons
+    apply (auto)
+    then show ?case
+    apply auto
+qed
+
+
+find_theorems "(\<subseteq>\<^sub>S)" "(\<squnion>\<^sub>S)"
+
+lemma scene_space_in_foldr: "\<lbrakk> a \<in> set xs; set xs \<subseteq> scene_space \<rbrakk> \<Longrightarrow> a \<subseteq>\<^sub>S \<Squnion>\<^sub>S xs"
+proof (induct xs)
+  case Nil
+  then show ?case
+    by simp
+next
+  case (Cons y ys)
+  then show ?case
+  proof (cases "a \<subseteq>\<^sub>S y")
+    case False
+    with Cons show ?thesis
+    have "y \<squnion>\<^sub>S \<Squnion>\<^sub>S ys = y \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll y ys)"
+      by (metis Cons.prems(2) foldr_scene_removeAll insert_absorb list.simps(15) pairwise_def pairwise_subset removeAll_id scene_space_compat)
+    also have "y \<subseteq>\<^sub>S ..."
+      apply (rule scene_union_ub)
+       apply (metis Cons.prems(2) Diff_subset dual_order.trans idem_scene_space insert_subset list.simps(15) scene_space_foldr set_removeAll)
+  
+      with Cons show ?thesis
+      
+  next
+    case False
+    then show ?thesis sorry
+  qed
+qed
+   apply (auto)
+*)
+
 end
 
 lemma foldr_scene_union_eq_scene_space: 
   "\<lbrakk> set xs \<subseteq> scene_space; set xs = set ys \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S ys"
   by (metis foldr_scene_union_eq_sets pairwise_def pairwise_subset scene_space_compat)
-
 subsection \<open> Frame type \<close>
 
 typedef (overloaded) 'a::scene_space frame = "scene_space :: 'a scene set"
@@ -620,6 +747,34 @@ instance
 
 end
 
+(*
+instantiation frame :: (scene_space) complete_lattice
+begin
+
+definition Sup_frame :: "'a frame set \<Rightarrow> 'a frame" where "Sup_frame = Sup_fin"
+definition Inf_frame :: "'a frame set \<Rightarrow> 'a frame" where "Inf_frame = Inf_fin"
+
+thm coboundedI
+
+find_theorems "?z \<le> \<Sqinter>\<^sub>f\<^sub>i\<^sub>n ?A"
+
+find_theorems Sup_fin "{}"
+
+find_theorems Sup_fin.F
+
+instance proof
+  show Sup: "Sup ({} :: 'a frame set) = bot"
+    apply (simp add: Sup_fin_def Sup_frame_def)
+  show "Inf ({} :: 'a frame set) = top"
+    by (simp add: Inf_frame_def Sup)
+  apply (intro_classes)
+       apply (simp_all add: Inf_frame_def Sup_frame_def Inf_fin.coboundedI)
+      apply (case_tac "A={}")
+  apply (simp)
+  apply (rule Inf_fin.boundedI)
+  solve_direct                                                  
+*)
+
 instantiation frame :: (scene_space) "{Inf, Sup}"
 begin
 
@@ -648,7 +803,6 @@ instance ..
 end
 
 (*
-
 instance frame :: (scene_space) complete_lattice
 proof
   show Sup: "Sup ({} :: 'a frame set) = bot"
@@ -657,11 +811,21 @@ proof
     by (simp add: Inf_frame_def Sup)
   fix x and A :: "'a frame set"
   assume "x \<in> A"
-  show "x \<le> Sup A"
-    apply (transfer)
+  thus "x \<le> Sup A"
+  proof (transfer)
+    fix x and A :: "'a scene set"
+    assume x: "x \<in> scene_space" "\<forall>x\<in>A. x \<in> scene_space" "x \<in> A"
+    then obtain xs where xs: "set xs = A"
+      by (metis finite_list finite_scene_space rev_finite_subset subsetI)
+    show "x \<subseteq>\<^sub>S \<Squnion>\<^sub>S (SOME xs. set xs = A)"
+      apply (rule someI2)
+       apply (rule xs)
+      apply (rule scene_in_foldr)
+      apply (simp add: x(3))
+      using x
+    
 
 qed
-
 *)
 
 subsection \<open> Alphabet Scene Spaces \<close>
