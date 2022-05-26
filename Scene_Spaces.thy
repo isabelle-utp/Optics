@@ -1,7 +1,7 @@
 section \<open> Scene Spaces \<close>
 
 theory Scene_Spaces            
-  imports Scenes "HOL-Algebra.Complete_Lattice"
+  imports Scenes
 begin
 
 subsection \<open> Preliminaries \<close>
@@ -15,8 +15,6 @@ lemma pairwise_compat_foldr:
    apply (simp)
   apply (auto simp add: pairwise_insert scene_union_pres_compat)
   done
-
-find_theorems "(\<bowtie>\<^sub>S)" "(\<squnion>\<^sub>S)"
 
 lemma foldr_scene_indep:
   "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> b \<in> set as. a \<bowtie>\<^sub>S b \<rbrakk> \<Longrightarrow> a \<bowtie>\<^sub>S \<Squnion>\<^sub>S as"
@@ -589,10 +587,13 @@ lemma prop1:
   shows "a \<squnion>\<^sub>S (b \<sqinter>\<^sub>S - a) = a \<squnion>\<^sub>S b"
   by (metis assms(1) assms(2) bot_idem_scene idem_scene_space idem_scene_uminus local.scene_union_inter_distrib scene_demorgan1 scene_space_uminus scene_union_compl scene_union_unit(1) uminus_scene_twice)
 
-find_theorems "(##\<^sub>S)" "\<Squnion>\<^sub>S"
+find_theorems "(##\<^sub>S)" "(\<sqinter>\<^sub>S)"
 
-(*
-lemma scene_union_foldr_remove_element:
+find_theorems "scene_space" "\<Squnion>\<^sub>S"
+
+find_theorems "(##\<^sub>S)" scene_space
+
+lemma scene_union_foldr_minus_element:
   assumes "a \<in> scene_space" "set xs \<subseteq> scene_space"
   shows "a \<squnion>\<^sub>S \<Squnion>\<^sub>S xs = a \<squnion>\<^sub>S \<Squnion>\<^sub>S (map (\<lambda> x. x \<sqinter>\<^sub>S - a) xs)"
 using assms proof (induct xs)
@@ -624,15 +625,17 @@ next
   also have "... = a \<squnion>\<^sub>S (y \<sqinter>\<^sub>S - a \<squnion>\<^sub>S \<Squnion>\<^sub>S (map (\<lambda>x. x \<sqinter>\<^sub>S - a) ys))"
     apply (subst scene_union_assoc)
     using Cons.prems(2) assms(1) scene_space_compat scene_space_inter scene_space_uminus apply force
-    apply (metis (no_types, lifting) Cons.hyps Cons.prems(2) assms(1) insert_subset list.simps(15) scene_compat_sym scene_space_compat scene_space_foldr scene_union_assoc scene_union_idem scene_union_incompat scene_union_unit(1))
-  finally show ?case using Cons
-    apply (auto)
-    then show ?case
+      apply (metis (no_types, lifting) Cons.hyps Cons.prems(2) assms(1) insert_subset list.simps(15) scene_compat_sym scene_space_compat scene_space_foldr scene_union_assoc scene_union_idem scene_union_incompat scene_union_unit(1))
+    apply (rule scene_space_compat)
+    using Cons.prems(2) assms(1) scene_space_inter scene_space_uminus apply auto[1]
+     apply (rule scene_space_foldr)
     apply auto
+    apply (meson Cons.prems(2) assms(1) in_mono scene_space_inter scene_space_uminus set_subset_Cons)
+    apply (metis Cons.prems(2) assms(1) insert_subset list.simps(15) prop1 scene_union_commute)
+    done
+  finally show ?case using Cons
+    by auto
 qed
-
-
-find_theorems "(\<subseteq>\<^sub>S)" "(\<squnion>\<^sub>S)"
 
 lemma scene_space_in_foldr: "\<lbrakk> a \<in> set xs; set xs \<subseteq> scene_space \<rbrakk> \<Longrightarrow> a \<subseteq>\<^sub>S \<Squnion>\<^sub>S xs"
 proof (induct xs)
@@ -641,25 +644,46 @@ proof (induct xs)
     by simp
 next
   case (Cons y ys)
-  then show ?case
+  have ysp: "y \<squnion>\<^sub>S \<Squnion>\<^sub>S ys = y \<squnion>\<^sub>S \<Squnion>\<^sub>S (map (\<lambda> x. x \<sqinter>\<^sub>S - y) ys)"
+    using Cons.prems(2) scene_union_foldr_minus_element by force
+  show ?case
   proof (cases "a \<subseteq>\<^sub>S y")
     case False
     with Cons show ?thesis
-    have "y \<squnion>\<^sub>S \<Squnion>\<^sub>S ys = y \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll y ys)"
-      by (metis Cons.prems(2) foldr_scene_removeAll insert_absorb list.simps(15) pairwise_def pairwise_subset removeAll_id scene_space_compat)
-    also have "y \<subseteq>\<^sub>S ..."
-      apply (rule scene_union_ub)
-       apply (metis Cons.prems(2) Diff_subset dual_order.trans idem_scene_space insert_subset list.simps(15) scene_space_foldr set_removeAll)
-  
-      with Cons show ?thesis
-      
+      by (simp)
+         (metis (no_types, lifting) idem_scene_space scene_space_foldr scene_space_ub scene_union_commute subscene_trans)
   next
-    case False
-    then show ?thesis sorry
+    case True
+    with Cons show ?thesis
+      by (simp)
+         (meson idem_scene_space scene_space_foldr scene_space_ub subscene_trans)
   qed
 qed
-   apply (auto)
-*)
+
+find_theorems "(\<squnion>\<^sub>S)" "(\<le>)"
+
+lemma scene_union_lb: "\<lbrakk> a ##\<^sub>S b; a \<le> c; b \<le> c \<rbrakk> \<Longrightarrow> a \<squnion>\<^sub>S b \<le> c"
+  by (simp add: less_eq_scene_def scene_override_union)
+
+find_theorems "\<Squnion>\<^sub>S" "(\<le>)"
+
+lemma scene_space_foldr_lb: 
+  "\<lbrakk> a \<in> scene_space; set xs \<subseteq> scene_space; \<forall> b\<in>set xs. b \<le> a \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S xs \<subseteq>\<^sub>S a"
+proof (induct xs arbitrary: a)
+  case Nil
+  then show ?case
+    by (simp add: scene_bot_least)
+next
+  case (Cons x xs)
+  then show ?case apply (auto)
+    apply (rule scene_union_lb)
+    using scene_space_compat scene_space_foldr apply presburger
+      apply blast
+     apply (rule Cons(1))
+      apply (simp_all)
+  done
+qed
+
 
 end
 
@@ -802,31 +826,64 @@ instance ..
 
 end
 
-(*
 instance frame :: (scene_space) complete_lattice
 proof
   show Sup: "Sup ({} :: 'a frame set) = bot"
     by (transfer, simp)
-  show "Inf ({} :: 'a frame set) = top"
+  show Inf: "Inf ({} :: 'a frame set) = top"
     by (simp add: Inf_frame_def Sup)
-  fix x and A :: "'a frame set"
-  assume "x \<in> A"
-  thus "x \<le> Sup A"
-  proof (transfer)
-    fix x and A :: "'a scene set"
-    assume x: "x \<in> scene_space" "\<forall>x\<in>A. x \<in> scene_space" "x \<in> A"
+  show le_Sup: "\<And>(x::'a frame) A. x \<in> A \<Longrightarrow> x \<le> Sup A"
+  proof -
+    fix x and A :: "'a frame set"
+    assume "x \<in> A"
+    thus "x \<le> Sup A"
+    proof (transfer)
+      fix x and A :: "'a scene set"
+      assume x: "x \<in> scene_space" "\<forall>x\<in>A. x \<in> scene_space" "x \<in> A"
+      then obtain xs where xs: "set xs = A"
+        by (metis finite_list finite_scene_space rev_finite_subset subsetI)
+      thus "x \<subseteq>\<^sub>S \<Squnion>\<^sub>S (SOME xs. set xs = A)"
+        by (metis (mono_tags, lifting) scene_space_in_foldr someI subset_iff x(2) x(3))
+    qed
+  qed
+  show "\<And>(x:: 'a frame) A. x \<in> A \<Longrightarrow> Inf A \<le> x"
+  proof -
+    fix x and A :: "'a frame set"
+    assume xA: "x \<in> A"
+    have "Inf A \<le> x \<longleftrightarrow> - Sup (uminus ` A) \<le> x"
+      by (simp add: Inf_frame_def)
+    also have "... \<longleftrightarrow> -x \<le> Sup (uminus ` A)"
+      using compl_le_swap2 by blast
+    also have "..."
+      by (simp add: le_Sup xA)
+    finally show "Inf A \<le> x" .
+  qed
+  show Sup_le: "\<And>(A::'a frame set) z. (\<And>x. x \<in> A \<Longrightarrow> x \<le> z) \<Longrightarrow> Sup A \<le> z"
+  proof transfer
+    fix z and A :: "'a scene set"
+    assume a: "\<forall>x\<in>A. x \<in> scene_space" "z \<in> scene_space" "\<And>x. x \<in> scene_space \<Longrightarrow> x \<in> A \<Longrightarrow> x \<subseteq>\<^sub>S z"
     then obtain xs where xs: "set xs = A"
       by (metis finite_list finite_scene_space rev_finite_subset subsetI)
-    show "x \<subseteq>\<^sub>S \<Squnion>\<^sub>S (SOME xs. set xs = A)"
-      apply (rule someI2)
-       apply (rule xs)
-      apply (rule scene_in_foldr)
-      apply (simp add: x(3))
-      using x
-    
-
+    with a show "\<Squnion>\<^sub>S (SOME xs. set xs = A) \<subseteq>\<^sub>S z"
+      by (metis (mono_tags, lifting) scene_space_foldr_lb subset_iff tfl_some)
+  qed
+  show "\<And>(A :: 'a frame set) z. (\<And>x. x \<in> A \<Longrightarrow> z \<le> x) \<Longrightarrow> z \<le> Inf A"
+  proof -
+    fix A :: "'a frame set" and z :: "'a frame"
+    assume a: "\<And>x. x \<in> A \<Longrightarrow> z \<le> x"
+    have "z \<le> Inf A \<longleftrightarrow> Sup (uminus ` A) \<le> - z"
+      by (metis Inf_frame_def compl_le_swap1)
+    also have "..."
+      using a compl_le_compl_iff by (blast intro: Sup_le)
+    finally show "z \<le> Inf A" .
+  qed
 qed
-*)
+
+lemma uminus_frame_Inf: "- Inf (A :: 'a::scene_space frame set) = Sup (uminus ` A)"
+  by (simp add: Inf_frame_def)
+
+lemma uminus_frame_Sup: "- Sup (A :: 'a::scene_space frame set) = Inf (uminus ` A)"
+  by (simp add: Inf_frame_def SUP_image)
 
 subsection \<open> Alphabet Scene Spaces \<close>
 
