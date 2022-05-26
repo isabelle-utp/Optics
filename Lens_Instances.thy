@@ -1,7 +1,7 @@
 section \<open>Lens Instances\<close>
 
 theory Lens_Instances
-  imports Lens_Order Lens_Symmetric "HOL-Eisbach.Eisbach"
+  imports Lens_Order Lens_Symmetric Scenes "HOL-Eisbach.Eisbach"
   keywords "alphabet" "statespace" :: "thy_defn"
 begin
 

@@ -1,7 +1,7 @@
 section \<open> Scenes \<close>
 
 theory Scenes
-  imports Lens_Instances
+  imports Lens_Algebra
 begin
 
 text \<open> Like lenses, scenes characterise a region of a source type. However, unlike lenses, scenes
