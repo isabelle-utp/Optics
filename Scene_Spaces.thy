@@ -1,7 +1,7 @@
 section \<open> Scene Spaces \<close>
 
 theory Scene_Spaces            
-  imports Scenes
+  imports Scenes Lens_Instances
 begin
 
 subsection \<open> Preliminaries \<close>
@@ -684,6 +684,19 @@ next
   done
 qed
 
+find_theorems "\<Squnion>\<^sub>S ?xs \<squnion>\<^sub>S \<Squnion>\<^sub>S ?xsa"
+
+find_theorems "?x \<subseteq>\<^sub>S \<Squnion>\<^sub>S ?xs"
+
+(*
+lemma "\<lbrakk> x \<in> set Vars; set xs \<subseteq> set Vars; x \<le> \<Squnion>\<^sub>S xs; x \<noteq> \<bottom>\<^sub>S \<rbrakk> \<Longrightarrow> x \<in> set xs"
+  apply (induct xs arbitrary: x)
+  apply (auto simp add: scene_bot_least subscene_antisym)
+
+lemma "\<lbrakk> x \<in> set Vars; a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> x \<le> a \<squnion>\<^sub>S b \<longleftrightarrow> (x \<le> a \<or> x \<le> b)"
+  apply (auto simp add: scene_space_vars_decomp_iff)
+  apply (simp only: union_scene_space_foldrs)
+*)
 
 end
 
@@ -885,7 +898,35 @@ lemma uminus_frame_Inf: "- Inf (A :: 'a::scene_space frame set) = Sup (uminus ` 
 lemma uminus_frame_Sup: "- Sup (A :: 'a::scene_space frame set) = Inf (uminus ` A)"
   by (simp add: Inf_frame_def SUP_image)
 
+locale basis_lens = vwb_lens +
+  assumes lens_in_basis: "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars"
+
+declare basis_lens.lens_in_basis [simp]
+
+lift_definition lens_frame :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame" 
+is "\<lambda> x. if basis_lens x then \<lbrakk>x\<rbrakk>\<^sub>\<sim> else \<bottom>\<^sub>S" by auto
+
+lift_definition lens_member :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame \<Rightarrow> bool"
+is "\<lambda> x a. basis_lens x \<and> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<le> a" .
+
+lemma "basis_lens x \<Longrightarrow> lens_member x (lens_frame x)"
+  by (transfer, simp add: subscene_refl)
+
+(*
+lemma "basis_lens x \<Longrightarrow> lens_member x (sup a b) \<longleftrightarrow> (lens_member x a \<or> lens_member x b)"
+  apply transfer
+  apply auto
+*)
+
+definition lens_insert :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame \<Rightarrow> 's frame"
+  where "lens_insert x a = sup (lens_frame x) a"
+
+ 
+
 subsection \<open> Alphabet Scene Spaces \<close>
+
+text \<open> The scene space for an alphabet is constructed using the set of scenes corresponding to
+  each lens, the base lens, and the more lens, to allow for extension. \<close>
 
 definition alpha_scene_space :: "'s scene list \<Rightarrow> ('a \<Longrightarrow> 's) \<Rightarrow> ('b::scene_space \<Longrightarrow> 's) \<Rightarrow> 's scene list" where
 "alpha_scene_space xs b\<^sub>L m\<^sub>L = xs @ map (\<lambda> x. x ;\<^sub>S m\<^sub>L) Vars"
