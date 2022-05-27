@@ -101,7 +101,7 @@ lemma lens_equivI [intro]:
   "\<lbrakk> X \<subseteq>\<^sub>L Y; Y \<subseteq>\<^sub>L X \<rbrakk> \<Longrightarrow> X \<approx>\<^sub>L Y"
   by (simp add: lens_equiv_def)
 
-lemma lens_equiv_refl:
+lemma lens_equiv_refl [simp]:
   "X \<approx>\<^sub>L X"
   by (simp add: lens_equiv_def)
 
@@ -649,6 +649,5 @@ lemma ief_lens_then_zero: "ief_lens x \<Longrightarrow> x \<approx>\<^sub>L 0\<^
 
 lemma ief_lens_iff_zero: "vwb_lens x \<Longrightarrow> ief_lens x \<longleftrightarrow> x \<approx>\<^sub>L 0\<^sub>L"
   by (metis ief_lens_axioms_def ief_lens_def ief_lens_then_zero lens_equiv_def lens_override_def lens_override_unit sublens'_prop3 sublens_implies_sublens' unit_vwb_lens vwb_lens_wb wb_lens_weak)
-
 
 end

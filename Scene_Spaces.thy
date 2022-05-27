@@ -688,15 +688,23 @@ find_theorems "\<Squnion>\<^sub>S ?xs \<squnion>\<^sub>S \<Squnion>\<^sub>S ?xsa
 
 find_theorems "?x \<subseteq>\<^sub>S \<Squnion>\<^sub>S ?xs"
 
-(*
-lemma "\<lbrakk> x \<in> set Vars; set xs \<subseteq> set Vars; x \<le> \<Squnion>\<^sub>S xs; x \<noteq> \<bottom>\<^sub>S \<rbrakk> \<Longrightarrow> x \<in> set xs"
-  apply (induct xs arbitrary: x)
-  apply (auto simp add: scene_bot_least subscene_antisym)
+lemma var_le_union_choice:
+  "\<lbrakk> x \<in> set Vars; a \<in> scene_space; b \<in> scene_space; x \<le> a \<squnion>\<^sub>S b \<rbrakk> \<Longrightarrow> (x \<le> a \<or> x \<le> b)"
+  by (auto simp add: scene_space_vars_decomp_iff)
+     (metis Vars_indep_foldr bot_idem_scene idem_scene_space removeAll_id scene_bot_least scene_indep_pres_compat scene_le_iff_indep_inv scene_space.union_scene_space scene_space_foldr scene_space_in_foldr scene_union_compl set_Vars_scene_space subscene_trans subset_trans uminus_scene_twice uminus_top_scene)
 
-lemma "\<lbrakk> x \<in> set Vars; a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> x \<le> a \<squnion>\<^sub>S b \<longleftrightarrow> (x \<le> a \<or> x \<le> b)"
-  apply (auto simp add: scene_space_vars_decomp_iff)
-  apply (simp only: union_scene_space_foldrs)
-*)
+lemma var_le_union_iff:
+  "\<lbrakk> x \<in> set Vars; a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> x \<le> a \<squnion>\<^sub>S b \<longleftrightarrow> (x \<le> a \<or> x \<le> b)"
+  apply (rule iffI, simp add: var_le_union_choice)
+  apply (auto)
+  apply (meson idem_scene_space scene_space_ub subscene_trans)
+  apply (metis idem_scene_space scene_space_ub scene_union_commute subscene_trans)
+  done
+
+text \<open> @{term Vars} may contain the empty scene, as we want to allow vacuous lenses in alphabets \<close>
+
+lemma le_vars_then_equal: "\<lbrakk> x \<in> set Vars; y \<in> set Vars; x \<le> y; x \<noteq> \<bottom>\<^sub>S \<rbrakk> \<Longrightarrow> x = y"
+  by (metis bot_idem_scene foldr_scene_removeAll local.idem_scene_Vars local.indep_Vars local.span_Vars pairwiseD scene_bot_least scene_indep_pres_compat scene_indeps_def scene_le_iff_indep_inv scene_space_compats scene_span_def scene_union_annhil subscene_antisym uminus_scene_twice uminus_top_scene uminus_var_other_vars)
 
 end
 
@@ -732,8 +740,6 @@ instance
 
 end
 
-find_theorems "(\<squnion>\<^sub>S)" "(\<subseteq>\<^sub>S)"
-
 instantiation frame :: (scene_space) lattice
 begin
 
@@ -755,6 +761,12 @@ instance
 
 end
 
+abbreviation frame_union :: "'a::scene_space frame \<Rightarrow> 'a frame \<Rightarrow> 'a frame" (infixl "\<union>\<^sub>F" 65) 
+  where "frame_union \<equiv> sup"
+
+abbreviation frame_inter :: "'a::scene_space frame \<Rightarrow> 'a frame \<Rightarrow> 'a frame"(infixl "\<inter>\<^sub>F" 70)
+  where "frame_inter \<equiv> inf"
+
 instantiation frame :: (scene_space) bounded_lattice
 begin
 
@@ -764,6 +776,9 @@ lift_definition top_frame :: "'a frame" is "\<top>\<^sub>S" by (simp add: top_sc
 instance by (intro_classes; transfer; simp add: scene_bot_least scene_top_greatest)
 
 end
+
+abbreviation frame_empty :: "'s::scene_space frame" ("\<lbrace>\<rbrace>")
+  where "\<lbrace>\<rbrace> \<equiv> bot"
 
 instance frame :: (scene_space) distrib_lattice
   by (intro_classes; transfer)
@@ -903,26 +918,54 @@ locale basis_lens = vwb_lens +
 
 declare basis_lens.lens_in_basis [simp]
 
+lemma basis_then_vwb [simp]: "basis_lens x \<Longrightarrow> vwb_lens x"
+  by (simp add: basis_lens_def)
+
+lemma basis_lens_intro: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars \<rbrakk> \<Longrightarrow> basis_lens x"
+  using basis_lens.intro basis_lens_axioms.intro by blast
+
 lift_definition lens_frame :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame" 
 is "\<lambda> x. if basis_lens x then \<lbrakk>x\<rbrakk>\<^sub>\<sim> else \<bottom>\<^sub>S" by auto
 
-lift_definition lens_member :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame \<Rightarrow> bool"
+lift_definition lens_member :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame \<Rightarrow> bool" (infix "\<in>\<^sub>F" 50)
 is "\<lambda> x a. basis_lens x \<and> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<le> a" .
 
-lemma "basis_lens x \<Longrightarrow> lens_member x (lens_frame x)"
+lemma lens_member_frame [simp]: "basis_lens x \<Longrightarrow> x \<in>\<^sub>F lens_frame x"
   by (transfer, simp add: subscene_refl)
 
-(*
-lemma "basis_lens x \<Longrightarrow> lens_member x (sup a b) \<longleftrightarrow> (lens_member x a \<or> lens_member x b)"
-  apply transfer
-  apply auto
-*)
+lemma FUn_iff [simp]: "basis_lens x \<Longrightarrow> (x \<in>\<^sub>F a \<union>\<^sub>F b) = (x \<in>\<^sub>F a \<or> x \<in>\<^sub>F b)"
+  by (transfer, simp add: var_le_union_iff)
 
 definition lens_insert :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame \<Rightarrow> 's frame"
   where "lens_insert x a = sup (lens_frame x) a"
 
- 
+lemma lens_insert_twice [simp]: "lens_insert x (lens_insert x A) = lens_insert x A"
+  by (simp add: lens_insert_def)
 
+lemma lens_insert_iff: 
+  assumes "basis_lens x"
+  shows "x \<in>\<^sub>F lens_insert y A \<longleftrightarrow> x \<approx>\<^sub>L 0\<^sub>L \<or> x \<approx>\<^sub>L y \<or> x \<in>\<^sub>F A"
+  using assms
+  apply (simp add: lens_insert_def)
+  apply (transfer)
+  apply (simp_all add: lens_equiv_scene scene_bot_least zero_lens_scene)
+  apply (metis basis_lens_axioms_def basis_lens_def bot_idem_scene le_vars_then_equal lens_equiv_def lens_equiv_scene lens_scene_indep_compl scene_bot_least scene_le_iff_indep_inv sublens_pres_vwb subscene_antisym)
+  done
+
+lemma lens_insert_iff_two [simp]: 
+  assumes "basis_lens (x :: 'a::two \<Longrightarrow> 's::scene_space)"
+  shows "x \<in>\<^sub>F lens_insert y A \<longleftrightarrow> x \<approx>\<^sub>L y \<or> x \<in>\<^sub>F A"
+  using assms basis_lens_def ief_lens_iff_zero lens_insert_iff no_ief_two_view by blast
+
+lemma lens_insert_commute: "lens_insert x (lens_insert y A) = lens_insert y (lens_insert x A)"
+  by (simp add: lens_insert_def sup.left_commute)
+  
+syntax
+  "_frame_set" :: "args \<Rightarrow> 'a::scene_space frame"    ("\<lbrace>(_)\<rbrace>")
+translations
+  "\<lbrace>x, xs\<rbrace>" \<rightleftharpoons> "CONST lens_insert x \<lbrace>xs\<rbrace>"
+  "\<lbrace>x\<rbrace>" \<rightleftharpoons> "CONST lens_insert x \<lbrace>\<rbrace>"
+ 
 subsection \<open> Alphabet Scene Spaces \<close>
 
 text \<open> The scene space for an alphabet is constructed using the set of scenes corresponding to
@@ -930,6 +973,10 @@ text \<open> The scene space for an alphabet is constructed using the set of sce
 
 definition alpha_scene_space :: "'s scene list \<Rightarrow> ('a \<Longrightarrow> 's) \<Rightarrow> ('b::scene_space \<Longrightarrow> 's) \<Rightarrow> 's scene list" where
 "alpha_scene_space xs b\<^sub>L m\<^sub>L = xs @ map (\<lambda> x. x ;\<^sub>S m\<^sub>L) Vars"
+
+lemma mem_alpha_scene_space_iff [simp]: 
+  "x \<in> set (alpha_scene_space xs b\<^sub>L m\<^sub>L) \<longleftrightarrow> (x \<in> set xs \<or> x \<in> (\<lambda> x. x ;\<^sub>S m\<^sub>L) ` set Vars)"
+  by (simp add: alpha_scene_space_def)
 
 lemma scene_space_class_intro:
   assumes 
@@ -973,9 +1020,9 @@ method alpha_scene_space uses defs =
   ,simp_all add: scene_indeps_def pairwise_def lens_plus_scene[THEN sym] lens_equiv_scene[THEN sym] lens_equiv_sym)
 
 alphabet test = 
-  x :: int
-  y :: int 
-  z :: int
+  x :: bool
+  y :: nat 
+  z :: "int list"
 
 instantiation test_ext :: (scene_space) scene_space
 begin
@@ -986,5 +1033,19 @@ definition Vars_test_ext :: "'a test_scheme scene list" where
 instance by (alpha_scene_space defs: Vars_test_ext_def)
 
 end
+
+lemma basis_lens_x [simp]: "basis_lens x"
+  by (rule basis_lens_intro, simp_all add: Vars_test_ext_def)
+
+lemma basis_lens_y [simp]: "basis_lens y"
+  by (rule basis_lens_intro, simp_all add: Vars_test_ext_def)
+
+lemma basis_lens_z [simp]: "basis_lens z"
+  by (rule basis_lens_intro, simp_all add: Vars_test_ext_def)
+
+term "\<lbrace>x, y, z\<rbrace>"
+
+lemma "z \<in>\<^sub>F \<lbrace>x, y, z\<rbrace>"
+  by simp
 
 end
