@@ -264,7 +264,7 @@ locale ief_lens = weak_lens +
   assumes put_inef: "put \<sigma> v = \<sigma>"
 begin
 
-sublocale vwb_lens
+lemma ief_then_vwb: "vwb_lens x"
 proof
   fix \<sigma> v u
   show "put \<sigma> (get \<sigma>) = \<sigma>"
@@ -273,11 +273,27 @@ proof
     by (simp add: put_inef)
 qed
 
+sublocale vwb_lens by (fact ief_then_vwb)
+
 lemma ineffectual_const_get:
   "\<exists> v.  \<forall> \<sigma>\<in>\<S>. get \<sigma> = v"
   using put_get put_inef by auto
 
 end
+
+declare ief_lens.ief_then_vwb [simp]
+
+text \<open> There is no ineffectual lens when the view type has two or more elements. \<close>
+
+lemma no_ief_two_view:
+  assumes "ief_lens (x :: 'a::two \<Longrightarrow> 's)"
+  shows "False"
+proof -
+  obtain x y :: "'a::two" where "x \<noteq> y"
+    using two_diff by auto
+  with assms show ?thesis
+    by (metis (full_types) ief_lens.axioms(1) ief_lens.put_inef weak_lens.put_get)
+qed
 
 abbreviation "eff_lens X \<equiv> (weak_lens X \<and> (\<not> ief_lens X))"
 
