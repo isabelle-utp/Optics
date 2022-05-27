@@ -1,7 +1,7 @@
 section \<open> Scenes \<close>
 
 theory Scenes
-  imports Lens_Algebra
+  imports Lens_Symmetric
 begin
 
 text \<open> Like lenses, scenes characterise a region of a source type. However, unlike lenses, scenes
@@ -488,44 +488,6 @@ lemma lens_scene_top_iff_bij_lens: "mwb_lens x \<Longrightarrow> \<lbrakk>x\<rbr
   apply (unfold_locales)
   apply auto
   done
-
-definition lens_insert :: "('a \<Longrightarrow> 'b) \<Rightarrow> 'b scene \<Rightarrow> 'b scene" ("insert\<^sub>S") where
-"lens_insert x A = (if (\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<le> A) then \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<squnion>\<^sub>S A else A)"
-
-lemma lens_insert_idem: "insert\<^sub>S x (insert\<^sub>S x A) = insert\<^sub>S x A"
-  apply (auto simp add: lens_insert_def less_eq_scene_def)
-  apply (transfer)
-  apply (auto simp add: lens_override_overshadow_left)
-  apply (metis lens_override_overshadow_left)
-  done
-
-text \<open> Membership operations. These have slightly hacky definitions at the moment in order to
-  cater for @{term mwb_lens}. See if they can be generalised? \<close>
-
-definition lens_member :: "('a \<Longrightarrow> 'b) \<Rightarrow> 'b scene \<Rightarrow> bool" (infix "\<in>\<^sub>S" 50) where
-[lens_defs]:
-"lens_member x A = ((\<forall> s\<^sub>1 s\<^sub>2 s\<^sub>3. s\<^sub>1 \<oplus>\<^sub>S s\<^sub>2 on A \<oplus>\<^sub>L s\<^sub>3 on x = s\<^sub>1 \<oplus>\<^sub>S (s\<^sub>2 \<oplus>\<^sub>L s\<^sub>3 on x) on A) \<and>
-                      (\<forall> b b'. get\<^bsub>x\<^esub> (b \<oplus>\<^sub>S b' on A) = get\<^bsub>x\<^esub> b'))"
-
-lemma lens_member_override: "x \<in>\<^sub>S A \<Longrightarrow> s\<^sub>1 \<oplus>\<^sub>S s\<^sub>2 on A \<oplus>\<^sub>L s\<^sub>3 on x = s\<^sub>1 \<oplus>\<^sub>S (s\<^sub>2 \<oplus>\<^sub>L s\<^sub>3 on x) on A"
-  using lens_member_def by force
-
-lemma lens_member_put:
-  assumes "vwb_lens x" "idem_scene a" "x \<in>\<^sub>S a"
-  shows "put\<^bsub>x\<^esub> s v \<oplus>\<^sub>S s on a = s"
-  by (metis (full_types) assms lens_member_override lens_override_def scene_override_idem vwb_lens.put_eq)
-
-lemma lens_member_top: "x \<in>\<^sub>S \<top>\<^sub>S"
-  by (auto simp add: lens_member_def)
-
-abbreviation lens_not_member :: "('a \<Longrightarrow> 'b) \<Rightarrow> 'b scene \<Rightarrow> bool" (infix "\<notin>\<^sub>S" 50) where
-"x \<notin>\<^sub>S A \<equiv> (x \<in>\<^sub>S - A)" 
-
-lemma lens_member_get_override [simp]: "x \<in>\<^sub>S a \<Longrightarrow> get\<^bsub>x\<^esub> (b \<oplus>\<^sub>S b' on a) = get\<^bsub>x\<^esub> b'"
-  by (simp add: lens_member_def)
-
-lemma lens_not_member_get_override [simp]: "x \<notin>\<^sub>S a \<Longrightarrow> get\<^bsub>x\<^esub> (b \<oplus>\<^sub>S b' on a) = get\<^bsub>x\<^esub> b"
-  by (simp add: lens_member_def scene_override_commute)
 
 subsection \<open> Function Domain Scene \<close>
 
