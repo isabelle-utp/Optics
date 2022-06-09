@@ -448,6 +448,9 @@ lemma put_scene_override_indep:
 lemma get_scene_override_le: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<le> a \<rbrakk> \<Longrightarrow> get\<^bsub>x\<^esub> (s \<oplus>\<^sub>S s' on a) = get\<^bsub>x\<^esub> s'"
   by (metis get_scene_override_indep scene_le_iff_indep_inv scene_override_commute)
 
+lemma put_scene_override_le: "\<lbrakk> vwb_lens x; idem_scene a; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<le> a \<rbrakk> \<Longrightarrow>  put\<^bsub>x\<^esub> s v \<oplus>\<^sub>S s' on a = s \<oplus>\<^sub>S s' on a"
+  by (metis lens_override_idem lens_override_put_right_in lens_scene_override sublens_refl subscene_eliminate vwb_lens_mwb)
+
 lemma lens_plus_scene:
   "\<lbrakk> vwb_lens X; vwb_lens Y; X \<bowtie> Y \<rbrakk> \<Longrightarrow> \<lbrakk>X +\<^sub>L Y\<rbrakk>\<^sub>\<sim> = \<lbrakk>X\<rbrakk>\<^sub>\<sim> \<squnion>\<^sub>S \<lbrakk>Y\<rbrakk>\<^sub>\<sim>"
   by (transfer, auto simp add: lens_override_plus lens_indep_override_def lens_indep_overrideI)
