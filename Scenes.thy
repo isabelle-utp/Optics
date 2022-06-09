@@ -440,6 +440,11 @@ proof -
     using a2 by (metis lens_override_def lens_scene_override mwb_lens_def vwb_lens_mwb weak_lens.put_get)
 qed
 
+lemma put_scene_override_indep:
+  "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<bowtie>\<^sub>S a \<rbrakk> \<Longrightarrow> put\<^bsub>x\<^esub> s v \<oplus>\<^sub>S s' on a = put\<^bsub>x\<^esub> (s \<oplus>\<^sub>S s' on a) v"
+  by (transfer, auto)
+     (metis lens_override_def mwb_lens_weak vwb_lens_mwb weak_lens.put_get)
+
 lemma get_scene_override_le: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<le> a \<rbrakk> \<Longrightarrow> get\<^bsub>x\<^esub> (s \<oplus>\<^sub>S s' on a) = get\<^bsub>x\<^esub> s'"
   by (metis get_scene_override_indep scene_le_iff_indep_inv scene_override_commute)
 
