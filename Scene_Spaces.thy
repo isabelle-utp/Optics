@@ -1024,6 +1024,7 @@ definition nmods :: "'s::scene_space rel \<Rightarrow> 's frame \<Rightarrow> bo
 lemma "\<lbrakk> nmods P a; nmods Q b \<rbrakk> \<Longrightarrow> nmods (P O Q) (a \<inter>\<^sub>F b)"
   apply (simp only: nmods_def relcomp_unfold)
   apply safe
+  apply transfer
   oops
 
 definition frame_of :: "'s::scene_space rel \<Rightarrow> 's frame" where
