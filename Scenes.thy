@@ -483,6 +483,10 @@ lemma lens_scene_indep_compl [simp]:
   shows "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<bowtie>\<^sub>S - \<lbrakk>y\<rbrakk>\<^sub>\<sim> \<longleftrightarrow> x \<subseteq>\<^sub>L y"
   by (simp add: assms scene_le_iff_indep_inv sublens_iff_subscene)
 
+lemma lens_scene_comp: "\<lbrakk> vwb_lens X; vwb_lens Y \<rbrakk> \<Longrightarrow> \<lbrakk>X ;\<^sub>L Y\<rbrakk>\<^sub>\<sim> = \<lbrakk>X\<rbrakk>\<^sub>\<sim> ;\<^sub>S Y"
+  by (transfer, simp add: fun_eq_iff comp_vwb_lens)
+     (simp add: lens_comp_def lens_override_def)
+
 lemma scene_comp_pres_indep: "\<lbrakk> idem_scene a; idem_scene b; a \<bowtie>\<^sub>S \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<rbrakk> \<Longrightarrow> a \<bowtie>\<^sub>S b ;\<^sub>S x"
   by (transfer, auto)
      (metis (no_types, opaque_lifting) lens_override_def lens_override_idem vwb_lens_def wb_lens_weak weak_lens.put_get)

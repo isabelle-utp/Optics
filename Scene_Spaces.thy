@@ -1036,17 +1036,19 @@ method alpha_scene_space uses defs =
   ,simp_all add: scene_indeps_def pairwise_def lens_plus_scene[THEN sym] lens_equiv_scene[THEN sym] lens_equiv_sym
                  lens_quotient_vwb lens_quotient_indep lens_quotient_plus[THEN sym] lens_quotient_bij)
 
+method basis_lens uses defs =
+  (rule basis_lens_intro, simp_all add: defs alpha_scene_space_def lens_scene_comp[THEN sym] lens_quotient_vwb lens_quotient_comp)
+
 alphabet test = 
   x :: bool
   y :: nat 
   z :: "int list"
 
-thm sublenses
-
 alphabet test2 = test +
   u :: string
 
-thm sublenses
+alphabet test3 = test +
+  v :: string
 
 instantiation test_ext :: (scene_space) scene_space
 begin
@@ -1058,12 +1060,9 @@ instance by (alpha_scene_space defs: Vars_test_ext_def)
 
 end
 
-lemma basis_lens_x [simp]: "basis_lens x"
-  by (rule basis_lens_intro, simp_all add: Vars_test_ext_def)
-lemma basis_lens_y [simp]: "basis_lens y"
-  by (rule basis_lens_intro, simp_all add: Vars_test_ext_def)
-lemma basis_lens_z [simp]: "basis_lens z"
-  by (rule basis_lens_intro, simp_all add: Vars_test_ext_def)
+lemma basis_lens_x [simp]: "basis_lens x" by (basis_lens defs: Vars_test_ext_def)
+lemma basis_lens_y [simp]: "basis_lens y" by (basis_lens defs: Vars_test_ext_def)
+lemma basis_lens_z [simp]: "basis_lens z" by (basis_lens defs: Vars_test_ext_def)
 
 term "\<lbrace>x, y, z\<rbrace>"
 
@@ -1081,10 +1080,21 @@ instance
 
 end
 
-lemma basis_lens_u [simp]: "basis_lens u"
-  apply (rule basis_lens_intro)
-  apply (simp_all add: Vars_test_ext_def Vars_test2_ext_def alpha_scene_space_def)
-  oops
+lemma basis_lens_u [simp]: "basis_lens u" by (basis_lens defs: Vars_test_ext_def Vars_test2_ext_def)
 
+(*
+instantiation test3_ext :: (scene_space) scene_space
+begin
+
+definition Vars_test3_ext :: "'a test3_ext scene list" where
+"Vars_test3_ext = alpha_scene_space [\<lbrakk>v /\<^sub>L test.more\<^sub>L\<rbrakk>\<^sub>\<sim>] (v /\<^sub>L test.more\<^sub>L) (test3.more\<^sub>L /\<^sub>L test.more\<^sub>L)"
+
+instance
+  by (alpha_scene_space defs: Vars_test3_ext_def)
+
+lemma basis_lens_v [simp]: "basis_lens v" apply (basis_lens defs: Vars_test_ext_def Vars_test2_ext_def Vars_test3_ext_def)
+
+end
+*)
 
 end
