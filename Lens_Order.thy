@@ -628,6 +628,20 @@ lemma sublens_iff_sublens':
   shows "X \<subseteq>\<^sub>L Y \<longleftrightarrow> X \<subseteq>\<^sub>L' Y"
   using assms sublens'_implies_sublens sublens_implies_sublens' by blast
 
+text \<open> We can also prove the closure law for lens quotient \<close>
+
+lemma lens_quotient_vwb: "\<lbrakk> vwb_lens x; vwb_lens y; x \<subseteq>\<^sub>L y \<rbrakk> \<Longrightarrow> vwb_lens (x /\<^sub>L y)"
+  by (unfold_locales)
+     (simp_all add: sublens'_def lens_quotient_def lens_quotient_mwb sublens_iff_sublens' lens_create_def sublens'_prop1 sublens'_prop2)
+
+lemma lens_quotient_indep: 
+  "\<lbrakk> vwb_lens x; vwb_lens y; vwb_lens a; x \<bowtie> y; x \<subseteq>\<^sub>L a; y \<subseteq>\<^sub>L a \<rbrakk> \<Longrightarrow> (x /\<^sub>L a) \<bowtie> (y /\<^sub>L a)"
+  by (unfold_locales)
+     (simp_all add: lens_quotient_def sublens_iff_sublens' lens_create_def lens_indep.lens_put_comm sublens'_prop1 sublens'_prop2 lens_indep.lens_put_irr2)
+
+lemma lens_quotient_bij: "\<lbrakk> vwb_lens x; vwb_lens y; y \<approx>\<^sub>L x \<rbrakk> \<Longrightarrow> bij_lens (x /\<^sub>L y)"
+  by (metis lens_comp_quotient lens_equiv_iff_bij lens_equiv_sym vwb_lens_wb wb_lens_weak)
+
 subsection \<open> Alternative Equivalence Characterisation \<close>
 
 definition lens_equiv' :: "('a \<Longrightarrow> 'c) \<Rightarrow> ('b \<Longrightarrow> 'c) \<Rightarrow> bool" (infix "\<approx>\<^sub>L''" 51) where

@@ -1033,18 +1033,26 @@ method alpha_scene_space uses defs =
   ,(intro_classes)[1]
   ,unfold defs
   ,rule scene_space_class_intro
-  ,simp_all add: scene_indeps_def pairwise_def lens_plus_scene[THEN sym] lens_equiv_scene[THEN sym] lens_equiv_sym)
+  ,simp_all add: scene_indeps_def pairwise_def lens_plus_scene[THEN sym] lens_equiv_scene[THEN sym] lens_equiv_sym
+                 lens_quotient_vwb lens_quotient_indep lens_quotient_plus[THEN sym] lens_quotient_bij)
 
 alphabet test = 
   x :: bool
   y :: nat 
   z :: "int list"
 
+thm sublenses
+
+alphabet test2 = test +
+  u :: string
+
+thm sublenses
+
 instantiation test_ext :: (scene_space) scene_space
 begin
 
 definition Vars_test_ext :: "'a test_scheme scene list" where
-"Vars_test_ext = alpha_scene_space [\<lbrakk>x\<rbrakk>\<^sub>\<sim>, \<lbrakk>y\<rbrakk>\<^sub>\<sim>, \<lbrakk>z\<rbrakk>\<^sub>\<sim>] base\<^sub>L more\<^sub>L"
+"Vars_test_ext = alpha_scene_space [\<lbrakk>x\<rbrakk>\<^sub>\<sim>, \<lbrakk>y\<rbrakk>\<^sub>\<sim>, \<lbrakk>z\<rbrakk>\<^sub>\<sim>] test.base\<^sub>L test.more\<^sub>L"
   
 instance by (alpha_scene_space defs: Vars_test_ext_def)
 
@@ -1061,5 +1069,22 @@ term "\<lbrace>x, y, z\<rbrace>"
 
 lemma "z \<in>\<^sub>F \<lbrace>x, y, z\<rbrace>"
   by simp
+
+instantiation test2_ext :: (scene_space) scene_space
+begin
+
+definition Vars_test2_ext :: "'a test2_ext scene list" where
+"Vars_test2_ext = alpha_scene_space [\<lbrakk>u /\<^sub>L test.more\<^sub>L\<rbrakk>\<^sub>\<sim>] (u /\<^sub>L test.more\<^sub>L) (test2.more\<^sub>L /\<^sub>L test.more\<^sub>L)"
+
+instance
+  by (alpha_scene_space defs: Vars_test2_ext_def)
+
+end
+
+lemma basis_lens_u [simp]: "basis_lens u"
+  apply (rule basis_lens_intro)
+  apply (simp_all add: Vars_test_ext_def Vars_test2_ext_def alpha_scene_space_def)
+  oops
+
 
 end

@@ -270,10 +270,14 @@ fun add_alphabet (params, binding) raw_parent ty_fields thy =
       case raw_parent of
         SOME _ => child_lensN |
         NONE => ""
+    val plchilds =
+      case raw_parent of
+        SOME _ => [child_lensN] |
+        NONE => []
     val bldef = (base_lensN, base_lensN ^ " = " ^ BASELENS ^ " " ^ tname);
     val mldef = (child_lensN, child_lensN ^ " = " ^ FLDLENS ^ " more"); 
     val sldef = (all_lensN, all_lensN ^ " \<equiv> \<lparr> " ^ slens_view ^ " = " ^ base_lensN ^ ", " ^ slens_coview ^ " = " ^ child_lensN ^ " \<rparr>");
-    val plnames = if (raw_parent = NONE) then [] else lnames  @ [child_lensN];
+    val plnames = if (raw_parent = NONE) then [] else lnames @ [child_lensN];
     fun pindeps thy = map (fn thm => @{thm sublens_pres_indep} OF [thm]) (get_thms thy sublensesN)
                     @ map (fn thm => @{thm sublens_pres_indep'} OF [thm]) (get_thms thy sublensesN)
     val attrs = map (Attrib.attribute (Named_Target.theory_init thy)) @{attributes [simp, code_unfold]}
@@ -296,7 +300,7 @@ fun add_alphabet (params, binding) raw_parent ty_fields thy =
          |> (fn thy => snd (add_thm ((Binding.make (base_moreN ^ bij_lens_suffix, Position.none), lens_bij_proof tname thy), attrs) thy))
             (* Add sublens proofs *)
          |> (fn thy => snd (add_thmss [((Binding.make (sublensesN, Position.none), map (sublens_proof tname pname thy plchild) plnames @ map (sublens_proof tname (Context.theory_name thy ^ "." ^ tname) thy base_lensN) lnames), attrs)] thy))
-            (* Add quotient proofs *)
+            (* Add quotient proofs *)                                                                                             
          |> (fn thy => snd (add_thmss [((Binding.make (quotientsN, Position.none), map (quotient_proof tname thy) lnames), attrs)] thy))
             (* Add composition proofs *)
          |> (fn thy => snd (add_thmss [((Binding.make (compositionsN, Position.none), map (composition_proof tname thy) lnames), attrs)] thy))
