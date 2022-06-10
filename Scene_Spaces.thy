@@ -171,8 +171,12 @@ qed
 
 subsection \<open> Predicates \<close>
 
+text \<open> All scenes in the set are independent \<close>
+
 definition scene_indeps :: "'s scene set \<Rightarrow> bool" where
 "scene_indeps = pairwise (\<bowtie>\<^sub>S)"
+
+text \<open> All scenes in the set cover the entire state space \<close>
 
 definition scene_span :: "'s scene list \<Rightarrow> bool" where
 "scene_span S = (foldr (\<squnion>\<^sub>S) S \<bottom>\<^sub>S = \<top>\<^sub>S)"
@@ -564,24 +568,6 @@ proof-
   finally show ?thesis .
 qed
 
-(*
-lemma 
-  assumes "x \<in> set Vars" "set xs \<subseteq> set Vars"
-  shows "(\<Squnion>\<^sub>S xs) \<sqinter>\<^sub>S (- x) = \<Squnion>\<^sub>S (removeAll x xs)"
-using assms proof (induct xs)
-  case Nil
-  then show ?case
-    by (simp add: idem_scene_Vars scene_indep_sym scene_inter_indep)
-next
-  case (Cons y ys)
-  then show ?case
-    apply auto
-    apply (smt (verit, del_insts) dual_order.trans foldr_scene_union_add_tail foldr_scene_union_removeAll local.idem_scene_Vars pairwise_compat_Vars_subset removeAll_id scene_compat_bot(1) scene_demorgan1 scene_inter_commute scene_inter_union_distrib scene_space.Vars_scene_space scene_space_foldr scene_space_uminus scene_union_compl scene_union_foldr_remove_element set_Vars_scene_space uminus_scene_twice uminus_top_scene)
-    apply (subst scene_inter_commute)
-    thm scene_union_inter_distrib
-qed
-*)
-
 lemma prop1:
   assumes "a \<in> scene_space" "b \<in> scene_space"
   shows "a \<squnion>\<^sub>S (b \<sqinter>\<^sub>S - a) = a \<squnion>\<^sub>S b"
@@ -662,11 +648,6 @@ qed
 
 find_theorems "(\<squnion>\<^sub>S)" "(\<le>)"
 
-lemma scene_union_lb: "\<lbrakk> a ##\<^sub>S b; a \<le> c; b \<le> c \<rbrakk> \<Longrightarrow> a \<squnion>\<^sub>S b \<le> c"
-  by (simp add: less_eq_scene_def scene_override_union)
-
-find_theorems "\<Squnion>\<^sub>S" "(\<le>)"
-
 lemma scene_space_foldr_lb: 
   "\<lbrakk> a \<in> scene_space; set xs \<subseteq> scene_space; \<forall> b\<in>set xs. b \<le> a \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S xs \<subseteq>\<^sub>S a"
 proof (induct xs arbitrary: a)
@@ -683,10 +664,6 @@ next
       apply (simp_all)
   done
 qed
-
-find_theorems "\<Squnion>\<^sub>S ?xs \<squnion>\<^sub>S \<Squnion>\<^sub>S ?xsa"
-
-find_theorems "?x \<subseteq>\<^sub>S \<Squnion>\<^sub>S ?xs"
 
 lemma var_le_union_choice:
   "\<lbrakk> x \<in> set Vars; a \<in> scene_space; b \<in> scene_space; x \<le> a \<squnion>\<^sub>S b \<rbrakk> \<Longrightarrow> (x \<le> a \<or> x \<le> b)"
@@ -799,34 +776,6 @@ instance
 
 end
 
-(*
-instantiation frame :: (scene_space) complete_lattice
-begin
-
-definition Sup_frame :: "'a frame set \<Rightarrow> 'a frame" where "Sup_frame = Sup_fin"
-definition Inf_frame :: "'a frame set \<Rightarrow> 'a frame" where "Inf_frame = Inf_fin"
-
-thm coboundedI
-
-find_theorems "?z \<le> \<Sqinter>\<^sub>f\<^sub>i\<^sub>n ?A"
-
-find_theorems Sup_fin "{}"
-
-find_theorems Sup_fin.F
-
-instance proof
-  show Sup: "Sup ({} :: 'a frame set) = bot"
-    apply (simp add: Sup_fin_def Sup_frame_def)
-  show "Inf ({} :: 'a frame set) = top"
-    by (simp add: Inf_frame_def Sup)
-  apply (intro_classes)
-       apply (simp_all add: Inf_frame_def Sup_frame_def Inf_fin.coboundedI)
-      apply (case_tac "A={}")
-  apply (simp)
-  apply (rule Inf_fin.boundedI)
-  solve_direct                                                  
-*)
-
 instantiation frame :: (scene_space) "{Inf, Sup}"
 begin
 
@@ -932,11 +881,6 @@ lemma basis_lens_intro: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> 
 lift_definition lens_frame :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame" 
 is "\<lambda> x. if basis_lens x then \<lbrakk>x\<rbrakk>\<^sub>\<sim> else \<bottom>\<^sub>S" by auto
 
-(*
-lift_definition lens_member :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame \<Rightarrow> bool" (infix "\<in>\<^sub>F" 50)
-is "\<lambda> x a. basis_lens x \<and> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<le> a" .
-*)
-
 definition lens_member :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame \<Rightarrow> bool" (infix "\<in>\<^sub>F" 50)
   where "x \<in>\<^sub>F a \<longleftrightarrow> (lens_frame x \<le> a)"
 
@@ -1012,30 +956,33 @@ lemma frame_equiv_sym [simp]: "s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on a \<Long
      (metis idem_scene_space scene_override_idem scene_override_overshadow_right)
 
 lemma frame_equiv_trans_gen [simp]: "\<lbrakk> s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on a; s\<^sub>2 \<approx>\<^sub>F s\<^sub>3 on b \<rbrakk> \<Longrightarrow> s\<^sub>1 \<approx>\<^sub>F s\<^sub>3 on (a \<inter>\<^sub>F b)"
-  oops
+proof (transfer, simp add: scene_override_inter scene_space_compat scene_space_uminus)
+  fix a b :: "'a scene" and s\<^sub>1 s\<^sub>2 s\<^sub>3 :: "'a"
+  assume 
+    a:"a \<in> scene_space" and b: "b \<in> scene_space" and
+    "s\<^sub>1 \<approx>\<^sub>S s\<^sub>2 on a" "s\<^sub>2 \<approx>\<^sub>S s\<^sub>3 on b"
+  have 1: "s\<^sub>3 = s\<^sub>3 \<oplus>\<^sub>S s\<^sub>2 on b"
+    by (metis \<open>b \<in> scene_space\<close> \<open>s\<^sub>2 \<approx>\<^sub>S s\<^sub>3 on b\<close> idem_scene_space scene_equiv_def scene_equiv_sym)
+  have 2: "s\<^sub>1 = s\<^sub>1 \<oplus>\<^sub>S s\<^sub>2 on a"
+    by (metis \<open>s\<^sub>1 \<approx>\<^sub>S s\<^sub>2 on a\<close> scene_equiv_def)
+  have 3: "s\<^sub>2 = s\<^sub>2 \<oplus>\<^sub>S s\<^sub>3 on b"
+    by (metis \<open>s\<^sub>2 \<approx>\<^sub>S s\<^sub>3 on b\<close> scene_equiv_def)
 
-lemma frame_equiv_trans [simp]: "\<lbrakk> s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on a; s\<^sub>2 \<approx>\<^sub>F s\<^sub>3 on a \<rbrakk> \<Longrightarrow> s\<^sub>1 \<approx>\<^sub>F s\<^sub>3 on a"
+  have "s\<^sub>1 \<oplus>\<^sub>S (s\<^sub>1 \<oplus>\<^sub>S s\<^sub>3 on a) on b = s\<^sub>1 \<oplus>\<^sub>S (s\<^sub>1 \<oplus>\<^sub>S (s\<^sub>3 \<oplus>\<^sub>S s\<^sub>2 on b) on a) on b"
+    using "1" by auto
+  also from 1 2 3 a b have "... = s\<^sub>1 \<oplus>\<^sub>S (s\<^sub>1 \<oplus>\<^sub>S s\<^sub>2 on a) on b"
+    by (metis scene_inter_commute scene_override_inter scene_override_overshadow_right scene_space_compat scene_space_uminus)
+  also have "... = s\<^sub>1 \<oplus>\<^sub>S s\<^sub>1 on b"
+    using 2 by auto
+  also have "... = s\<^sub>1"
+    by (simp add: b idem_scene_space)
+  finally show "s\<^sub>1 \<approx>\<^sub>S s\<^sub>3 on a \<sqinter>\<^sub>S b"
+    by (simp add: a b scene_equiv_def scene_override_inter scene_space_compat scene_space_uminus)
+qed
+
+lemma frame_equiv_trans: "\<lbrakk> s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on a; s\<^sub>2 \<approx>\<^sub>F s\<^sub>3 on a \<rbrakk> \<Longrightarrow> s\<^sub>1 \<approx>\<^sub>F s\<^sub>3 on a"
   by (transfer)
      (metis scene_equiv_def scene_override_overshadow_right)
-
-definition nmods :: "'s::scene_space rel \<Rightarrow> 's frame \<Rightarrow> bool" where
-"nmods R a = (\<forall> (s, s') \<in> R. s \<approx>\<^sub>F s' on a)"
-
-lemma "\<lbrakk> nmods P a; nmods Q b \<rbrakk> \<Longrightarrow> nmods (P O Q) (a \<inter>\<^sub>F b)"
-  apply (simp only: nmods_def relcomp_unfold)
-  apply safe
-  apply transfer
-  oops
-
-definition frame_of :: "'s::scene_space rel \<Rightarrow> 's frame" where
-"frame_of R = Least (nmods R)"
-
-lemma "frame_of Id = \<lbrace>\<rbrace>"
-  apply (simp add: frame_of_def nmods_def)
-  apply (rule Least_equality)
-   apply (simp add: nmods_def)
-  apply simp
-  done
 
 subsection \<open> Alphabet Scene Spaces \<close>
 
@@ -1080,8 +1027,6 @@ proof (simp add: alpha_scene_space_def, unfold_locales)
     apply (metis "1" assms(4) scene_comp_top_scene scene_span_def span_Vars)    
     done
 qed
-
-find_theorems lens_comp
 
 method alpha_scene_space uses defs =
   (rule scene_space_class.intro

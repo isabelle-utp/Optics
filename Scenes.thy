@@ -199,8 +199,17 @@ lemma scene_union_incompat: "\<not> X ##\<^sub>S Y \<Longrightarrow> X \<squnion
 lemma scene_override_union: "X ##\<^sub>S Y \<Longrightarrow> S\<^sub>1 \<oplus>\<^sub>S S\<^sub>2 on (X \<squnion>\<^sub>S Y) = (S\<^sub>1 \<oplus>\<^sub>S S\<^sub>2 on X) \<oplus>\<^sub>S S\<^sub>2 on Y"
   by (transfer, auto)
 
+lemma scene_override_inter: "-X ##\<^sub>S -Y \<Longrightarrow> S\<^sub>1 \<oplus>\<^sub>S S\<^sub>2 on (X \<sqinter>\<^sub>S Y) = S\<^sub>1 \<oplus>\<^sub>S S\<^sub>1 \<oplus>\<^sub>S S\<^sub>2 on X on Y"
+  by (simp add: inf_scene_def scene_override_commute scene_override_union)
+
 lemma scene_equiv_bot [simp]: "a \<approx>\<^sub>S b on \<bottom>\<^sub>S"
   by (simp add: scene_equiv_def)
+
+lemma scene_equiv_refl [simp]: "idem_scene a \<Longrightarrow> s \<approx>\<^sub>S s on a"
+  by (simp add: scene_equiv_def)
+
+lemma scene_equiv_sym [simp]: "idem_scene a \<Longrightarrow> s\<^sub>1 \<approx>\<^sub>S s\<^sub>2 on a \<Longrightarrow> s\<^sub>2 \<approx>\<^sub>S s\<^sub>1 on a"
+  by (metis scene_equiv_def scene_override_idem scene_override_overshadow_right)
 
 lemma scene_union_unit [simp]: "X \<squnion>\<^sub>S \<bottom>\<^sub>S = X" "\<bottom>\<^sub>S \<squnion>\<^sub>S X = X"
   by (transfer, simp)+
@@ -346,6 +355,9 @@ lemma scene_top_greatest: "X \<le> \<top>\<^sub>S"
 lemma scene_union_ub: "\<lbrakk> idem_scene Y; X \<bowtie>\<^sub>S Y \<rbrakk> \<Longrightarrow> X \<le> (X \<squnion>\<^sub>S Y)"
   by (simp add: less_eq_scene_def, transfer, auto)
      (metis (no_types, opaque_lifting) idem_overrider.ovr_idem overrider.ovr_overshadow_right)
+
+lemma scene_union_lb: "\<lbrakk> a ##\<^sub>S b; a \<le> c; b \<le> c \<rbrakk> \<Longrightarrow> a \<squnion>\<^sub>S b \<le> c"
+  by (simp add: less_eq_scene_def scene_override_union)
 
 lemma scene_union_mono: "\<lbrakk> a \<subseteq>\<^sub>S c; b \<subseteq>\<^sub>S c; a ##\<^sub>S b; idem_scene a; idem_scene b \<rbrakk> \<Longrightarrow> a \<squnion>\<^sub>S b \<subseteq>\<^sub>S c"
   by (simp add: less_eq_scene_def, transfer, auto)
