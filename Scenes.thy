@@ -392,6 +392,14 @@ lemma scene_comp_bot [simp]: "\<bottom>\<^sub>S ;\<^sub>S x = \<bottom>\<^sub>S"
 lemma scene_union_comp_distl: "a ##\<^sub>S b \<Longrightarrow> (a \<squnion>\<^sub>S b) ;\<^sub>S x = (a ;\<^sub>S x) \<squnion>\<^sub>S (b ;\<^sub>S x)"
   by (transfer, auto simp add: fun_eq_iff)
 
+lift_definition scene_quotient :: "'b scene \<Rightarrow> ('a \<Longrightarrow> 'b) \<Rightarrow> 'a scene" (infixl "'/\<^sub>S" 80)
+is "\<lambda> S X a b. if (vwb_lens X \<and> (\<forall>s\<^sub>1 s\<^sub>2 s\<^sub>3. S (s\<^sub>1 \<triangleleft>\<^bsub>X\<^esub> s\<^sub>2) s\<^sub>3 = s\<^sub>1 \<triangleleft>\<^bsub>X\<^esub> S s\<^sub>2 s\<^sub>3)) then get\<^bsub>X\<^esub> (S (create\<^bsub>X\<^esub> a) (create\<^bsub>X\<^esub> b)) else a"
+  by (unfold_locales, auto simp add: lens_create_def lens_override_def)
+     (metis (no_types, lifting) overrider.ovr_overshadow_right)
+
+lemma scene_comp_quotient: "vwb_lens X \<Longrightarrow> (A ;\<^sub>S X) /\<^sub>S X = A"
+  by (transfer, auto simp add: fun_eq_iff lens_override_def)
+
 subsection \<open> Linking Scenes and Lenses \<close>
 
 text \<open> The following function extracts a scene from a very well behaved lens \<close>
@@ -490,6 +498,28 @@ lemma lens_scene_comp: "\<lbrakk> vwb_lens X; vwb_lens Y \<rbrakk> \<Longrightar
 lemma scene_comp_pres_indep: "\<lbrakk> idem_scene a; idem_scene b; a \<bowtie>\<^sub>S \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<rbrakk> \<Longrightarrow> a \<bowtie>\<^sub>S b ;\<^sub>S x"
   by (transfer, auto)
      (metis (no_types, opaque_lifting) lens_override_def lens_override_idem vwb_lens_def wb_lens_weak weak_lens.put_get)
+
+lemma scene_comp_le: "A ;\<^sub>S X \<le> \<lbrakk>X\<rbrakk>\<^sub>\<sim>"
+  unfolding less_eq_scene_def by (transfer, auto simp add: fun_eq_iff lens_override_def)
+
+lemma scene_quotient_comp: "\<lbrakk> vwb_lens X; idem_scene A; A \<le> \<lbrakk>X\<rbrakk>\<^sub>\<sim> \<rbrakk> \<Longrightarrow> (A /\<^sub>S X) ;\<^sub>S X = A"
+  unfolding less_eq_scene_def
+proof (transfer, simp add: fun_eq_iff, safe)
+  fix Xa :: "'a \<Longrightarrow> 'b" and Aa :: "'b \<Rightarrow> 'b \<Rightarrow> 'b" and x :: 'b and xa :: 'b
+  assume a1: "vwb_lens Xa"
+  assume a2: "overrider Aa"
+  assume a3: "idem_overrider Aa"
+  assume a4: "\<forall>s\<^sub>1 s\<^sub>2 s\<^sub>3. Aa (s\<^sub>1 \<triangleleft>\<^bsub>Xa\<^esub> s\<^sub>2) s\<^sub>3 = s\<^sub>1 \<triangleleft>\<^bsub>Xa\<^esub> Aa s\<^sub>2 s\<^sub>3"
+  have "\<And>b. Aa b b = b"
+    using a3 by simp
+  then have "Aa x (put\<^bsub>Xa\<^esub> src\<^bsub>Xa\<^esub> (get\<^bsub>Xa\<^esub> xa)) = Aa x xa"
+    by (metis a2 a4 lens_override_def overrider.ovr_overshadow_right)
+  then show "put\<^bsub>Xa\<^esub> x (get\<^bsub>Xa\<^esub> (Aa (create\<^bsub>Xa\<^esub> (get\<^bsub>Xa\<^esub> x)) (create\<^bsub>Xa\<^esub> (get\<^bsub>Xa\<^esub> xa)))) = Aa x xa"
+    using a4 a1 by (metis lens_create_def lens_override_def vwb_lens_def wb_lens.get_put wb_lens_weak weak_lens.put_get)
+qed
+
+lemma lens_scene_quotient: "\<lbrakk> vwb_lens Y; X \<subseteq>\<^sub>L Y \<rbrakk> \<Longrightarrow> \<lbrakk>X\<rbrakk>\<^sub>\<sim> /\<^sub>S Y = \<lbrakk>X /\<^sub>L Y\<rbrakk>\<^sub>\<sim>"
+  by (metis lens_quotient_comp lens_quotient_vwb lens_scene_comp scene_comp_quotient sublens_pres_vwb vwb_lens_def wb_lens_weak)
 
 text \<open> Equality on scenes is sound and complete with respect to lens equivalence. \<close>
 
