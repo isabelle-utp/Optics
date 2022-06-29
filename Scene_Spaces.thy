@@ -989,12 +989,68 @@ subsection \<open> Alphabet Scene Spaces \<close>
 text \<open> The scene space for an alphabet is constructed using the set of scenes corresponding to
   each lens, the base lens, and the more lens, to allow for extension. \<close>
 
-definition alpha_scene_space :: "'s scene list \<Rightarrow> ('a \<Longrightarrow> 's) \<Rightarrow> ('b::scene_space \<Longrightarrow> 's) \<Rightarrow> 's scene list" where
-"alpha_scene_space xs b\<^sub>L m\<^sub>L = xs @ map (\<lambda> x. x ;\<^sub>S m\<^sub>L) Vars"
+definition alpha_scene_space :: "'s scene list \<Rightarrow> ('b::scene_space \<Longrightarrow> 's) \<Rightarrow> 's scene list" where
+"alpha_scene_space xs m\<^sub>L = xs @ map (\<lambda> x. x ;\<^sub>S m\<^sub>L) Vars"
+
+definition alpha_scene_space' :: "'s scene list \<Rightarrow> ('b::scene_space \<Longrightarrow> 's) \<Rightarrow> ('c \<Longrightarrow> 's) \<Rightarrow> 'c scene list" where
+"alpha_scene_space' xs m\<^sub>L p\<^sub>L = alpha_scene_space (map (\<lambda> x. x /\<^sub>S p\<^sub>L) xs) (m\<^sub>L /\<^sub>L p\<^sub>L)"
 
 lemma mem_alpha_scene_space_iff [simp]: 
-  "x \<in> set (alpha_scene_space xs b\<^sub>L m\<^sub>L) \<longleftrightarrow> (x \<in> set xs \<or> x \<in> (\<lambda> x. x ;\<^sub>S m\<^sub>L) ` set Vars)"
+  "x \<in> set (alpha_scene_space xs m\<^sub>L) \<longleftrightarrow> (x \<in> set xs \<or> x \<in> (\<lambda> x. x ;\<^sub>S m\<^sub>L) ` set Vars)"
   by (simp add: alpha_scene_space_def)
+
+lemma scene_space_class_intro:
+  assumes 
+    "\<forall> x\<in>set xs. idem_scene x"
+    "scene_indeps (set xs)"
+    "vwb_lens m\<^sub>L" \<comment> \<open> The more lens \<close>
+    "\<forall> x\<in>set xs. x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"  
+    "(foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>) = \<top>\<^sub>S"
+  shows "class.scene_space (alpha_scene_space xs m\<^sub>L)"
+proof (simp add: alpha_scene_space_def, unfold_locales)
+  show "\<And>x. x \<in> set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars) \<Longrightarrow> idem_scene x"
+    using assms(1) idem_scene_Vars by fastforce
+  show "scene_indeps (set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars))"
+    apply (auto simp add: scene_indeps_def pairwise_def)
+    apply (metis assms(2) pairwiseD scene_indeps_def)
+    using assms(1) assms(4) idem_scene_Vars scene_comp_pres_indep apply blast
+    using assms(1) assms(4) idem_scene_Vars scene_comp_pres_indep scene_indep_sym apply blast
+    apply (metis indep_Vars pairwiseD scene_comp_indep scene_indeps_def)
+    done
+  show "scene_span (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars)"
+    apply (simp add: scene_span_def)
+    apply (subst foldr_compat_dist)
+    apply (simp)
+    apply (metis assms(2) assms(3) assms(4) assms(5) dual_order.eq_iff foldr_scene_union_add_tail pairwise_mono scene_comp_top_scene scene_indep_compat scene_indeps_def scene_span_def span_Vars)    
+    done
+qed
+
+(*
+lemma scene_space_class_intro':
+  assumes 
+    "\<forall> x\<in>set xs. idem_scene x"
+    "scene_indeps (set xs)"
+    "vwb_lens m\<^sub>L" \<comment> \<open> The more lens \<close>
+    "\<forall> x\<in>set xs. x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"  
+    "(foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>) = \<top>\<^sub>S"
+  shows "class.scene_space (alpha_scene_space'' xs m\<^sub>L)"
+proof (simp add: alpha_scene_space''_def, unfold_locales)
+  show "\<And>x. x \<in> set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars) \<Longrightarrow> idem_scene x"
+    using assms(1) idem_scene_Vars by fastforce
+  show "scene_indeps (set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars))"
+    apply (auto simp add: scene_indeps_def pairwise_def)
+    apply (metis assms(2) pairwiseD scene_indeps_def)
+    using assms(1) assms(4) idem_scene_Vars scene_comp_pres_indep apply blast
+    using assms(1) assms(4) idem_scene_Vars scene_comp_pres_indep scene_indep_sym apply blast
+    apply (metis indep_Vars pairwiseD scene_comp_indep scene_indeps_def)
+    done
+  show "scene_span (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars)"
+    apply (simp add: scene_span_def)
+    apply (subst foldr_compat_dist)
+    apply (simp)
+    apply (metis assms(3,5) scene_comp_top_scene scene_span_def span_Vars)    
+    done
+qed
 
 lemma scene_space_class_intro:
   assumes 
@@ -1010,7 +1066,6 @@ lemma scene_space_class_intro:
 proof (simp add: alpha_scene_space_def, unfold_locales)
   from assms(5-7) have 1: "(foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>) = \<top>\<^sub>S"
     by (metis assms(2) assms(3) assms(4) assms(8) foldr_scene_union_add_tail lens_plus_scene lens_scene_top_iff_bij_lens pairwise_alt plus_mwb_lens scene_indep_compat scene_indeps_def vwb_lens_mwb)
-
   show "\<And>x. x \<in> set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars) \<Longrightarrow> idem_scene x"
     using assms(1) idem_scene_Vars by fastforce
   show "scene_indeps (set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars))"
@@ -1027,74 +1082,109 @@ proof (simp add: alpha_scene_space_def, unfold_locales)
     apply (metis "1" assms(4) scene_comp_top_scene scene_span_def span_Vars)    
     done
 qed
+*)
+
+named_theorems scene_space_defs
 
 method alpha_scene_space uses defs =
   (rule scene_space_class.intro
   ,(intro_classes)[1]
-  ,unfold defs
+  ,simp add: defs scene_space_defs alpha_scene_space'_def lens_scene_quotient
   ,rule scene_space_class_intro
   ,simp_all add: scene_indeps_def pairwise_def lens_plus_scene[THEN sym] lens_equiv_scene[THEN sym] lens_equiv_sym
-                 lens_quotient_vwb lens_quotient_indep lens_quotient_plus[THEN sym] lens_quotient_bij)
+                 lens_quotient_vwb lens_quotient_indep lens_quotient_plus[THEN sym] lens_quotient_bij plus_pred_sublens 
+                 lens_scene_top_iff_bij_lens)
 
 method basis_lens uses defs =
-  (rule basis_lens_intro, simp_all add: defs alpha_scene_space_def lens_scene_comp[THEN sym] lens_quotient_vwb lens_quotient_comp)
+  (rule basis_lens_intro, simp_all add: scene_space_defs alpha_scene_space_def alpha_scene_space'_def lens_scene_comp[THEN sym] lens_quotient_vwb lens_quotient_comp
+   comp_vwb_lens lens_comp_assoc[THEN sym] sublens_iff_subscene[THEN sym] lens_scene_quotient[THEN sym])
 
 alphabet test = 
   x :: bool
   y :: nat 
   z :: "int list"
 
-alphabet test2 = test +
-  u :: string
-
-alphabet test3 = test +
-  v :: string
-
 instantiation test_ext :: (scene_space) scene_space
 begin
 
 definition Vars_test_ext :: "'a test_scheme scene list" where
-"Vars_test_ext = alpha_scene_space [\<lbrakk>x\<rbrakk>\<^sub>\<sim>, \<lbrakk>y\<rbrakk>\<^sub>\<sim>, \<lbrakk>z\<rbrakk>\<^sub>\<sim>] test.base\<^sub>L test.more\<^sub>L"
+[scene_space_defs]: "Vars_test_ext = alpha_scene_space [\<lbrakk>x\<rbrakk>\<^sub>\<sim>, \<lbrakk>y\<rbrakk>\<^sub>\<sim>, \<lbrakk>z\<rbrakk>\<^sub>\<sim>] test.more\<^sub>L"
   
-instance by (alpha_scene_space defs: Vars_test_ext_def)
+instance by alpha_scene_space
 
 end
 
-lemma basis_lens_x [simp]: "basis_lens x" by (basis_lens defs: Vars_test_ext_def)
-lemma basis_lens_y [simp]: "basis_lens y" by (basis_lens defs: Vars_test_ext_def)
-lemma basis_lens_z [simp]: "basis_lens z" by (basis_lens defs: Vars_test_ext_def)
+lemma basis_lens_x [simp]: "basis_lens x" by basis_lens
+lemma basis_lens_y [simp]: "basis_lens y" by basis_lens
+lemma basis_lens_z [simp]: "basis_lens z" by basis_lens
 
 term "\<lbrace>x, y, z\<rbrace>"
 
 lemma "z \<in>\<^sub>F \<lbrace>x, y, z\<rbrace>"
   by simp
 
+alphabet test2 = test +
+  u :: string
+  v :: int
+
+term base\<^sub>L
+
+find_theorems lens_scene top
+
+term "\<lbrakk>u\<rbrakk>\<^sub>\<sim>"
+term test.more\<^sub>L
+
+find_theorems lens_scene scene_quotient
+
 instantiation test2_ext :: (scene_space) scene_space
 begin
 
 definition Vars_test2_ext :: "'a test2_ext scene list" where
-"Vars_test2_ext = alpha_scene_space [\<lbrakk>u /\<^sub>L test.more\<^sub>L\<rbrakk>\<^sub>\<sim>] (u /\<^sub>L test.more\<^sub>L) (test2.more\<^sub>L /\<^sub>L test.more\<^sub>L)"
+[scene_space_defs]: "Vars_test2_ext = alpha_scene_space' [\<lbrakk>u\<rbrakk>\<^sub>\<sim>, \<lbrakk>v\<rbrakk>\<^sub>\<sim>] (test2.more\<^sub>L) test.more\<^sub>L"
 
-instance
-  by (alpha_scene_space defs: Vars_test2_ext_def)
+instance 
+  by alpha_scene_space
 
 end
 
-lemma basis_lens_u [simp]: "basis_lens u" by (basis_lens defs: Vars_test_ext_def Vars_test2_ext_def)
+find_theorems scene_quotient scene_comp
 
-(*
+lemma basis_lens_u [simp]: "basis_lens u" by basis_lens
+lemma basis_lens_v [simp]: "basis_lens v" by basis_lens
+
+alphabet test3 = test2 +
+  w :: string
+
 instantiation test3_ext :: (scene_space) scene_space
 begin
 
 definition Vars_test3_ext :: "'a test3_ext scene list" where
-"Vars_test3_ext = alpha_scene_space [\<lbrakk>v /\<^sub>L test.more\<^sub>L\<rbrakk>\<^sub>\<sim>] (v /\<^sub>L test.more\<^sub>L) (test3.more\<^sub>L /\<^sub>L test.more\<^sub>L)"
+[scene_space_defs]: "Vars_test3_ext = alpha_scene_space' [\<lbrakk>w\<rbrakk>\<^sub>\<sim>] test3.more\<^sub>L test2.more\<^sub>L"
 
-instance
-  by (alpha_scene_space defs: Vars_test3_ext_def)
-
-lemma basis_lens_v [simp]: "basis_lens v" apply (basis_lens defs: Vars_test_ext_def Vars_test2_ext_def Vars_test3_ext_def)
+instance by alpha_scene_space
 
 end
-*)
+
+lemma basis_lens_w [simp]: "basis_lens w" by basis_lens
+  
+alphabet test4 = test3 +
+  j :: string
+
+instantiation test4_ext :: (scene_space) scene_space
+begin
+
+definition Vars_test4_ext :: "'a test4_ext scene list" where
+[scene_space_defs]: "Vars_test4_ext = alpha_scene_space' [\<lbrakk>j\<rbrakk>\<^sub>\<sim>] test4.more\<^sub>L test3.more\<^sub>L"
+
+instance
+  by alpha_scene_space
+
+end
+
+lemma basis_lens_j [simp]: "basis_lens j" by basis_lens
+
+
+end
+
 
 end

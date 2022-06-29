@@ -518,7 +518,7 @@ proof (transfer, simp add: fun_eq_iff, safe)
     using a4 a1 by (metis lens_create_def lens_override_def vwb_lens_def wb_lens.get_put wb_lens_weak weak_lens.put_get)
 qed
 
-lemma lens_scene_quotient: "\<lbrakk> vwb_lens Y; X \<subseteq>\<^sub>L Y \<rbrakk> \<Longrightarrow> \<lbrakk>X\<rbrakk>\<^sub>\<sim> /\<^sub>S Y = \<lbrakk>X /\<^sub>L Y\<rbrakk>\<^sub>\<sim>"
+lemma lens_scene_quotient: "\<lbrakk> vwb_lens Y; X \<subseteq>\<^sub>L Y \<rbrakk> \<Longrightarrow> \<lbrakk>X /\<^sub>L Y\<rbrakk>\<^sub>\<sim> = \<lbrakk>X\<rbrakk>\<^sub>\<sim> /\<^sub>S Y"
   by (metis lens_quotient_comp lens_quotient_vwb lens_scene_comp scene_comp_quotient sublens_pres_vwb vwb_lens_def wb_lens_weak)
 
 text \<open> Equality on scenes is sound and complete with respect to lens equivalence. \<close>
