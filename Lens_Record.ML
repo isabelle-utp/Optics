@@ -28,6 +28,7 @@ val child_lensN = "more\<^sub>L"
 val all_lensN = "all\<^sub>L"
 val base_moreN = "base_more"
 val bij_lens_suffix = "_bij_lens"
+val bij_lenses_suffix = "_bij_lenses"
 val vwb_lens_suffix = "_vwb_lens"
 val sym_lens_suffix = "_sym_lens"
 val Trueprop = @{const_name Trueprop}
@@ -128,7 +129,7 @@ fun prove_equiv tname thy =
                 ,prove_lens_goal tname thy context])
 end
  
-(* Constrct a proof that base + more is a bijective lens *)
+(* Construct a proof that base + more is a bijective lens *)
 
 fun lens_bij_proof tname thy =
   let open Simplifier; open Global_Theory in
@@ -191,6 +192,25 @@ fun equiv_base_proof tname parent thy fs =
                 )]))
       (prove_equiv tname thy)
   end
+
+fun lenses_bij_proof tname parent thy fs =
+  let open Simplifier; open Global_Theory; open Context; open Term in
+      Goal.prove_global thy [] []
+      (hd (Type_Infer_Context.infer_types
+              (Proof_Context.init_global thy)
+              [ Const (Trueprop, dummyT)
+              $ (const (bij_lensN) $ 
+                (const (lens_plusN) $ 
+                   foldr1 (fn (x, y) => Const (lens_plusN, dummyT) $ x $ y) 
+                          ((case parent of NONE => [] | SOME (_, pname) => [Const (pname ^ "." ^ base_lensN, dummyT)]) @ 
+                            map (fn n => Const (theory_name thy ^ "." ^ tname ^ "." ^ n, dummyT)) fs)
+                                      $ const (Context.theory_name thy ^ "." ^ tname ^ "." ^ child_lensN)))]))
+      (fn {context = context, prems = _}
+                           => EVERY [ Locale.intro_locales_tac {strict = true, eager = true} context []
+                                    , auto_tac (fold add_simp (get_thms thy lens_defsN @ [@{thm prod.case_eq_if}])
+                                                                         context)])
+  end
+
 
 fun equiv_partition_proof tname thy =
   let open Simplifier; open Global_Theory; open Context; open Term in
@@ -298,6 +318,8 @@ fun add_alphabet (params, binding) raw_parent ty_fields thy =
          |> fold (fn x => fn thy => snd (add_thm ((Binding.make (x ^ vwb_lens_suffix, Position.none), lens_proof tname x thy), attrs) thy)) (lnames @ [base_lensN, child_lensN])
             (* Add a bij lens proof for the base and more lenses *)
          |> (fn thy => snd (add_thm ((Binding.make (base_moreN ^ bij_lens_suffix, Position.none), lens_bij_proof tname thy), attrs) thy))
+            (* Add a bij lens proof for the summation of all constituent lenses and the more lens *)
+         |> (fn thy => snd (add_thm ((Binding.make (base_moreN ^ bij_lenses_suffix, Position.none), lenses_bij_proof tname parent thy lnames), attrs) thy))
             (* Add sublens proofs *)
          |> (fn thy => snd (add_thmss [((Binding.make (sublensesN, Position.none), map (sublens_proof tname pname thy plchild) plnames @ map (sublens_proof tname (Context.theory_name thy ^ "." ^ tname) thy base_lensN) lnames), attrs)] thy))
             (* Add quotient proofs *)                                                                                             
