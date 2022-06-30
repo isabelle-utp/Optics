@@ -217,6 +217,11 @@ lemma scene_union_unit [simp]: "X \<squnion>\<^sub>S \<bottom>\<^sub>S = X" "\<b
 lemma scene_indep_bot [simp]: "X \<bowtie>\<^sub>S \<bottom>\<^sub>S"
   by (transfer, simp)
 
+text \<open> A unitary scene admits only one element, and therefore top and bottom are the same. \<close>
+
+lemma unit_scene_top_eq_bot: "(\<bottom>\<^sub>S :: unit scene) = \<top>\<^sub>S"
+  by (transfer, simp)
+
 lemma idem_scene_union [simp]: "\<lbrakk> idem_scene A; idem_scene B \<rbrakk> \<Longrightarrow> idem_scene (A \<squnion>\<^sub>S B)"
   apply (transfer, auto)
   apply (unfold_locales, auto)
@@ -397,6 +402,16 @@ is "\<lambda> S X a b. if (vwb_lens X \<and> (\<forall>s\<^sub>1 s\<^sub>2 s\<^s
   by (unfold_locales, auto simp add: lens_create_def lens_override_def)
      (metis (no_types, lifting) overrider.ovr_overshadow_right)
 
+lemma scene_quotient_idem: "idem_scene S \<Longrightarrow> idem_scene (S /\<^sub>S X)"
+  by (transfer, unfold_locales, auto simp add: lens_create_def lens_override_def)
+     (metis (no_types, lifting) overrider.ovr_overshadow_right) 
+
+lemma scene_quotient_indep: "A \<bowtie>\<^sub>S B \<Longrightarrow> (A /\<^sub>S X) \<bowtie>\<^sub>S (B /\<^sub>S X)"
+  by (transfer, auto simp add: lens_create_def lens_override_def)
+
+lemma scene_bot_quotient [simp]: "\<bottom>\<^sub>S /\<^sub>S X = \<bottom>\<^sub>S"
+  by (transfer, auto)
+
 lemma scene_comp_quotient: "vwb_lens X \<Longrightarrow> (A ;\<^sub>S X) /\<^sub>S X = A"
   by (transfer, auto simp add: fun_eq_iff lens_override_def)
 
@@ -520,6 +535,10 @@ qed
 
 lemma lens_scene_quotient: "\<lbrakk> vwb_lens Y; X \<subseteq>\<^sub>L Y \<rbrakk> \<Longrightarrow> \<lbrakk>X /\<^sub>L Y\<rbrakk>\<^sub>\<sim> = \<lbrakk>X\<rbrakk>\<^sub>\<sim> /\<^sub>S Y"
   by (metis lens_quotient_comp lens_quotient_vwb lens_scene_comp scene_comp_quotient sublens_pres_vwb vwb_lens_def wb_lens_weak)
+
+lemma scene_union_quotient: "\<lbrakk> A ##\<^sub>S B; A \<le> \<lbrakk>X\<rbrakk>\<^sub>\<sim>; B \<le> \<lbrakk>X\<rbrakk>\<^sub>\<sim> \<rbrakk> \<Longrightarrow> (A \<squnion>\<^sub>S B) /\<^sub>S X = (A /\<^sub>S X) \<squnion>\<^sub>S (B /\<^sub>S X)"
+  unfolding less_eq_scene_def
+  by (case_tac "vwb_lens X"; transfer, auto simp add: lens_create_def lens_override_def)
 
 text \<open> Equality on scenes is sound and complete with respect to lens equivalence. \<close>
 

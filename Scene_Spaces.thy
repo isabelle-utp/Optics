@@ -31,6 +31,16 @@ lemma foldr_compat_dist:
   apply (metis pairwise_compat_foldr scene_compat_refl scene_union_comp_distl)
   done  
 
+lemma foldr_compat_quotient_dist:
+  "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> a\<in>set as. a \<le> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<rbrakk> \<Longrightarrow> foldr (\<squnion>\<^sub>S) (map (\<lambda>a. a /\<^sub>S x) as) \<bottom>\<^sub>S = \<Squnion>\<^sub>S as /\<^sub>S x"
+  apply (induct as)
+   apply (auto simp add: pairwise_insert)
+  apply (subst scene_union_quotient)
+  apply simp_all
+  using pairwise_compat_foldr scene_compat_refl apply blast
+  apply (meson foldr_scene_indep scene_indep_sym scene_le_iff_indep_inv)
+  done
+
 lemma foldr_scene_union_add_tail:
   "\<lbrakk> pairwise (##\<^sub>S) (set xs); \<forall> x\<in>set xs. x ##\<^sub>S b \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S xs \<squnion>\<^sub>S b = foldr (\<squnion>\<^sub>S) xs b"
   apply (induct xs)
@@ -688,6 +698,17 @@ end
 lemma foldr_scene_union_eq_scene_space: 
   "\<lbrakk> set xs \<subseteq> scene_space; set xs = set ys \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S ys"
   by (metis foldr_scene_union_eq_sets pairwise_def pairwise_subset scene_space_compat)
+
+instantiation unit :: scene_space
+begin
+
+definition Vars_unit :: "unit scene list" where "Vars_unit = []"
+
+instance
+  by (intro_classes, simp_all add: Vars_unit_def scene_indeps_def scene_span_def unit_scene_top_eq_bot)
+
+end
+
 subsection \<open> Frame type \<close>
 
 typedef (overloaded) 'a::scene_space frame = "scene_space :: 'a scene set"
@@ -1021,10 +1042,47 @@ proof (simp add: alpha_scene_space_def, unfold_locales)
     apply (simp add: scene_span_def)
     apply (subst foldr_compat_dist)
     apply (simp)
-    apply (metis assms(2) assms(3) assms(4) assms(5) dual_order.eq_iff foldr_scene_union_add_tail pairwise_mono scene_comp_top_scene scene_indep_compat scene_indeps_def scene_span_def span_Vars)    
+    apply (metis assms(3) assms(5) scene_comp_top_scene scene_span_def span_Vars)    
     done
 qed
 
+lemma scene_space_class_intro':
+  assumes 
+    "\<forall> x\<in>set xs. idem_scene x"
+    "scene_indeps (set xs)"
+    "vwb_lens m\<^sub>L" \<comment> \<open> The more lens \<close>
+    "vwb_lens p\<^sub>L" \<comment> \<open> The parent more lens \<close>
+    "m\<^sub>L \<subseteq>\<^sub>L p\<^sub>L"
+    "\<forall>a\<in>set xs. a \<subseteq>\<^sub>S \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
+    "\<forall> x\<in>set xs. x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"
+    "(foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>) = \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
+  shows "class.scene_space (alpha_scene_space' xs m\<^sub>L p\<^sub>L)"
+  unfolding alpha_scene_space'_def
+  apply (rule scene_space_class_intro)
+      apply (simp_all add: assms scene_quotient_idem)
+  apply (simp add: scene_indeps_def pairwise_def )
+  apply (metis assms(2) pairwiseD scene_indeps_def scene_quotient_indep)
+  using assms(3) assms(4) assms(5) lens_quotient_vwb apply blast
+   apply (simp add: assms lens_scene_quotient scene_quotient_indep)
+  apply (subst foldr_scene_union_add_tail[THEN sym])
+  apply (simp)
+  apply (metis (mono_tags, lifting) assms(2) pairwiseD pairwise_imageI scene_indep_compat scene_indeps_def scene_quotient_indep)
+  apply (simp add: assms(4) assms(5) assms(7) lens_scene_quotient scene_quotient_indep)
+  apply (subst foldr_compat_quotient_dist)
+  apply (metis assms(2) pairwise_alt scene_indep_compat scene_indeps_def)
+  using assms(6) apply blast
+  apply (simp add: lens_scene_quotient assms)
+  apply (subst scene_union_quotient[THEN sym])
+  apply (metis assms(2) assms(3) assms(4) assms(5) assms(7) assms(8) bot_idem_scene empty_iff foldr.simps(1) foldr_scene_union_add_tail id_apply list.set(1) order_eq_refl pairwise_compat_foldr pairwise_empty pairwise_mono scene_bot_least scene_indep_compat scene_indeps_def scene_union_incompat sublens'_implies_subscene sublens_implies_sublens' subscene_antisym)
+  apply (metis assms(2) assms(6) foldr_scene_indep pairwise_def scene_indep_compat scene_indep_sym scene_indeps_def scene_le_iff_indep_inv)
+  apply (simp add: assms(3) assms(4) assms(5) sublens'_implies_subscene sublens_implies_sublens')
+  apply (subst foldr_scene_union_add_tail)
+  apply (metis assms(2) pairwiseD pairwiseI scene_indep_compat scene_indeps_def)
+  using assms(7) scene_indep_compat apply blast
+  apply (simp add: assms(8))
+  apply (metis assms(4) scene_comp_quotient scene_comp_top_scene)
+  done
+  
 (*
 lemma scene_space_class_intro':
   assumes 
@@ -1089,15 +1147,16 @@ named_theorems scene_space_defs
 method alpha_scene_space uses defs =
   (rule scene_space_class.intro
   ,(intro_classes)[1]
-  ,simp add: defs scene_space_defs alpha_scene_space'_def lens_scene_quotient
-  ,rule scene_space_class_intro
+  ,simp add: defs scene_space_defs lens_scene_quotient
+  ,rule scene_space_class_intro scene_space_class_intro'
   ,simp_all add: scene_indeps_def pairwise_def lens_plus_scene[THEN sym] lens_equiv_scene[THEN sym] lens_equiv_sym
                  lens_quotient_vwb lens_quotient_indep lens_quotient_plus[THEN sym] lens_quotient_bij plus_pred_sublens 
-                 lens_scene_top_iff_bij_lens)
+                 lens_scene_top_iff_bij_lens lens_scene_quotient[THEN sym] sublens_greatest lens_quotient_id_denom
+                 sublens_iff_subscene[THEN sym])
 
 method basis_lens uses defs =
   (rule basis_lens_intro, simp_all add: scene_space_defs alpha_scene_space_def alpha_scene_space'_def lens_scene_comp[THEN sym] lens_quotient_vwb lens_quotient_comp
-   comp_vwb_lens lens_comp_assoc[THEN sym] sublens_iff_subscene[THEN sym] lens_scene_quotient[THEN sym])
+   comp_vwb_lens lens_comp_assoc[THEN sym] sublens_iff_subscene[THEN sym] lens_scene_quotient[THEN sym] sublens_greatest lens_quotient_id_denom)
 
 alphabet test = 
   x :: bool
@@ -1108,7 +1167,7 @@ instantiation test_ext :: (scene_space) scene_space
 begin
 
 definition Vars_test_ext :: "'a test_scheme scene list" where
-[scene_space_defs]: "Vars_test_ext = alpha_scene_space [\<lbrakk>x\<rbrakk>\<^sub>\<sim>, \<lbrakk>y\<rbrakk>\<^sub>\<sim>, \<lbrakk>z\<rbrakk>\<^sub>\<sim>] test.more\<^sub>L"
+[scene_space_defs]: "Vars_test_ext = alpha_scene_space' [\<lbrakk>x\<rbrakk>\<^sub>\<sim>, \<lbrakk>y\<rbrakk>\<^sub>\<sim>, \<lbrakk>z\<rbrakk>\<^sub>\<sim>] test.more\<^sub>L 1\<^sub>L"
   
 instance by alpha_scene_space
 
@@ -1142,8 +1201,7 @@ begin
 definition Vars_test2_ext :: "'a test2_ext scene list" where
 [scene_space_defs]: "Vars_test2_ext = alpha_scene_space' [\<lbrakk>u\<rbrakk>\<^sub>\<sim>, \<lbrakk>v\<rbrakk>\<^sub>\<sim>] (test2.more\<^sub>L) test.more\<^sub>L"
 
-instance 
-  by alpha_scene_space
+instance by alpha_scene_space
 
 end
 
@@ -1182,9 +1240,6 @@ instance
 end
 
 lemma basis_lens_j [simp]: "basis_lens j" by basis_lens
-
-
-end
 
 
 end
