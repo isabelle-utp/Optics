@@ -195,8 +195,10 @@ text \<open> cf. @{term finite_dimensional_vector_space}, which scene spaces are
 
 subsection \<open> Scene space class \<close>
 
-class scene_space = 
+class pre_scene_space = 
   fixes Vars :: "'a scene list"
+
+class scene_space = pre_scene_space +
   assumes idem_scene_Vars: "\<And> x. x \<in> set Vars \<Longrightarrow> idem_scene x"
   and indep_Vars: "scene_indeps (set Vars)"
   and span_Vars: "scene_span Vars"
@@ -1010,10 +1012,10 @@ subsection \<open> Alphabet Scene Spaces \<close>
 text \<open> The scene space for an alphabet is constructed using the set of scenes corresponding to
   each lens, the base lens, and the more lens, to allow for extension. \<close>
 
-definition alpha_scene_space :: "'s scene list \<Rightarrow> ('b::scene_space \<Longrightarrow> 's) \<Rightarrow> 's scene list" where
+definition alpha_scene_space :: "'s scene list \<Rightarrow> ('b::pre_scene_space \<Longrightarrow> 's) \<Rightarrow> 's scene list" where
 "alpha_scene_space xs m\<^sub>L = xs @ map (\<lambda> x. x ;\<^sub>S m\<^sub>L) Vars"
 
-definition alpha_scene_space' :: "'s scene list \<Rightarrow> ('b::scene_space \<Longrightarrow> 's) \<Rightarrow> ('c \<Longrightarrow> 's) \<Rightarrow> 'c scene list" where
+definition alpha_scene_space' :: "'s scene list \<Rightarrow> ('b::pre_scene_space \<Longrightarrow> 's) \<Rightarrow> ('c \<Longrightarrow> 's) \<Rightarrow> 'c scene list" where
 "alpha_scene_space' xs m\<^sub>L p\<^sub>L = alpha_scene_space (map (\<lambda> x. x /\<^sub>S p\<^sub>L) xs) (m\<^sub>L /\<^sub>L p\<^sub>L)"
 
 lemma mem_alpha_scene_space_iff [simp]: 
@@ -1027,7 +1029,7 @@ lemma scene_space_class_intro:
     "vwb_lens m\<^sub>L" \<comment> \<open> The more lens \<close>
     "\<forall> x\<in>set xs. x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"  
     "(foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>) = \<top>\<^sub>S"
-  shows "class.scene_space (alpha_scene_space xs m\<^sub>L)"
+  shows "class.scene_space (alpha_scene_space xs (m\<^sub>L::'b::scene_space \<Longrightarrow> 's))"
 proof (simp add: alpha_scene_space_def, unfold_locales)
   show "\<And>x. x \<in> set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars) \<Longrightarrow> idem_scene x"
     using assms(1) idem_scene_Vars by fastforce
@@ -1056,7 +1058,7 @@ lemma scene_space_class_intro':
     "\<forall>a\<in>set xs. a \<subseteq>\<^sub>S \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
     "\<forall> x\<in>set xs. x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"
     "(foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>) = \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
-  shows "class.scene_space (alpha_scene_space' xs m\<^sub>L p\<^sub>L)"
+  shows "class.scene_space (alpha_scene_space' xs (m\<^sub>L::'b::scene_space \<Longrightarrow> 's) p\<^sub>L)"
   unfolding alpha_scene_space'_def
   apply (rule scene_space_class_intro)
       apply (simp_all add: assms scene_quotient_idem)
@@ -1144,16 +1146,6 @@ qed
 
 named_theorems scene_space_defs
 
-method alpha_scene_space uses defs =
-  (rule scene_space_class.intro
-  ,(intro_classes)[1]
-  ,simp add: defs scene_space_defs lens_scene_quotient
-  ,rule scene_space_class_intro scene_space_class_intro'
-  ,simp_all add: scene_indeps_def pairwise_def lens_plus_scene[THEN sym] lens_equiv_scene[THEN sym] lens_equiv_sym
-                 lens_quotient_vwb lens_quotient_indep lens_quotient_plus[THEN sym] lens_quotient_bij plus_pred_sublens 
-                 lens_scene_top_iff_bij_lens lens_scene_quotient[THEN sym] sublens_greatest lens_quotient_id_denom
-                 sublens_iff_subscene[THEN sym])
-
 method basis_lens uses defs =
   (rule basis_lens_intro, simp_all add: scene_space_defs alpha_scene_space_def alpha_scene_space'_def lens_scene_comp[THEN sym] lens_quotient_vwb lens_quotient_comp
    comp_vwb_lens lens_comp_assoc[THEN sym] sublens_iff_subscene[THEN sym] lens_scene_quotient[THEN sym] sublens_greatest lens_quotient_id_denom)
@@ -1163,15 +1155,61 @@ alphabet test =
   y :: nat 
   z :: "int list"
 
-instantiation test_ext :: (scene_space) scene_space
-begin
+method alpha_scene_space = 
+  (rule scene_space_class.intro
+  ,(intro_classes)[1]
+  ,simp add: scene_space_defs lens_scene_quotient
+  ,rule scene_space_class_intro scene_space_class_intro'
+  ,simp_all add: scene_indeps_def pairwise_def lens_plus_scene[THEN sym] lens_equiv_scene[THEN sym] lens_equiv_sym
+                 lens_quotient_vwb lens_quotient_indep lens_quotient_plus[THEN sym] lens_quotient_bij plus_pred_sublens 
+                 lens_scene_top_iff_bij_lens lens_scene_quotient[THEN sym] sublens_greatest lens_quotient_id_denom
+                 sublens_iff_subscene[THEN sym])
 
-definition Vars_test_ext :: "'a test_scheme scene list" where
-[scene_space_defs]: "Vars_test_ext = alpha_scene_space' [\<lbrakk>x\<rbrakk>\<^sub>\<sim>, \<lbrakk>y\<rbrakk>\<^sub>\<sim>, \<lbrakk>z\<rbrakk>\<^sub>\<sim>] test.more\<^sub>L 1\<^sub>L"
-  
-instance by alpha_scene_space
+ML \<open>
 
-end
+(*
+Specification.definition (SOME (Binding.name ("Vars_" ^ tname ^ "_ext"), NONE, NoSyn)) [] [];
+*)
+
+fun alpha_scene_space_term xs more parent =
+  let open Syntax; open HOLogic;
+      val vs = map (fn x => (const @{const_name lens_scene}) $ const x) xs
+  in const @{const_name alpha_scene_space'} $ mk_list dummyT vs  $ const more $ const parent
+  end;
+ 
+
+fun mk_alpha_scene_space tname xs thy =
+  let
+  open Syntax
+  open Term
+  open Proof_Context
+  val (Type (qname, _)) = read_type_name {proper = false, strict = false} (init_global thy) tname
+  val info = Record.the_info thy qname
+  val r_ext = fst (#extension info)
+  fun mk_def ty x v = Const ("Pure.eq", ty --> ty --> Term.propT) $ Free (x, ty) $ v;
+  val ctx0 = Class.instantiation_cmd ([r_ext], ["pre_scene_space"], "pre_scene_space") thy;
+  val parent =     
+      (case #parent info of
+       NONE => @{const_name id_lens} |
+       SOME (ts, pname) => (pname ^ ".more\<^sub>L"))
+  val (Type (qtname, _)) = Syntax.read_typ ctx0 tname
+  val (Const (more, _)) = Syntax.read_term ctx0 (tname ^ ".more\<^sub>L")
+
+  val def_ty = Syntax.read_typ ctx0 ("'a " ^ r_ext ^ " scene list");
+  val (_, ctx1) = Specification.definition (SOME (Binding.name ("Vars_" ^ tname ^ "_ext"), NONE, NoSyn)) [] [] ((Binding.empty, @{attributes [scene_space_defs]}), mk_def def_ty ("Vars_" ^ tname ^ "_ext") (alpha_scene_space_term xs more parent)) ctx0
+
+  val thy1 = Class.prove_instantiation_exit (fn ctx => Class.intro_classes_tac ctx []) ctx1 
+
+  val ctx2 = Class.instantiation_cmd ([r_ext], ["scene_space"], "scene_space") thy1;
+  val thy2 = Class.prove_instantiation_exit (fn _ => NO_CONTEXT_TACTIC ctx2 (Method_Closure.apply_method ctx2 @{method alpha_scene_space} [] [] [] ctx2 [])) ctx2
+
+  in thy2 end
+
+(* Class.prove_instantiation_exit (fn ctx => NO_CONTEXT_TACTIC ctx (Method_Closure.apply_method ctx @{method alpha_scene_space} [] [] [] ctx [])) ctx1 *)
+
+\<close>
+
+setup \<open> mk_alpha_scene_space "test" [@{const_name x}, @{const_name y}, @{const_name z}] \<close>
 
 lemma basis_lens_x [simp]: "basis_lens x" by basis_lens
 lemma basis_lens_y [simp]: "basis_lens y" by basis_lens
