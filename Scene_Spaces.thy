@@ -195,10 +195,8 @@ text \<open> cf. @{term finite_dimensional_vector_space}, which scene spaces are
 
 subsection \<open> Scene space class \<close>
 
-class pre_scene_space = 
+class scene_space =
   fixes Vars :: "'a scene list"
-
-class scene_space = pre_scene_space +
   assumes idem_scene_Vars: "\<And> x. x \<in> set Vars \<Longrightarrow> idem_scene x"
   and indep_Vars: "scene_indeps (set Vars)"
   and span_Vars: "scene_span Vars"
@@ -1012,10 +1010,10 @@ subsection \<open> Alphabet Scene Spaces \<close>
 text \<open> The scene space for an alphabet is constructed using the set of scenes corresponding to
   each lens, the base lens, and the more lens, to allow for extension. \<close>
 
-definition alpha_scene_space :: "'s scene list \<Rightarrow> ('b::pre_scene_space \<Longrightarrow> 's) \<Rightarrow> 's scene list" where
+definition alpha_scene_space :: "'s scene list \<Rightarrow> ('b::scene_space \<Longrightarrow> 's) \<Rightarrow> 's scene list" where
 "alpha_scene_space xs m\<^sub>L = xs @ map (\<lambda> x. x ;\<^sub>S m\<^sub>L) Vars"
 
-definition alpha_scene_space' :: "'s scene list \<Rightarrow> ('b::pre_scene_space \<Longrightarrow> 's) \<Rightarrow> ('c \<Longrightarrow> 's) \<Rightarrow> 'c scene list" where
+definition alpha_scene_space' :: "'s scene list \<Rightarrow> ('b::scene_space \<Longrightarrow> 's) \<Rightarrow> ('c \<Longrightarrow> 's) \<Rightarrow> 'c scene list" where
 "alpha_scene_space' xs m\<^sub>L p\<^sub>L = alpha_scene_space (map (\<lambda> x. x /\<^sub>S p\<^sub>L) xs) (m\<^sub>L /\<^sub>L p\<^sub>L)"
 
 lemma mem_alpha_scene_space_iff [simp]: 
@@ -1029,7 +1027,7 @@ lemma scene_space_class_intro:
     "vwb_lens m\<^sub>L" \<comment> \<open> The more lens \<close>
     "\<forall> x\<in>set xs. x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"  
     "(foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>) = \<top>\<^sub>S"
-  shows "class.scene_space (alpha_scene_space xs (m\<^sub>L::'b::scene_space \<Longrightarrow> 's))"
+  shows "class.scene_space (alpha_scene_space xs m\<^sub>L)"
 proof (simp add: alpha_scene_space_def, unfold_locales)
   show "\<And>x. x \<in> set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars) \<Longrightarrow> idem_scene x"
     using assms(1) idem_scene_Vars by fastforce
@@ -1058,7 +1056,7 @@ lemma scene_space_class_intro':
     "\<forall>a\<in>set xs. a \<subseteq>\<^sub>S \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
     "\<forall> x\<in>set xs. x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"
     "(foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>) = \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
-  shows "class.scene_space (alpha_scene_space' xs (m\<^sub>L::'b::scene_space \<Longrightarrow> 's) p\<^sub>L)"
+  shows "class.scene_space (alpha_scene_space' xs m\<^sub>L p\<^sub>L)"
   unfolding alpha_scene_space'_def
   apply (rule scene_space_class_intro)
       apply (simp_all add: assms scene_quotient_idem)
@@ -1187,7 +1185,7 @@ fun mk_alpha_scene_space tname xs thy =
   val info = Record.the_info thy qname
   val r_ext = fst (#extension info)
   fun mk_def ty x v = Const ("Pure.eq", ty --> ty --> Term.propT) $ Free (x, ty) $ v;
-  val ctx0 = Class.instantiation_cmd ([r_ext], ["pre_scene_space"], "pre_scene_space") thy;
+  val ctx0 = Class.instantiation_cmd ([r_ext], ["scene_space"], "scene_space") thy;
   val parent =     
       (case #parent info of
        NONE => @{const_name id_lens} |
@@ -1195,18 +1193,19 @@ fun mk_alpha_scene_space tname xs thy =
   val (Type (qtname, _)) = Syntax.read_typ ctx0 tname
   val (Const (more, _)) = Syntax.read_term ctx0 (tname ^ ".more\<^sub>L")
 
+  val (_, ctx1) = Local_Theory.begin_nested ctx0
+
   val def_ty = Syntax.read_typ ctx0 ("'a " ^ r_ext ^ " scene list");
-  val (_, ctx1) = Specification.definition (SOME (Binding.name ("Vars_" ^ tname ^ "_ext"), NONE, NoSyn)) [] [] ((Binding.empty, @{attributes [scene_space_defs]}), mk_def def_ty ("Vars_" ^ tname ^ "_ext") (alpha_scene_space_term xs more parent)) ctx0
+  val (_, ctx2) = Specification.definition (SOME (Binding.name ("Vars_" ^ tname ^ "_ext"), NONE, NoSyn)) [] [] ((Binding.empty, @{attributes [scene_space_defs]}), mk_def def_ty ("Vars_" ^ tname ^ "_ext") (alpha_scene_space_term xs more parent)) ctx1
 
-  val thy1 = Class.prove_instantiation_exit (fn ctx => Class.intro_classes_tac ctx []) ctx1 
+  val ctx3 = Local_Theory.end_nested ctx2
 
-  val ctx2 = Class.instantiation_cmd ([r_ext], ["scene_space"], "scene_space") thy1;
-  val thy2 = Class.prove_instantiation_exit (fn _ => NO_CONTEXT_TACTIC ctx2 (Method_Closure.apply_method ctx2 @{method alpha_scene_space} [] [] [] ctx2 [])) ctx2
+  val thy2 = Class.prove_instantiation_exit (fn _ => NO_CONTEXT_TACTIC ctx3 (Method_Closure.apply_method ctx3 @{method alpha_scene_space} [] [] [] ctx3 [])) ctx3
 
-  in thy2 end
+  in thy2 end;
 
 (* Class.prove_instantiation_exit (fn ctx => NO_CONTEXT_TACTIC ctx (Method_Closure.apply_method ctx @{method alpha_scene_space} [] [] [] ctx [])) ctx1 *)
-
+Proof_Context.init_global;
 \<close>
 
 setup \<open> mk_alpha_scene_space "test" [@{const_name x}, @{const_name y}, @{const_name z}] \<close>
