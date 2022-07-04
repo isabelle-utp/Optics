@@ -397,6 +397,10 @@ lemma scene_comp_bot [simp]: "\<bottom>\<^sub>S ;\<^sub>S x = \<bottom>\<^sub>S"
 lemma scene_union_comp_distl: "a ##\<^sub>S b \<Longrightarrow> (a \<squnion>\<^sub>S b) ;\<^sub>S x = (a ;\<^sub>S x) \<squnion>\<^sub>S (b ;\<^sub>S x)"
   by (transfer, auto simp add: fun_eq_iff)
 
+lemma scene_comp_assoc: "\<lbrakk> vwb_lens X; vwb_lens Y \<rbrakk> \<Longrightarrow> A ;\<^sub>S X ;\<^sub>S Y = A ;\<^sub>S (X ;\<^sub>L Y)"
+  by (transfer, auto simp add: lens_comp_def fun_eq_iff)
+     (metis comp_vwb_lens lens_comp_def)
+
 lift_definition scene_quotient :: "'b scene \<Rightarrow> ('a \<Longrightarrow> 'b) \<Rightarrow> 'a scene" (infixl "'/\<^sub>S" 80)
 is "\<lambda> S X a b. if (vwb_lens X \<and> (\<forall>s\<^sub>1 s\<^sub>2 s\<^sub>3. S (s\<^sub>1 \<triangleleft>\<^bsub>X\<^esub> s\<^sub>2) s\<^sub>3 = s\<^sub>1 \<triangleleft>\<^bsub>X\<^esub> S s\<^sub>2 s\<^sub>3)) then get\<^bsub>X\<^esub> (S (create\<^bsub>X\<^esub> a) (create\<^bsub>X\<^esub> b)) else a"
   by (unfold_locales, auto simp add: lens_create_def lens_override_def)
