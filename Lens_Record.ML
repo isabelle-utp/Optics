@@ -34,7 +34,6 @@ val sym_lens_suffix = "_sym_lens"
 val Trueprop = @{const_name Trueprop}
 val HOLeq = @{const_name HOL.eq}
 
-val lens_suffix = "\<^sub>v"
 val lens_defsN = "lens_defs"
 val lens_defs = (Binding.empty, [Token.make_src (lens_defsN, Position.none) []])
 val alpha_splitsN = "alpha_splits"
@@ -365,9 +364,7 @@ fun remove_lens_suffixes i st =
     val (_, _, Bi, _) = Thm.dest_state (st, i);
     val params = (map #1 (Logic.strip_params Bi))
     val params' = 
-      map (fn x => if (String.isSuffix lens_suffix x) 
-                   then String.substring (x, 0, (String.size x - String.size lens_suffix)) 
-                   else x) params ;
+      map remove_lens_suffix params ;
   in if params = params' then Seq.empty else Seq.single (Thm.rename_params_rule (params', i) st)
   end;
 
