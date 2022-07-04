@@ -220,8 +220,11 @@ lemma set_Vars_scene_space [simp]: "set Vars \<subseteq> scene_space"
 lemma pairwise_compat_Vars_subset: "set xs \<subseteq> set Vars \<Longrightarrow> pairwise (##\<^sub>S) (set xs)"
   using pairwise_subset scene_space_compats by blast
 
-lemma scene_space_foldr: "set xs \<subseteq> scene_space \<Longrightarrow> foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S \<in> scene_space"
+lemma scene_space_foldr: "set xs \<subseteq> scene_space \<Longrightarrow> \<Squnion>\<^sub>S xs \<in> scene_space"
   by (induction xs, auto)
+
+lemma top_scene_eq: "\<top>\<^sub>S = \<Squnion>\<^sub>S Vars"
+  using local.span_Vars scene_span_def by force
 
 lemma top_scene_space: "\<top>\<^sub>S \<in> scene_space"
 proof -
@@ -719,6 +722,10 @@ setup_lifting type_definition_frame
 lemma UNIV_frame_scene_space: "UNIV = Abs_frame ` scene_space"
   by (metis Rep_frame Rep_frame_inverse UNIV_eq_I imageI)
 
+lift_definition frame_scene :: "'s::scene_space scene \<Rightarrow> 's frame" ("\<lbrakk>_\<rbrakk>\<^sub>F")
+  is "\<lambda> s. if s \<in> scene_space then s else \<bottom>\<^sub>S"
+  by auto
+
 instance frame :: (scene_space) finite
   by (intro_classes, simp add: UNIV_frame_scene_space finite_scene_space)
 
@@ -765,6 +772,10 @@ abbreviation frame_union :: "'a::scene_space frame \<Rightarrow> 'a frame \<Righ
 abbreviation frame_inter :: "'a::scene_space frame \<Rightarrow> 'a frame \<Rightarrow> 'a frame"(infixl "\<inter>\<^sub>F" 70)
   where "frame_inter \<equiv> inf"
 
+lemma frame_scene_union: "\<lbrakk> A \<in> scene_space; B \<in> scene_space \<rbrakk> \<Longrightarrow> \<lbrakk>A \<squnion>\<^sub>S B\<rbrakk>\<^sub>F = \<lbrakk>A\<rbrakk>\<^sub>F \<union>\<^sub>F \<lbrakk>B\<rbrakk>\<^sub>F"
+  by (transfer, auto)
+  
+
 instantiation frame :: (scene_space) bounded_lattice
 begin
 
@@ -775,8 +786,14 @@ instance by (intro_classes; transfer; simp add: scene_bot_least scene_top_greate
 
 end
 
+abbreviation frame_UNIV :: "'s::scene_space frame" ("\<top>\<^sub>F")
+  where "\<top>\<^sub>F \<equiv> top"
+
 abbreviation frame_empty :: "'s::scene_space frame" ("\<lbrace>\<rbrace>")
   where "\<lbrace>\<rbrace> \<equiv> bot"
+
+lemma frame_top: "top = frame_scene \<top>\<^sub>S"
+  by (transfer, simp add: top_scene_space)
 
 instance frame :: (scene_space) distrib_lattice
   by (intro_classes; transfer)
@@ -791,7 +808,7 @@ lift_definition minus_frame :: "'a frame \<Rightarrow> 'a frame \<Rightarrow> 'a
 lift_definition uminus_frame :: "'a frame \<Rightarrow> 'a frame" is "uminus"
   by (simp add: scene_space_uminus)
 
-instance
+instance  
   by (intro_classes; transfer)
      (simp_all add: idem_scene_space scene_inter_indep scene_union_compl scene_le_iff_indep_inv subscene_refl)
 
@@ -824,13 +841,19 @@ instance ..
 
 end
 
+abbreviation frame_Union :: "'a::scene_space frame set \<Rightarrow> 'a frame"  ("\<Union>\<^sub>F")
+  where "\<Union>\<^sub>FS \<equiv> Sup S"
+
+abbreviation frame_Inter :: "'a::scene_space frame set \<Rightarrow> 'a frame"  ("\<Inter>\<^sub>F")
+  where "\<Inter>\<^sub>FS \<equiv> Inf S"
+
 instance frame :: (scene_space) complete_lattice
 proof
-  show Sup: "Sup ({} :: 'a frame set) = bot"
+  show Sup: "\<Union>\<^sub>F {} = bot"
     by (transfer, simp)
-  show Inf: "Inf ({} :: 'a frame set) = top"
+  show Inf: "\<Inter>\<^sub>F {} = top"
     by (simp add: Inf_frame_def Sup)
-  show le_Sup: "\<And>(x::'a frame) A. x \<in> A \<Longrightarrow> x \<le> Sup A"
+  show le_Sup: "\<And>(x::'a frame) A. x \<in> A \<Longrightarrow> x \<le> \<Union>\<^sub>F A"
   proof -
     fix x and A :: "'a frame set"
     assume "x \<in> A"
@@ -844,19 +867,19 @@ proof
         by (metis (mono_tags, lifting) scene_space_in_foldr someI subset_iff x(2) x(3))
     qed
   qed
-  show "\<And>(x:: 'a frame) A. x \<in> A \<Longrightarrow> Inf A \<le> x"
+  show "\<And>(x:: 'a frame) A. x \<in> A \<Longrightarrow> \<Inter>\<^sub>F A \<le> x"
   proof -
     fix x and A :: "'a frame set"
     assume xA: "x \<in> A"
-    have "Inf A \<le> x \<longleftrightarrow> - Sup (uminus ` A) \<le> x"
+    have "Inf A \<le> x \<longleftrightarrow> (- \<Union>\<^sub>F (uminus ` A) \<le> x)"
       by (simp add: Inf_frame_def)
-    also have "... \<longleftrightarrow> -x \<le> Sup (uminus ` A)"
+    also have "... \<longleftrightarrow> (- x \<le> \<Union>\<^sub>F (uminus ` A))"
       using compl_le_swap2 by blast
     also have "..."
       by (simp add: le_Sup xA)
-    finally show "Inf A \<le> x" .
+    finally show "\<Inter>\<^sub>F A \<le> x" .
   qed
-  show Sup_le: "\<And>(A::'a frame set) z. (\<And>x. x \<in> A \<Longrightarrow> x \<le> z) \<Longrightarrow> Sup A \<le> z"
+  show Sup_le: "\<And>(A::'a frame set) z. (\<And>x. x \<in> A \<Longrightarrow> x \<le> z) \<Longrightarrow> \<Union>\<^sub>F A \<le> z"
   proof transfer
     fix z and A :: "'a scene set"
     assume a: "\<forall>x\<in>A. x \<in> scene_space" "z \<in> scene_space" "\<And>x. x \<in> scene_space \<Longrightarrow> x \<in> A \<Longrightarrow> x \<subseteq>\<^sub>S z"
@@ -865,11 +888,11 @@ proof
     with a show "\<Squnion>\<^sub>S (SOME xs. set xs = A) \<subseteq>\<^sub>S z"
       by (metis (mono_tags, lifting) scene_space_foldr_lb subset_iff tfl_some)
   qed
-  show "\<And>(A :: 'a frame set) z. (\<And>x. x \<in> A \<Longrightarrow> z \<le> x) \<Longrightarrow> z \<le> Inf A"
+  show "\<And>(A :: 'a frame set) z. (\<And>x. x \<in> A \<Longrightarrow> z \<le> x) \<Longrightarrow> z \<le> \<Inter>\<^sub>F A"
   proof -
     fix A :: "'a frame set" and z :: "'a frame"
     assume a: "\<And>x. x \<in> A \<Longrightarrow> z \<le> x"
-    have "z \<le> Inf A \<longleftrightarrow> Sup (uminus ` A) \<le> - z"
+    have "z \<le> Inf A \<longleftrightarrow> \<Union>\<^sub>F (uminus ` A) \<le> - z"
       by (metis Inf_frame_def compl_le_swap1)
     also have "..."
       using a compl_le_compl_iff by (blast intro: Sup_le)
@@ -877,10 +900,17 @@ proof
   qed
 qed
 
-lemma uminus_frame_Inf: "- Inf (A :: 'a::scene_space frame set) = Sup (uminus ` A)"
+lemma frame_scene_foldr: "\<lbrakk> set xs \<subseteq> scene_space \<rbrakk> \<Longrightarrow> \<lbrakk>\<Squnion>\<^sub>S xs\<rbrakk>\<^sub>F = \<Union>\<^sub>F (set (map frame_scene xs))"
+  by (transfer, auto simp add: image_constant_conv Int_absorb2 scene_space_foldr)
+     (metis (mono_tags, lifting) foldr_scene_union_eq_scene_space tfl_some)
+
+lemma frame_scene_top: "\<top>\<^sub>F = \<lbrakk>\<Squnion>\<^sub>S Vars\<rbrakk>\<^sub>F"
+  by (simp add: frame_top top_scene_eq)  
+
+lemma uminus_frame_Inf: "- \<Inter>\<^sub>F A = \<Union>\<^sub>F (uminus ` A)"
   by (simp add: Inf_frame_def)
 
-lemma uminus_frame_Sup: "- Sup (A :: 'a::scene_space frame set) = Inf (uminus ` A)"
+lemma uminus_frame_Sup: "- \<Union>\<^sub>F A = \<Inter>\<^sub>F (uminus ` A)"
   by (simp add: Inf_frame_def SUP_image)
 
 subsection \<open> Frames as sets of basis scenes \<close>
@@ -899,8 +929,14 @@ lemma basis_then_vwb [simp]: "basis_lens x \<Longrightarrow> vwb_lens x"
 lemma basis_lens_intro: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars \<rbrakk> \<Longrightarrow> basis_lens x"
   using basis_lens.intro basis_lens_axioms.intro by blast
 
+lemma basis_lens_scene_space [simp]: "basis_lens x \<Longrightarrow> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> scene_space"
+  using basis_lens.lens_in_basis by blast
+
 lift_definition lens_frame :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame" 
 is "\<lambda> x. if basis_lens x then \<lbrakk>x\<rbrakk>\<^sub>\<sim> else \<bottom>\<^sub>S" by auto
+
+lemma frame_scene_basis_lens: "basis_lens x \<Longrightarrow> \<lbrakk>\<lbrakk>x\<rbrakk>\<^sub>\<sim>\<rbrakk>\<^sub>F = lens_frame x"
+  by (transfer, auto)
 
 definition lens_member :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame \<Rightarrow> bool" (infix "\<in>\<^sub>F" 50)
   where "x \<in>\<^sub>F a \<longleftrightarrow> (lens_frame x \<le> a)"
@@ -939,6 +975,9 @@ definition lens_insert :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 
 lemma lens_insert_twice [simp]: "lens_insert x (lens_insert x A) = lens_insert x A"
   by (simp add: lens_insert_def)
 
+lemma lens_Un_insert_left [simp]: "lens_insert x A \<union>\<^sub>F B = lens_insert x (A \<union>\<^sub>F B)"
+  by (simp add: lens_insert_def semigroup.assoc sup.semigroup_axioms)
+  
 lemma lens_insert_iff: 
   assumes "basis_lens x"
   shows "x \<in>\<^sub>F lens_insert y A \<longleftrightarrow> x \<approx>\<^sub>L 0\<^sub>L \<or> x \<approx>\<^sub>L y \<or> x \<in>\<^sub>F A"
@@ -963,6 +1002,9 @@ translations
   "\<lbrace>x, xs\<rbrace>" \<rightleftharpoons> "CONST lens_insert x \<lbrace>xs\<rbrace>"
   "\<lbrace>x\<rbrace>" \<rightleftharpoons> "CONST lens_insert x \<lbrace>\<rbrace>"
 
+lemma frame_single_basis_lens [simp]: "basis_lens x \<Longrightarrow> \<lbrakk>\<lbrakk>x\<rbrakk>\<^sub>\<sim>\<rbrakk>\<^sub>F = \<lbrace>x\<rbrace>"
+  by (simp add: frame_scene_basis_lens lens_insert_def)
+  
 lift_definition frame_equiv :: "'a::scene_space \<Rightarrow> 'a \<Rightarrow> 'a frame \<Rightarrow> bool" ("_ \<approx>\<^sub>F _ on _" [65,0,66] 65)
   is "\<lambda> s\<^sub>1 s\<^sub>2 a. s\<^sub>1 \<approx>\<^sub>S s\<^sub>2 on a" .
 
@@ -1204,8 +1246,6 @@ fun mk_alpha_scene_space tname xs thy =
 
   in thy2 end;
 
-(* Class.prove_instantiation_exit (fn ctx => NO_CONTEXT_TACTIC ctx (Method_Closure.apply_method ctx @{method alpha_scene_space} [] [] [] ctx [])) ctx1 *)
-Proof_Context.init_global;
 \<close>
 
 setup \<open> mk_alpha_scene_space "test" [@{const_name x}, @{const_name y}, @{const_name z}] \<close>
@@ -1219,9 +1259,33 @@ term "\<lbrace>x, y, z\<rbrace>"
 lemma "z \<in>\<^sub>F \<lbrace>x, y, z\<rbrace>"
   by simp
 
+find_theorems map "(`)"
+
+definition "more_frame xs m\<^sub>L = \<Union>\<^sub>F ((\<lambda>x. \<lbrakk>x ;\<^sub>S m\<^sub>L\<rbrakk>\<^sub>F) ` set xs)"
+
+lemma "(\<top>\<^sub>F :: 'a::scene_space test_ext frame) = \<lbrace>x,y,z\<rbrace> \<union>\<^sub>F more_frame Vars more\<^sub>L"
+  apply (simp add: frame_scene_top Vars_test_ext_def)
+  apply (subst frame_scene_foldr)
+  apply (simp_all add: alpha_scene_space'_def alpha_scene_space_def lens_scene_quotient[THEN sym] lens_quotient_id_denom sublens_greatest Vars_unit_def )
+  oops
+
 alphabet test2 = test +
   u :: string
   v :: int
+  
+
+setup \<open> mk_alpha_scene_space "test2" [@{const_name u}, @{const_name v}] \<close>
+
+lemma [simp]: "basis_lens u" by basis_lens
+lemma [simp]: "basis_lens v" by basis_lens
+
+find_theorems "(/\<^sub>S)"
+
+thm image_cong
+
+lemma "more_frame Vars test.more\<^sub>L = \<lbrace>u,v\<rbrace> \<union>\<^sub>F more_frame Vars more\<^sub>L"
+  apply (simp cong:image_cong add: more_frame_def Vars_test2_ext_def alpha_scene_space'_def alpha_scene_space_def scene_quotient_comp  sublens_iff_subscene[THEN sym] image_comp)
+  oops
 
 term base\<^sub>L
 
@@ -1232,20 +1296,6 @@ term test.more\<^sub>L
 
 find_theorems lens_scene scene_quotient
 
-instantiation test2_ext :: (scene_space) scene_space
-begin
-
-definition Vars_test2_ext :: "'a test2_ext scene list" where
-[scene_space_defs]: "Vars_test2_ext = alpha_scene_space' [\<lbrakk>u\<rbrakk>\<^sub>\<sim>, \<lbrakk>v\<rbrakk>\<^sub>\<sim>] (test2.more\<^sub>L) test.more\<^sub>L"
-
-instance by alpha_scene_space
-
-end
-
-find_theorems scene_quotient scene_comp
-
-lemma basis_lens_u [simp]: "basis_lens u" by basis_lens
-lemma basis_lens_v [simp]: "basis_lens v" by basis_lens
 
 alphabet test3 = test2 +
   w :: string
