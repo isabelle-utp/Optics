@@ -11,13 +11,19 @@ alphabet test =
 
 alphabet_scene_space test
 
+lemma "UNIV\<^sub>F(test) = \<lbrace>x, y, z\<rbrace>"
+  by (simp add: frame)
+
 term "\<lbrace>x, y, z\<rbrace>"
 
 lemma "z \<in>\<^sub>F \<lbrace>x, y, z\<rbrace>"
   by simp
 
-lemma "UNIV\<^sub>F(test) = \<lbrace>x, y, z\<rbrace>"
-  by (simp add: frame)
+lemma "\<lbrace>x\<rbrace> \<union>\<^sub>F \<lbrace>y, z\<rbrace> = \<lbrace>x, y, z\<rbrace>"
+  by simp
+
+lemma "\<lbrace>x\<rbrace> \<union>\<^sub>F \<lbrace>x, y, z\<rbrace> = \<lbrace>x, y, z\<rbrace>"
+  by simp
 
 alphabet test2 = test +
   u :: string
