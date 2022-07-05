@@ -1,7 +1,7 @@
 section \<open> Alphabet Scene Spaces \<close>
 
 theory Alphabet_Scene_Spaces
-  imports Frames
+  imports Frames Lens_Instances
   keywords "alphabet_scene_space" :: "thy_defn"
 begin
 

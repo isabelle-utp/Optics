@@ -1,7 +1,7 @@
 section \<open> Scene Spaces \<close>
 
 theory Scene_Spaces            
-  imports Scenes Lens_Instances
+  imports Scenes
 begin
 
 subsection \<open> Preliminaries \<close>
