@@ -254,6 +254,8 @@ text \<open>We also introduce the \textbf{alphabet} command that creates a recor
   pair of lenses an independence theorem is generated. Alphabets can also be extended which yields 
   sublens proofs between the extension field lens and record extension lenses. \<close>
 
+named_theorems lens
+
 ML_file \<open>Lens_Lib.ML\<close>
 ML_file \<open>Lens_Record.ML\<close>
 

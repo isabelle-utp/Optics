@@ -313,7 +313,7 @@ fun add_alphabet (params, binding) raw_parent ty_fields thy =
     val plnames = if (raw_parent = NONE) then [] else lnames @ [child_lensN];
     fun pindeps thy = map (fn thm => @{thm sublens_pres_indep} OF [thm]) (get_thms thy sublensesN)
                     @ map (fn thm => @{thm sublens_pres_indep'} OF [thm]) (get_thms thy sublensesN)
-    val attrs = map (Attrib.attribute (Named_Target.theory_init thy)) @{attributes [simp, code_unfold]}
+    val attrs = map (Attrib.attribute (Named_Target.theory_init thy)) @{attributes [simp, code_unfold, lens]}
  in thy     (* Add a new record for the new alphabet lenses *)
          |> add_record_cmd {overloaded = false} (params, binding) raw_parent fields
             (* Add the record definition theorems to lens_defs *)
@@ -329,7 +329,7 @@ fun add_alphabet (params, binding) raw_parent ty_fields thy =
               (fold (fn (n, d) => Specification.abbreviation_cmd Syntax.mode_default (SOME (Binding.make (n, Position.none), NONE, NoSyn)) [] d true) [sldef])
             (* Add a vwb lens proof for each field lens *)
          |> fold (fn x => fn thy => snd (add_thm ((Binding.make (x ^ vwb_lens_suffix, Position.none), lens_proof tname x thy), attrs) thy)) (lnames @ [base_lensN, child_lensN])
-            (* Add a bij lens proof for the base and more lenses *)
+            (* Add a bij lens proof for the base and more lenses *)                                                              
          |> (fn thy => snd (add_thm ((Binding.make (base_moreN ^ bij_lens_suffix, Position.none), lens_bij_proof tname thy), attrs) thy))
             (* Add a bij lens proof for the summation of all constituent lenses and the more lens *)
          |> (fn thy => if raw_parent = NONE then snd (add_thm ((Binding.make (bij_lensesN, Position.none), lenses_bij_proof tname parent thy lnames), attrs) thy) else thy)

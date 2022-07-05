@@ -30,7 +30,7 @@ fun basis_lens_proof x thy =
   end;
 
 fun basis_lenses lnames thy =
-  let open Global_Theory; val attrs = map (Attrib.attribute (Named_Target.theory_init thy)) @{attributes [simp, code_unfold]} in
+  let open Global_Theory; val attrs = map (Attrib.attribute (Named_Target.theory_init thy)) @{attributes [simp, code_unfold, lens]} in
   fold (fn x => fn thy => snd (add_thm ((Binding.make (Long_Name.base_name x ^ basis_lens_suffix, Position.none), basis_lens_proof x thy), attrs) thy)) lnames thy 
   end;
 
