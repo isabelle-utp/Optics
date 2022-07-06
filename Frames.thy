@@ -7,12 +7,13 @@ begin
 subsection \<open> Frame type \<close>
 
 typedef (overloaded) 'a::scene_space frame = "scene_space :: 'a scene set"
+  morphisms of_frame mk_frame
   by blast
 
 setup_lifting type_definition_frame
 
-lemma UNIV_frame_scene_space: "UNIV = Abs_frame ` scene_space"
-  by (metis Rep_frame Rep_frame_inverse UNIV_eq_I imageI)
+lemma UNIV_frame_scene_space: "UNIV = mk_frame ` scene_space"
+  by (metis of_frame of_frame_inverse UNIV_eq_I imageI)
 
 lift_definition frame_scene :: "'s::scene_space scene \<Rightarrow> 's frame" ("\<lbrakk>_\<rbrakk>\<^sub>F")
   is "\<lambda> s. if s \<in> scene_space then s else \<bottom>\<^sub>S"
@@ -213,27 +214,33 @@ lemma uminus_frame_Sup: "- \<Union>\<^sub>F A = \<Inter>\<^sub>F (uminus ` A)"
 
 subsection \<open> Frames as sets of basis scenes \<close>
 
+locale var_lens = vwb_lens +
+  assumes lens_in_scene_space: "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> scene_space"
+
+declare var_lens.lens_in_scene_space [simp]
+declare var_lens.axioms(1) [simp]
+
 locale basis_lens = vwb_lens +
   assumes lens_in_basis: "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars"
 
 declare basis_lens.lens_in_basis [simp]
 
+abbreviation (input) evar_lens :: "('a::two \<Longrightarrow> 's::scene_space) \<Rightarrow> bool" 
+  where "evar_lens \<equiv> var_lens"
+
 abbreviation (input) ebasis_lens :: "('a::two \<Longrightarrow> 's::scene_space) \<Rightarrow> bool" 
   where "ebasis_lens \<equiv> basis_lens"
 
-lemma basis_then_vwb [simp]: "basis_lens x \<Longrightarrow> vwb_lens x"
-  by (simp add: basis_lens_def)
+lemma basis_then_var [simp]: "basis_lens x \<Longrightarrow> var_lens x"
+  using basis_lens.lens_in_basis basis_lens_def var_lens_axioms_def var_lens_def by blast
 
 lemma basis_lens_intro: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars \<rbrakk> \<Longrightarrow> basis_lens x"
   using basis_lens.intro basis_lens_axioms.intro by blast
 
-lemma basis_lens_scene_space [simp]: "basis_lens x \<Longrightarrow> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> scene_space"
-  using basis_lens.lens_in_basis by blast
-
 lift_definition lens_frame :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame" 
-is "\<lambda> x. if basis_lens x then \<lbrakk>x\<rbrakk>\<^sub>\<sim> else \<bottom>\<^sub>S" by auto
+is "\<lambda> x. if var_lens x then \<lbrakk>x\<rbrakk>\<^sub>\<sim> else \<bottom>\<^sub>S" by auto
 
-lemma frame_scene_basis_lens: "basis_lens x \<Longrightarrow> \<lbrakk>\<lbrakk>x\<rbrakk>\<^sub>\<sim>\<rbrakk>\<^sub>F = lens_frame x"
+lemma frame_scene_basis_lens: "var_lens x \<Longrightarrow> \<lbrakk>\<lbrakk>x\<rbrakk>\<^sub>\<sim>\<rbrakk>\<^sub>F = lens_frame x"
   by (transfer, auto)
 
 definition lens_member :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame \<Rightarrow> bool" (infix "\<in>\<^sub>F" 50)
@@ -244,12 +251,12 @@ abbreviation lens_not_member (infix "\<notin>\<^sub>F" 50) where "x \<notin>\<^s
 lemma lens_member_frame [simp]: "x \<in>\<^sub>F lens_frame x"
   by (simp add: lens_member_def)
 
-lemma lens_not_member_empty: "basis_lens x \<Longrightarrow> (x \<in>\<^sub>F \<lbrace>\<rbrace>) \<longleftrightarrow> x \<approx>\<^sub>L 0\<^sub>L"
+lemma lens_not_member_empty: "var_lens x \<Longrightarrow> (x \<in>\<^sub>F \<lbrace>\<rbrace>) \<longleftrightarrow> x \<approx>\<^sub>L 0\<^sub>L"
   by (simp add: lens_member_def)
      (transfer, auto simp add: lens_equiv_scene scene_bot_least subscene_antisym zero_lens_scene)
 
-lemma lens_not_member_empty_two: "ebasis_lens x \<Longrightarrow> x \<notin>\<^sub>F \<lbrace>\<rbrace>"
-  using basis_then_vwb ief_lens_iff_zero lens_not_member_empty no_ief_two_view by blast
+lemma lens_not_member_empty_two: "evar_lens x \<Longrightarrow> x \<notin>\<^sub>F \<lbrace>\<rbrace>"
+  using ief_lens_iff_zero lens_not_member_empty no_ief_two_view var_lens.axioms(1) by blast
 
 lemma lens_member_top: "x \<in>\<^sub>F top"
   by (simp add: lens_member_def)
@@ -260,7 +267,7 @@ lemma FUn_iff [simp]: "basis_lens x \<Longrightarrow> (x \<in>\<^sub>F a \<union
 
 lemma FCompl_iff: "ebasis_lens x \<Longrightarrow> x \<in>\<^sub>F - A \<longleftrightarrow> x \<notin>\<^sub>F A"
   apply (simp add: lens_member_def, auto)
-  apply (metis (no_types, opaque_lifting) basis_then_vwb boolean_algebra.disj_cancel_right compl_le_compl_iff dual_order.trans ief_lens_iff_zero lens_member_def lens_not_member_empty no_ief_two_view sup.absorb2 top_greatest)
+  apply (metis (no_types, opaque_lifting) basis_then_var boolean_algebra.disj_cancel_right boolean_algebra_class.boolean_algebra.double_compl bot.extremum compl_le_swap1 dual_order.trans lens_member_def lens_not_member_empty_two sup.absorb2)
   apply (metis FUn_iff boolean_algebra.disj_cancel_right lens_member_def top_greatest)
   done
 
@@ -275,34 +282,36 @@ lemma lens_insert_twice [simp]: "lens_insert x (lens_insert x A) = lens_insert x
 
 lemma lens_Un_insert_left [simp]: "lens_insert x A \<union>\<^sub>F B = lens_insert x (A \<union>\<^sub>F B)"
   by (simp add: lens_insert_def semigroup.assoc sup.semigroup_axioms)
-  
+
 lemma lens_insert_iff: 
-  assumes "basis_lens x"
+  assumes "basis_lens x" "basis_lens y"
   shows "x \<in>\<^sub>F lens_insert y A \<longleftrightarrow> x \<approx>\<^sub>L 0\<^sub>L \<or> x \<approx>\<^sub>L y \<or> x \<in>\<^sub>F A"
   using assms
   apply (simp add: lens_insert_def lens_member_def)
   apply (transfer)
   apply (simp_all add: lens_equiv_scene scene_bot_least zero_lens_scene)
-  apply (metis basis_lens.lens_in_basis basis_lens_axioms.intro basis_lens_def le_vars_then_equal lens_equiv_def lens_equiv_scene scene_bot_least scene_space_class.scene_space.Vars_scene_space scene_space_ub sublens_pres_vwb var_le_union_iff)
+  apply (metis basis_lens.lens_in_basis basis_then_var le_vars_then_equal scene_bot_least subscene_refl var_le_union_iff var_lens.lens_in_scene_space)
   done
 
 lemma lens_insert_iff_two [simp]: 
-  assumes "basis_lens (x :: 'a::two \<Longrightarrow> 's::scene_space)"
+  assumes "basis_lens (x :: 'a::two \<Longrightarrow> 's::scene_space)" "basis_lens y"
   shows "x \<in>\<^sub>F lens_insert y A \<longleftrightarrow> x \<approx>\<^sub>L y \<or> x \<in>\<^sub>F A"
   using assms basis_lens_def ief_lens_iff_zero lens_insert_iff no_ief_two_view by blast
 
 lemma lens_insert_commute: "lens_insert x (lens_insert y A) = lens_insert y (lens_insert x A)"
   by (simp add: lens_insert_def sup.left_commute)
-  
+
 syntax
   "_frame_set" :: "args \<Rightarrow> 'a::scene_space frame"    ("\<lbrace>(_)\<rbrace>")
 translations
   "\<lbrace>x, xs\<rbrace>" \<rightleftharpoons> "CONST lens_insert x \<lbrace>xs\<rbrace>"
   "\<lbrace>x\<rbrace>" \<rightleftharpoons> "CONST lens_insert x \<lbrace>\<rbrace>"
 
-lemma frame_single_basis_lens [simp]: "basis_lens x \<Longrightarrow> \<lbrakk>\<lbrakk>x\<rbrakk>\<^sub>\<sim>\<rbrakk>\<^sub>F = \<lbrace>x\<rbrace>"
+lemma frame_single_var_lens [simp]: "var_lens x \<Longrightarrow> \<lbrakk>\<lbrakk>x\<rbrakk>\<^sub>\<sim>\<rbrakk>\<^sub>F = \<lbrace>x\<rbrace>"
   by (simp add: frame_scene_basis_lens lens_insert_def)
-  
+
+subsection \<open> Equivalence under a frame \<close>
+
 lift_definition frame_equiv :: "'a::scene_space \<Rightarrow> 'a \<Rightarrow> 'a frame \<Rightarrow> bool" ("_ \<approx>\<^sub>F _ on _" [65,0,66] 65)
   is "\<lambda> s\<^sub>1 s\<^sub>2 a. s\<^sub>1 \<approx>\<^sub>S s\<^sub>2 on a" .
 
@@ -310,7 +319,7 @@ lemma frame_equiv_empty [simp]: "s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on \<lbra
   by (transfer, simp)
 
 lemma frame_equiv_refl [simp]: "s \<approx>\<^sub>F s on a"
-  by (simp add: Rep_frame frame_equiv.rep_eq idem_scene_space scene_equiv_def)
+  by (simp add: of_frame frame_equiv.rep_eq idem_scene_space scene_equiv_def)
 
 lemma frame_equiv_sym [simp]: "s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on a \<Longrightarrow> s\<^sub>2 \<approx>\<^sub>F s\<^sub>1 on a"
   by (transfer, simp add: scene_equiv_def)
