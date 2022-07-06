@@ -143,16 +143,16 @@ lemma scene_override_commute_indep:
 
 instantiation scene :: (type) "{bot, top, uminus, sup, inf}"
 begin
-  lift_definition bot_scene    :: "'s scene" is "\<lambda> x y. x" by (unfold_locales, simp_all)
-  lift_definition top_scene    :: "'s scene" is "\<lambda> x y. y" by (unfold_locales, simp_all)
-  lift_definition uminus_scene :: "'s scene \<Rightarrow> 's scene" is "\<lambda> F x y. F y x"
+  lift_definition bot_scene    :: "'a scene" is "\<lambda> x y. x" by (unfold_locales, simp_all)
+  lift_definition top_scene    :: "'a scene" is "\<lambda> x y. y" by (unfold_locales, simp_all)
+  lift_definition uminus_scene :: "'a scene \<Rightarrow> 'a scene" is "\<lambda> F x y. F y x"
     by (unfold_locales, simp_all)
   text \<open> Scene union requires that the two scenes are at least compatible. If they are not, the
         result is the bottom scene. \<close>
-  lift_definition sup_scene :: "'s scene \<Rightarrow> 's scene \<Rightarrow> 's scene" 
+  lift_definition sup_scene :: "'a scene \<Rightarrow> 'a scene \<Rightarrow> 'a scene" 
     is "\<lambda> F G. if (\<forall> s\<^sub>1 s\<^sub>2. G (F s\<^sub>1 s\<^sub>2) s\<^sub>2 = F (G s\<^sub>1 s\<^sub>2) s\<^sub>2) then (\<lambda> s\<^sub>1 s\<^sub>2. G (F s\<^sub>1 s\<^sub>2) s\<^sub>2) else (\<lambda> s\<^sub>1 s\<^sub>2. s\<^sub>1)"
     by (unfold_locales, auto, metis overrider.ovr_overshadow_right)
-  definition inf_scene :: "'s scene \<Rightarrow> 's scene \<Rightarrow> 's scene" where
+  definition inf_scene :: "'a scene \<Rightarrow> 'a scene \<Rightarrow> 'a scene" where
     [lens_defs]: "inf_scene X Y = - (sup (- X) (- Y))"
   instance ..
 end
@@ -168,6 +168,13 @@ where "top_scene \<equiv> top"
 
 abbreviation bot_scene :: "'s scene" ("\<bottom>\<^sub>S")
 where "bot_scene \<equiv> bot"
+
+instantiation scene :: (type) "minus"
+begin
+  definition minus_scene :: "'a scene \<Rightarrow> 'a scene \<Rightarrow> 'a scene" where
+    "minus_scene A B = A \<sqinter>\<^sub>S (- B)"
+instance ..
+end
 
 lemma bot_idem_scene [simp]: "idem_scene \<bottom>\<^sub>S"
   by (transfer, unfold_locales, simp_all)

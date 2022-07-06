@@ -10,12 +10,14 @@ typedef (overloaded) 'a::scene_space frame = "scene_space :: 'a scene set"
   morphisms of_frame mk_frame
   by blast
 
+notation of_frame ("\<lbrakk>_\<rbrakk>\<^sub>F")
+
 setup_lifting type_definition_frame
 
 lemma UNIV_frame_scene_space: "UNIV = mk_frame ` scene_space"
   by (metis of_frame of_frame_inverse UNIV_eq_I imageI)
 
-lift_definition frame_scene :: "'s::scene_space scene \<Rightarrow> 's frame" ("\<lbrakk>_\<rbrakk>\<^sub>F")
+lift_definition frame_scene :: "'s::scene_space scene \<Rightarrow> 's frame" ("[_]\<^sub>F")
   is "\<lambda> s. if s \<in> scene_space then s else \<bottom>\<^sub>S"
   by auto
 
@@ -67,7 +69,7 @@ abbreviation frame_union :: "'a::scene_space frame \<Rightarrow> 'a frame \<Righ
 abbreviation frame_inter :: "'a::scene_space frame \<Rightarrow> 'a frame \<Rightarrow> 'a frame"(infixl "\<inter>\<^sub>F" 70)
   where "frame_inter \<equiv> inf"
 
-lemma frame_scene_union: "\<lbrakk> A \<in> scene_space; B \<in> scene_space \<rbrakk> \<Longrightarrow> \<lbrakk>A \<squnion>\<^sub>S B\<rbrakk>\<^sub>F = \<lbrakk>A\<rbrakk>\<^sub>F \<union>\<^sub>F \<lbrakk>B\<rbrakk>\<^sub>F"
+lemma frame_scene_union: "\<lbrakk> A \<in> scene_space; B \<in> scene_space \<rbrakk> \<Longrightarrow> [A \<squnion>\<^sub>S B]\<^sub>F = [A]\<^sub>F \<union>\<^sub>F [B]\<^sub>F"
   by (transfer, auto)
   
 
@@ -199,11 +201,11 @@ proof
   qed
 qed
 
-lemma frame_scene_foldr: "\<lbrakk> set xs \<subseteq> scene_space \<rbrakk> \<Longrightarrow> \<lbrakk>\<Squnion>\<^sub>S xs\<rbrakk>\<^sub>F = \<Union>\<^sub>F (set (map frame_scene xs))"
+lemma frame_scene_foldr: "\<lbrakk> set xs \<subseteq> scene_space \<rbrakk> \<Longrightarrow> [\<Squnion>\<^sub>S xs]\<^sub>F = \<Union>\<^sub>F (set (map frame_scene xs))"
   by (transfer, auto simp add: image_constant_conv Int_absorb2 scene_space_foldr)
      (metis (mono_tags, lifting) foldr_scene_union_eq_scene_space tfl_some)
 
-lemma frame_scene_top: "\<top>\<^sub>F = \<lbrakk>\<Squnion>\<^sub>S Vars\<rbrakk>\<^sub>F"
+lemma frame_scene_top: "\<top>\<^sub>F = [\<Squnion>\<^sub>S Vars]\<^sub>F"
   by (simp add: frame_top top_scene_eq)  
 
 lemma uminus_frame_Inf: "- \<Inter>\<^sub>F A = \<Union>\<^sub>F (uminus ` A)"
@@ -240,7 +242,7 @@ lemma basis_lens_intro: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> 
 lift_definition lens_frame :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame" 
 is "\<lambda> x. if var_lens x then \<lbrakk>x\<rbrakk>\<^sub>\<sim> else \<bottom>\<^sub>S" by auto
 
-lemma frame_scene_basis_lens: "var_lens x \<Longrightarrow> \<lbrakk>\<lbrakk>x\<rbrakk>\<^sub>\<sim>\<rbrakk>\<^sub>F = lens_frame x"
+lemma frame_scene_basis_lens: "var_lens x \<Longrightarrow> [\<lbrakk>x\<rbrakk>\<^sub>\<sim>]\<^sub>F = lens_frame x"
   by (transfer, auto)
 
 definition lens_member :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame \<Rightarrow> bool" (infix "\<in>\<^sub>F" 50)
@@ -307,7 +309,7 @@ translations
   "\<lbrace>x, xs\<rbrace>" \<rightleftharpoons> "CONST lens_insert x \<lbrace>xs\<rbrace>"
   "\<lbrace>x\<rbrace>" \<rightleftharpoons> "CONST lens_insert x \<lbrace>\<rbrace>"
 
-lemma frame_single_var_lens [simp]: "var_lens x \<Longrightarrow> \<lbrakk>\<lbrakk>x\<rbrakk>\<^sub>\<sim>\<rbrakk>\<^sub>F = \<lbrace>x\<rbrace>"
+lemma frame_single_var_lens [simp]: "var_lens x \<Longrightarrow> [\<lbrakk>x\<rbrakk>\<^sub>\<sim>]\<^sub>F = \<lbrace>x\<rbrace>"
   by (simp add: frame_scene_basis_lens lens_insert_def)
 
 subsection \<open> Equivalence under a frame \<close>

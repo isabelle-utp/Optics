@@ -82,7 +82,7 @@ lemma alpha_scene_space_class_intro':
   done
   
 definition more_frame :: "('a::scene_space \<Longrightarrow> 'b::scene_space) \<Rightarrow> 'b frame" where
-"more_frame m\<^sub>L = \<Union>\<^sub>F ((\<lambda>x. \<lbrakk>x ;\<^sub>S m\<^sub>L\<rbrakk>\<^sub>F) ` set Vars)"
+"more_frame m\<^sub>L = \<Union>\<^sub>F ((\<lambda>x. [x ;\<^sub>S m\<^sub>L]\<^sub>F) ` set Vars)"
 
 lemma more_frame_unit [simp]: "more_frame (m\<^sub>L :: unit \<Longrightarrow> 'b::scene_space) = \<lbrace>\<rbrace>"
   by (simp add: more_frame_def)
