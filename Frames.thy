@@ -17,6 +17,12 @@ setup_lifting type_definition_frame
 lemma UNIV_frame_scene_space: "UNIV = mk_frame ` scene_space"
   by (metis of_frame of_frame_inverse UNIV_eq_I imageI)
 
+lemma idem_scene_frame [simp]: "idem_scene \<lbrakk>A\<rbrakk>\<^sub>F"
+  by (simp add: idem_scene_space of_frame)
+
+lemma compat_frames [simp]: "\<lbrakk>A\<rbrakk>\<^sub>F ##\<^sub>S \<lbrakk>B\<rbrakk>\<^sub>F"
+  by (simp add: of_frame scene_space_compat)
+
 lift_definition frame_scene :: "'s::scene_space scene \<Rightarrow> 's frame" ("[_]\<^sub>F")
   is "\<lambda> s. if s \<in> scene_space then s else \<bottom>\<^sub>S"
   by auto
@@ -227,6 +233,8 @@ locale basis_lens = vwb_lens +
 
 declare basis_lens.lens_in_basis [simp]
 
+text \<open> Effectual variable and basis lenses need to have at least two view elements \<close>
+
 abbreviation (input) evar_lens :: "('a::two \<Longrightarrow> 's::scene_space) \<Rightarrow> bool" 
   where "evar_lens \<equiv> var_lens"
 
@@ -257,10 +265,10 @@ lemma lens_not_member_empty: "var_lens x \<Longrightarrow> (x \<in>\<^sub>F \<lb
   by (simp add: lens_member_def)
      (transfer, auto simp add: lens_equiv_scene scene_bot_least subscene_antisym zero_lens_scene)
 
-lemma lens_not_member_empty_two: "evar_lens x \<Longrightarrow> x \<notin>\<^sub>F \<lbrace>\<rbrace>"
+lemma lens_not_member_empty_two [simp]: "evar_lens x \<Longrightarrow> x \<notin>\<^sub>F \<lbrace>\<rbrace>"
   using ief_lens_iff_zero lens_not_member_empty no_ief_two_view var_lens.axioms(1) by blast
 
-lemma lens_member_top: "x \<in>\<^sub>F top"
+lemma lens_member_top [simp]: "x \<in>\<^sub>F top"
   by (simp add: lens_member_def)
 
 lemma FUn_iff [simp]: "basis_lens x \<Longrightarrow> (x \<in>\<^sub>F a \<union>\<^sub>F b) = (x \<in>\<^sub>F a \<or> x \<in>\<^sub>F b)"
@@ -275,6 +283,16 @@ lemma FCompl_iff: "ebasis_lens x \<Longrightarrow> x \<in>\<^sub>F - A \<longlef
 
 lemma FInter_iff [simp]: "basis_lens x \<Longrightarrow> (x \<in>\<^sub>F a \<inter>\<^sub>F b) = (x \<in>\<^sub>F a \<and> x \<in>\<^sub>F b)"
   by (simp add: lens_member_def)
+
+text \<open> A basis lens is not a member of a frame when it is independent of the corresponding scene. This
+  does not hold for non-basis lenses, because in that case part of the lens may be in the frame, even
+  if not all of it is. \<close>
+
+lemma basis_lens_not_member_indep: "ebasis_lens x \<Longrightarrow> x \<notin>\<^sub>F A \<longleftrightarrow> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<bowtie>\<^sub>S \<lbrakk>A\<rbrakk>\<^sub>F"
+  apply (auto simp add: lens_frame.rep_eq less_eq_frame.rep_eq FCompl_iff[THEN sym] indep_then_compl_in uminus_frame.rep_eq)
+  apply (metis basis_then_var boolean_algebra_class.boolean_algebra.double_compl lens_frame.rep_eq lens_member_def less_eq_frame.rep_eq scene_le_iff_indep_inv uminus_frame.rep_eq)
+  apply (simp add: indep_then_compl_in lens_frame.rep_eq lens_member_def less_eq_frame.rep_eq uminus_frame.rep_eq)
+  done
   
 definition lens_insert :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame \<Rightarrow> 's frame"
   where "lens_insert x a = sup (lens_frame x) a"
@@ -302,6 +320,10 @@ lemma lens_insert_iff_two [simp]:
 
 lemma lens_insert_commute: "lens_insert x (lens_insert y A) = lens_insert y (lens_insert x A)"
   by (simp add: lens_insert_def sup.left_commute)
+
+lemma lens_scene_insert_frame: 
+  "var_lens x \<Longrightarrow> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<squnion>\<^sub>S \<lbrakk>A\<rbrakk>\<^sub>F = \<lbrakk>lens_insert x A\<rbrakk>\<^sub>F"
+  by (simp add: lens_frame.rep_eq lens_insert_def sup_frame.rep_eq)
 
 syntax
   "_frame_set" :: "args \<Rightarrow> 'a::scene_space frame"    ("\<lbrace>(_)\<rbrace>")

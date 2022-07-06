@@ -161,7 +161,7 @@ lemma plus_pred_sublens: "\<lbrakk> mwb_lens Z; X \<subseteq>\<^sub>L Z; Y \<sub
   apply (rename_tac Z\<^sub>1 Z\<^sub>2)
   apply (rule_tac x="Z\<^sub>1 +\<^sub>L Z\<^sub>2" in exI)
   apply (auto intro!: plus_wb_lens)
-   apply (simp add: lens_comp_indep_cong_left plus_vwb_lens)
+   apply (simp add: lens_comp_indep_cong_left)
   apply (simp add: plus_lens_distr)
 done
 
@@ -222,8 +222,6 @@ done
 
 lemma lens_plus_comm: "X \<bowtie> Y \<Longrightarrow> X +\<^sub>L Y \<approx>\<^sub>L Y +\<^sub>L X"
   by (simp add: lens_equivI lens_indep_sym lens_plus_sub_comm)
-
-
 
 text \<open>Any composite lens is larger than an element of the lens, as demonstrated by the following
   four laws.\<close>
@@ -379,6 +377,24 @@ proof -
   then show ?thesis
     using f4 f3 a1 by (metis mwb_lens.put_put mwb_lens_def vwb_lens_mwb weak_lens.put_get)
 qed
+
+text \<open> If two lenses are both independent and equivalent then they must be ineffectual. \<close>
+
+lemma indep_and_equiv_implies_ief:
+  assumes "wb_lens x" "x \<bowtie> y" "x \<approx>\<^sub>L y"
+  shows "ief_lens x"
+proof -
+  have "x \<bowtie> x"
+    using assms(2) assms(3) lens_equiv_pres_indep' by blast
+  thus ?thesis
+    using assms(1) lens_indep_quasi_irrefl vwb_lens_wb wb_lens_weak by blast
+qed
+
+lemma indep_eff_implies_not_equiv [simp]:
+  fixes x :: "'a::two \<Longrightarrow> 'b"
+  assumes "wb_lens x" "x \<bowtie> y"
+  shows "\<not> (x \<approx>\<^sub>L y)"
+  using assms indep_and_equiv_implies_ief no_ief_two_view by blast
 
 subsection \<open>Bijective Lens Equivalences\<close>
   
