@@ -179,6 +179,14 @@ next
   qed
 qed
 
+lemma foldr_scene_append:
+  "\<lbrakk> pairwise (##\<^sub>S) (set (xs @ ys)) \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S (xs @ ys) = \<Squnion>\<^sub>S xs \<squnion>\<^sub>S \<Squnion>\<^sub>S ys"
+  by (simp add: foldr_scene_union_add_tail pairwise_compat_foldr pairwise_subset scene_compats_members)
+
+lemma foldr_scene_concat:
+  "\<lbrakk> pairwise (##\<^sub>S) (set (concat xs)) \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S (concat xs) = \<Squnion>\<^sub>S (map \<Squnion>\<^sub>S xs)"
+  by (induct xs, simp_all, metis foldr_append foldr_scene_append pairwise_subset set_append set_concat sup_ge2)
+
 subsection \<open> Predicates \<close>
 
 text \<open> All scenes in the set are independent \<close>

@@ -11,6 +11,8 @@ open Lens_Lib;
 open HOLogic;
 
 fun alpha_scene_space_term xs more parent =
+  (* FIXME: Use following code to determine whether a field has a scene space, and use if present by mapping over Vars *)
+  (* Sorts.of_sort (Sign.classes_of @{theory}) (@{typ test}, @{sort scene_space}) *)
   let val vs = map (fn x => (const @{const_name lens_scene}) $ const x) xs
   in const @{const_name alpha_scene_space'} $ mk_list dummyT vs  $ const more $ const parent
   end;
@@ -106,7 +108,7 @@ fun mk_alpha_scene_space tname thy =
 
   val (_, ctx1) = Local_Theory.begin_nested ctx0
 
-  val def_ty = Syntax.read_typ ctx0 ("'a " ^ r_ext ^ " scene list");
+  val def_ty = Syntax.read_typ ctx0 ("'a " ^ r_ext ^ " scene list");                                                                                                                                                     
   val (_, ctx2) = Specification.definition (SOME (Binding.name ("Vars_" ^ tname ^ "_ext"), NONE, NoSyn)) [] [] ((Binding.empty, @{attributes [scene_space_defs]}), mk_def def_ty ("Vars_" ^ tname ^ "_ext") (alpha_scene_space_term xs more parent)) ctx1
 
   val ctx3 = Local_Theory.end_nested ctx2

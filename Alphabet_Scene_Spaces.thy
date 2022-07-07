@@ -53,7 +53,7 @@ lemma alpha_scene_space_class_intro':
     "m\<^sub>L \<subseteq>\<^sub>L p\<^sub>L"
     "\<forall>a\<in>set xs. a \<subseteq>\<^sub>S \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
     "\<forall> x\<in>set xs. x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"
-    "(foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>) = \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
+    "foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim> = \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
   shows "class.scene_space (alpha_scene_space' xs m\<^sub>L p\<^sub>L)"
   unfolding alpha_scene_space'_def
   apply (rule alpha_scene_space_class_intro)
@@ -80,7 +80,33 @@ lemma alpha_scene_space_class_intro':
   apply (simp add: assms(8))
   apply (metis assms(4) scene_comp_quotient scene_comp_top_scene)
   done
-  
+
+lemma alpha_scene_space_class_intro'':
+  assumes 
+    "\<forall> x\<in>set (concat xs). idem_scene x"
+    "scene_indeps (set (concat xs))"
+    "vwb_lens m\<^sub>L" \<comment> \<open> The more lens \<close>
+    "vwb_lens p\<^sub>L" \<comment> \<open> The parent more lens \<close>
+    "m\<^sub>L \<subseteq>\<^sub>L p\<^sub>L"
+    "\<forall>a\<in>set (concat xs). a \<subseteq>\<^sub>S \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
+    "\<forall> x\<in>set (concat xs). x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"
+    "foldr (\<squnion>\<^sub>S) (map \<Squnion>\<^sub>S xs) \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim> = \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
+  shows "class.scene_space (alpha_scene_space' (concat xs) m\<^sub>L p\<^sub>L)"
+proof -
+  have p1: "pairwise (##\<^sub>S) (set (concat xs))"
+    by (metis assms(2) pairwise_def scene_indep_compat scene_indeps_def)
+  have p2: "pairwise (##\<^sub>S) (set (concat xs @ [\<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>]))"
+    by (metis (no_types, lifting) assms(7) insertE list.simps(15) p1 pairwise_def rotate1.simps(2) scene_compat_sym scene_indep_compat set_rotate1)
+  have "foldr (\<squnion>\<^sub>S) (concat xs) \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim> = \<Squnion>\<^sub>S (concat (xs @ [[\<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>]]))"
+    by simp
+  also have "... = \<Squnion>\<^sub>S (map \<Squnion>\<^sub>S (xs @ [[\<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>]]))"
+    by (metis append_self_conv concat.simps(2) concat_append foldr_scene_concat p2)
+  also have "... = foldr (\<squnion>\<^sub>S) (map \<Squnion>\<^sub>S xs) \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"
+    by simp
+  finally show ?thesis
+    using assms by (rule_tac alpha_scene_space_class_intro', simp_all)
+qed
+
 definition more_frame :: "('a::scene_space \<Longrightarrow> 'b::scene_space) \<Rightarrow> 'b frame" where
 "more_frame m\<^sub>L = \<Union>\<^sub>F ((\<lambda>x. [x ;\<^sub>S m\<^sub>L]\<^sub>F) ` set Vars)"
 
@@ -95,7 +121,8 @@ lemmas scene_space_lemmas =
    comp_vwb_lens lens_comp_assoc[THEN sym] sublens_iff_subscene[THEN sym] 
    lens_scene_quotient[THEN sym] sublens_greatest lens_quotient_id_denom
    scene_comp_assoc lens_quotient_indep lens_quotient_plus[THEN sym] lens_quotient_bij 
-   plus_pred_sublens lens_scene_top_iff_bij_lens
+   plus_pred_sublens lens_scene_top_iff_bij_lens lens_indep_scene[THEN sym]
+   lens_indep_left_ext lens_indep_right_ext
 
 method basis_lens uses defs =
   (rule basis_lens_intro, simp_all add: scene_space_defs alpha_scene_space_def alpha_scene_space'_def scene_space_lemmas)
