@@ -9,6 +9,9 @@ subsection \<open> Preliminaries \<close>
 abbreviation foldr_scene :: "'a scene list \<Rightarrow> 'a scene" ("\<Squnion>\<^sub>S") where
 "foldr_scene as \<equiv> foldr (\<squnion>\<^sub>S) as \<bottom>\<^sub>S"
 
+lemma pairwise_indep_then_compat [simp]: "pairwise (\<bowtie>\<^sub>S) A \<Longrightarrow> pairwise (##\<^sub>S) A"
+  by (simp add: pairwise_alt)
+
 lemma pairwise_compat_foldr: 
   "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> b \<in> set as. a ##\<^sub>S b \<rbrakk> \<Longrightarrow> a ##\<^sub>S \<Squnion>\<^sub>S as"
   apply (induct as)
@@ -205,13 +208,16 @@ subsection \<open> Scene space class \<close>
 
 class scene_space =
   fixes Vars :: "'a scene list"
-  assumes idem_scene_Vars: "\<And> x. x \<in> set Vars \<Longrightarrow> idem_scene x"
+  assumes idem_scene_Vars [simp]: "\<And> x. x \<in> set Vars \<Longrightarrow> idem_scene x"
   and indep_Vars: "scene_indeps (set Vars)"
   and span_Vars: "scene_span Vars"
 begin
 
 lemma scene_space_compats [simp]: "pairwise (##\<^sub>S) (set Vars)"
   by (metis local.indep_Vars pairwise_alt scene_indep_compat scene_indeps_def)
+
+lemma Vars_ext_lens_indep: "\<lbrakk> a ;\<^sub>S x \<noteq> b ;\<^sub>S x; a \<in> set Vars; b \<in> set Vars \<rbrakk> \<Longrightarrow> a ;\<^sub>S x \<bowtie>\<^sub>S b ;\<^sub>S x"
+  by (metis indep_Vars pairwiseD scene_comp_indep scene_indeps_def)
 
 inductive_set scene_space :: "'a scene set" where
 bot_scene_space [intro]: "\<bottom>\<^sub>S \<in> scene_space" | 
@@ -702,6 +708,21 @@ lemma foldr_scene_union_eq_scene_space:
   "\<lbrakk> set xs \<subseteq> scene_space; set xs = set ys \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S ys"
   by (metis foldr_scene_union_eq_sets pairwise_def pairwise_subset scene_space_compat)
 
+subsection \<open> Mapping a lens over a scene list \<close>
+
+definition map_lcomp :: "'b scene list \<Rightarrow> ('b \<Longrightarrow> 'a) \<Rightarrow> 'a scene list" where
+"map_lcomp ss a = map (\<lambda> x. x ;\<^sub>S a) ss"
+
+lemma map_lcomp_dist: 
+  "\<lbrakk> pairwise (##\<^sub>S) (set xs); vwb_lens a \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S (map_lcomp xs a) = \<Squnion>\<^sub>S xs ;\<^sub>S a"
+  by (simp add: foldr_compat_dist map_lcomp_def)
+
+lemma map_lcomp_Vars_is_lens [simp]: "vwb_lens a \<Longrightarrow> \<Squnion>\<^sub>S (map_lcomp Vars a) = \<lbrakk>a\<rbrakk>\<^sub>\<sim>"
+  by (metis map_lcomp_dist scene_comp_top_scene scene_space_compats top_scene_eq)
+
+lemma set_map_lcomp [simp]: "set (map_lcomp xs a) = (\<lambda>x. x ;\<^sub>S a) ` set xs"
+  by (simp add: map_lcomp_def)
+
 subsection \<open> Instances \<close>
 
 instantiation unit :: scene_space
@@ -713,5 +734,109 @@ instance
   by (intro_classes, simp_all add: scene_indeps_def scene_span_def unit_scene_top_eq_bot)
 
 end
+
+find_theorems vwb_lens fst\<^sub>L
+
+find_theorems "(\<Squnion>\<^sub>S)" "(@)"
+
+instantiation prod :: (scene_space, scene_space) scene_space
+begin
+
+definition Vars_prod :: "('a \<times> 'b) scene list" where "Vars_prod = map_lcomp Vars fst\<^sub>L @ map_lcomp Vars snd\<^sub>L"
+
+instance proof
+  have pw: "pairwise (\<bowtie>\<^sub>S) (set (map_lcomp Vars fst\<^sub>L @ map_lcomp Vars snd\<^sub>L))"
+    by (auto simp add: pairwise_def Vars_ext_lens_indep scene_comp_pres_indep scene_indep_sym)
+  show "\<And>x:: ('a \<times> 'b) scene. x \<in> set Vars \<Longrightarrow> idem_scene x"
+    by (auto simp add: Vars_prod_def)
+  from pw show "scene_indeps (set (Vars :: ('a \<times> 'b) scene list))"
+    by (simp add: Vars_prod_def scene_indeps_def)
+  show "scene_span (Vars :: ('a \<times> 'b) scene list)"
+    by (simp only: scene_span_def Vars_prod_def foldr_scene_append pw pairwise_indep_then_compat map_lcomp_Vars_is_lens fst_vwb_lens snd_vwb_lens)
+       (metis fst_vwb_lens lens_plus_scene lens_scene_top_iff_bij_lens plus_mwb_lens scene_union_commute snd_fst_lens_indep snd_vwb_lens swap_bij_lens vwb_lens_mwb)
+qed  
+
+end
+
+subsection \<open> Scene space and basis lenses \<close>
+
+locale var_lens = vwb_lens +
+  assumes lens_in_scene_space: "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> scene_space"
+
+declare var_lens.lens_in_scene_space [simp]
+declare var_lens.axioms(1) [simp]
+
+locale basis_lens = vwb_lens +
+  assumes lens_in_basis: "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars"
+
+declare basis_lens.lens_in_basis [simp]
+
+text \<open> Effectual variable and basis lenses need to have at least two view elements \<close>
+
+abbreviation (input) evar_lens :: "('a::two \<Longrightarrow> 's::scene_space) \<Rightarrow> bool" 
+  where "evar_lens \<equiv> var_lens"
+
+abbreviation (input) ebasis_lens :: "('a::two \<Longrightarrow> 's::scene_space) \<Rightarrow> bool" 
+  where "ebasis_lens \<equiv> basis_lens"
+
+lemma basis_then_var [simp]: "basis_lens x \<Longrightarrow> var_lens x"
+  using basis_lens.lens_in_basis basis_lens_def var_lens_axioms_def var_lens_def by blast
+
+lemma basis_lens_intro: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars \<rbrakk> \<Longrightarrow> basis_lens x"
+  using basis_lens.intro basis_lens_axioms.intro by blast
+
+subsection \<open> Composite lenses \<close>
+
+locale composite_lens = vwb_lens +
+  assumes comp_in_Vars: "(\<lambda> a. a ;\<^sub>S x) ` set Vars \<subseteq> set Vars"
+begin
+
+lemma Vars_closed_comp: "a \<in> set Vars \<Longrightarrow> a ;\<^sub>S x \<in> set Vars"
+  using comp_in_Vars by blast
+
+lemma scene_space_closed_comp:
+  assumes "a \<in> scene_space"
+  shows "a ;\<^sub>S x \<in> scene_space"
+proof -
+  obtain xs where xs: "a = \<Squnion>\<^sub>S xs" "set xs \<subseteq> set Vars"
+    using assms scene_space_vars_decomp by blast
+  have "(\<Squnion>\<^sub>S xs) ;\<^sub>S x = \<Squnion>\<^sub>S (map (\<lambda> a. a ;\<^sub>S x) xs)"
+    by (metis foldr_compat_dist pairwise_subset scene_space_compats xs(2))
+  also have "... \<in> scene_space"
+    by (auto simp add: scene_space_vars_decomp_iff)
+       (metis comp_in_Vars image_Un le_iff_sup le_supE list.set_map xs(2))
+  finally show ?thesis
+    by (simp add: xs)
+qed
+
+sublocale var_lens
+proof
+  show "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> scene_space"
+    by (metis scene_comp_top_scene scene_space_closed_comp top_scene_space vwb_lens_axioms)
+qed
+
+end
+
+lemma composite_implies_var_lens [simp]:
+  "composite_lens x \<Longrightarrow> var_lens x"
+  by (metis composite_lens.axioms(1) composite_lens.scene_space_closed_comp scene_comp_top_scene top_scene_space var_lens_axioms.intro var_lens_def)
+
+text \<open> The extension of any lens in the scene space remains in the scene space \<close>
+
+lemma composite_lens_comp [simp]:
+  "\<lbrakk> composite_lens a; var_lens x \<rbrakk> \<Longrightarrow> var_lens (x ;\<^sub>L a)"
+  by (metis comp_vwb_lens composite_lens.scene_space_closed_comp composite_lens_def lens_scene_comp var_lens_axioms_def var_lens_def)
+
+text \<open> A basis lens within a composite lens remains a basis lens (i.e. it remains atomic) \<close>
+
+lemma composite_lens_basis_comp [simp]:
+  "\<lbrakk> composite_lens a; basis_lens x \<rbrakk> \<Longrightarrow> basis_lens (x ;\<^sub>L a)"
+  by (metis basis_lens.lens_in_basis basis_lens_def basis_lens_intro comp_vwb_lens composite_lens.Vars_closed_comp composite_lens_def lens_scene_comp)
+
+lemma fst_composite_lens: "composite_lens fst\<^sub>L"
+  by (rule composite_lens.intro, simp add: fst_vwb_lens, rule composite_lens_axioms.intro, simp add: Vars_prod_def)
+
+lemma snd_composite_lens: "composite_lens snd\<^sub>L"
+  by (rule composite_lens.intro, simp add: snd_vwb_lens, rule composite_lens_axioms.intro, simp add: Vars_prod_def)
 
 end

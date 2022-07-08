@@ -222,31 +222,6 @@ lemma uminus_frame_Sup: "- \<Union>\<^sub>F A = \<Inter>\<^sub>F (uminus ` A)"
 
 subsection \<open> Frames as sets of basis scenes \<close>
 
-locale var_lens = vwb_lens +
-  assumes lens_in_scene_space: "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> scene_space"
-
-declare var_lens.lens_in_scene_space [simp]
-declare var_lens.axioms(1) [simp]
-
-locale basis_lens = vwb_lens +
-  assumes lens_in_basis: "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars"
-
-declare basis_lens.lens_in_basis [simp]
-
-text \<open> Effectual variable and basis lenses need to have at least two view elements \<close>
-
-abbreviation (input) evar_lens :: "('a::two \<Longrightarrow> 's::scene_space) \<Rightarrow> bool" 
-  where "evar_lens \<equiv> var_lens"
-
-abbreviation (input) ebasis_lens :: "('a::two \<Longrightarrow> 's::scene_space) \<Rightarrow> bool" 
-  where "ebasis_lens \<equiv> basis_lens"
-
-lemma basis_then_var [simp]: "basis_lens x \<Longrightarrow> var_lens x"
-  using basis_lens.lens_in_basis basis_lens_def var_lens_axioms_def var_lens_def by blast
-
-lemma basis_lens_intro: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars \<rbrakk> \<Longrightarrow> basis_lens x"
-  using basis_lens.intro basis_lens_axioms.intro by blast
-
 lift_definition lens_frame :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame" 
 is "\<lambda> x. if var_lens x then \<lbrakk>x\<rbrakk>\<^sub>\<sim> else \<bottom>\<^sub>S" by auto
 

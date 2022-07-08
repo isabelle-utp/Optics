@@ -426,6 +426,9 @@ lemma scene_bot_quotient [simp]: "\<bottom>\<^sub>S /\<^sub>S X = \<bottom>\<^su
 lemma scene_comp_quotient: "vwb_lens X \<Longrightarrow> (A ;\<^sub>S X) /\<^sub>S X = A"
   by (transfer, auto simp add: fun_eq_iff lens_override_def)
 
+lemma scene_quot_id_lens [simp]: "(A /\<^sub>S 1\<^sub>L) = A"
+  by (transfer, simp, simp add: lens_defs)
+
 subsection \<open> Linking Scenes and Lenses \<close>
 
 text \<open> The following function extracts a scene from a very well behaved lens \<close>

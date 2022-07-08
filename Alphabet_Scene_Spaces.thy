@@ -90,7 +90,7 @@ lemma alpha_scene_space_class_intro'':
     "m\<^sub>L \<subseteq>\<^sub>L p\<^sub>L"
     "\<forall>a\<in>set (concat xs). a \<subseteq>\<^sub>S \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
     "\<forall> x\<in>set (concat xs). x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"
-    "foldr (\<squnion>\<^sub>S) (map \<Squnion>\<^sub>S xs) \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim> = \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
+    "\<Squnion>\<^sub>S (map \<Squnion>\<^sub>S xs @ [\<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>]) = \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
   shows "class.scene_space (alpha_scene_space' (concat xs) m\<^sub>L p\<^sub>L)"
 proof -
   have p1: "pairwise (##\<^sub>S) (set (concat xs))"
@@ -126,6 +126,10 @@ lemmas scene_space_lemmas =
 
 method basis_lens uses defs =
   (rule basis_lens_intro, simp_all add: scene_space_defs alpha_scene_space_def alpha_scene_space'_def scene_space_lemmas)
+
+method composite_lens =
+  (rule composite_lens.intro, simp, rule composite_lens_axioms.intro
+  ,simp add: scene_space_defs alpha_scene_space_def alpha_scene_space'_def scene_space_lemmas image_comp)
 
 method more_frame = 
   ((simp add: frame_scene_top frame_scene_foldr)?
