@@ -23,6 +23,8 @@ sig
 
   val lensT: typ -> typ -> typ              (* Lens type *)
   val isLensT: typ -> bool                
+  val lensViewT: typ -> typ                 (* Get the view type of a lens *)
+  val lensSrcT: typ -> typ                  (* Get the source type of a lens *)   
   val astateT: typ                          (* Abstract state type *)
   val pairsWith: 'a list -> 'a list -> ('a * 'a) list
   val pairings: 'a list -> ('a * 'a) list   (* Calculate all pairings *)
@@ -60,6 +62,12 @@ fun lensT a b = Type (@{type_name lens_ext}, [a, b, unitT])
 
 fun isLensT (Type (n, _)) = (n = @{type_name lens_ext}) |
     isLensT _ = false
+
+fun lensViewT (Type (@{type_name lens_ext}, [v, _, _])) = v |
+    lensViewT _ = raise Match;
+
+fun lensSrcT (Type (@{type_name lens_ext}, [_, s, _])) = s |
+    lensSrcT _ = raise Match;
 
 val astateT = (TFree ("'st", [@{class type}, @{class scene_space}]))
 
