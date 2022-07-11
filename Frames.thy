@@ -272,6 +272,12 @@ lemma basis_lens_not_member_indep: "ebasis_lens x \<Longrightarrow> x \<notin>\<
 definition lens_insert :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame \<Rightarrow> 's frame"
   where "lens_insert x a = sup (lens_frame x) a"
 
+syntax
+  "_frame_set" :: "args \<Rightarrow> 'a::scene_space frame"    ("\<lbrace>(_)\<rbrace>\<^sub>F")
+translations
+  "\<lbrace>x, xs\<rbrace>\<^sub>F" \<rightleftharpoons> "CONST lens_insert x \<lbrace>xs\<rbrace>\<^sub>F"
+  "\<lbrace>x\<rbrace>\<^sub>F" \<rightleftharpoons> "CONST lens_insert x \<lbrace>\<rbrace>\<^sub>F"
+
 lemma lens_insert_twice [simp]: "lens_insert x (lens_insert x A) = lens_insert x A"
   by (simp add: lens_insert_def)
 

@@ -4,12 +4,6 @@ theory Alphabet_Scene_Space_Examples
 imports Alphabet_Scene_Spaces
 begin
 
-syntax
-  "_frame_set" :: "args \<Rightarrow> 'a::scene_space frame"    ("\<lbrace>(_)\<rbrace>\<^sub>F")
-translations
-  "\<lbrace>x, xs\<rbrace>\<^sub>F" \<rightleftharpoons> "CONST lens_insert x \<lbrace>xs\<rbrace>\<^sub>F"
-  "\<lbrace>x\<rbrace>\<^sub>F" \<rightleftharpoons> "CONST lens_insert x \<lbrace>\<rbrace>\<^sub>F"
-
 alphabet test = 
   x :: bool
   y :: nat 
