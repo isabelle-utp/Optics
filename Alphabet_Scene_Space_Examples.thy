@@ -79,9 +79,19 @@ alphabet_scene_space company
 lemma "composite_lens more\<^sub>L"
   by composite_lens
 
+find_theorems set map_lcomp
+
+find_theorems "\<Squnion>\<^sub>S" concat
+
 lemma "\<top>\<^sub>F = \<lbrace>income, boss, worker\<rbrace> \<union>\<^sub>F more_frame more\<^sub>L"
-  apply (simp add: frame_scene_top frame_scene_foldr)?
-  apply (simp add: Vars_company_ext_def frame_scene_top frame_scene_foldr alpha_scene_space'_def alpha_scene_space_def scene_space_lemmas more_frame_def  image_Un Sup_union_distrib)
+  apply (simp add: frame_scene_top frame_Union_image)? 
+  apply (unfold Vars_company_ext_def)
+  apply (subst foldr_scene_concat)
+  apply (simp)
+  apply (rule conjI)
+  apply (simp add: frame_scene_top frame_scene_foldr alpha_scene_space'_def alpha_scene_space_def scene_space_lemmas more_frame_def  image_Un Sup_union_distrib)
+  apply (simp add: image_comp)
+  apply (subst composite_lens_frame_lens)
   apply more_frame
   oops
 
