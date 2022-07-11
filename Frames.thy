@@ -92,8 +92,8 @@ end
 abbreviation frame_UNIV :: "'s::scene_space frame" ("\<top>\<^sub>F")
   where "\<top>\<^sub>F \<equiv> top"
 
-abbreviation frame_empty :: "'s::scene_space frame" ("\<lbrace>\<rbrace>")
-  where "\<lbrace>\<rbrace> \<equiv> bot"
+abbreviation frame_empty :: "'s::scene_space frame" ("\<lbrace>\<rbrace>\<^sub>F")
+  where "\<lbrace>\<rbrace>\<^sub>F \<equiv> bot"
 
 syntax "_frame_UNIV" :: "type \<Rightarrow> logic" ("UNIV\<^sub>F'(_')")
 
@@ -236,11 +236,11 @@ abbreviation lens_not_member (infix "\<notin>\<^sub>F" 50) where "x \<notin>\<^s
 lemma lens_member_frame [simp]: "x \<in>\<^sub>F lens_frame x"
   by (simp add: lens_member_def)
 
-lemma lens_not_member_empty: "var_lens x \<Longrightarrow> (x \<in>\<^sub>F \<lbrace>\<rbrace>) \<longleftrightarrow> x \<approx>\<^sub>L 0\<^sub>L"
+lemma lens_not_member_empty: "var_lens x \<Longrightarrow> (x \<in>\<^sub>F \<lbrace>\<rbrace>\<^sub>F) \<longleftrightarrow> x \<approx>\<^sub>L 0\<^sub>L"
   by (simp add: lens_member_def)
      (transfer, auto simp add: lens_equiv_scene scene_bot_least subscene_antisym zero_lens_scene)
 
-lemma lens_not_member_empty_two [simp]: "evar_lens x \<Longrightarrow> x \<notin>\<^sub>F \<lbrace>\<rbrace>"
+lemma lens_not_member_empty_two [simp]: "evar_lens x \<Longrightarrow> x \<notin>\<^sub>F \<lbrace>\<rbrace>\<^sub>F"
   using ief_lens_iff_zero lens_not_member_empty no_ief_two_view var_lens.axioms(1) by blast
 
 lemma lens_member_top [simp]: "x \<in>\<^sub>F top"
@@ -300,13 +300,7 @@ lemma lens_scene_insert_frame:
   "var_lens x \<Longrightarrow> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<squnion>\<^sub>S \<lbrakk>A\<rbrakk>\<^sub>F = \<lbrakk>lens_insert x A\<rbrakk>\<^sub>F"
   by (simp add: lens_frame.rep_eq lens_insert_def sup_frame.rep_eq)
 
-syntax
-  "_frame_set" :: "args \<Rightarrow> 'a::scene_space frame"    ("\<lbrace>(_)\<rbrace>")
-translations
-  "\<lbrace>x, xs\<rbrace>" \<rightleftharpoons> "CONST lens_insert x \<lbrace>xs\<rbrace>"
-  "\<lbrace>x\<rbrace>" \<rightleftharpoons> "CONST lens_insert x \<lbrace>\<rbrace>"
-
-lemma frame_single_var_lens [simp]: "var_lens x \<Longrightarrow> [\<lbrakk>x\<rbrakk>\<^sub>\<sim>]\<^sub>F = \<lbrace>x\<rbrace>"
+lemma frame_single_var_lens [simp]: "var_lens x \<Longrightarrow> [\<lbrakk>x\<rbrakk>\<^sub>\<sim>]\<^sub>F = lens_insert x frame_empty"
   by (simp add: frame_scene_basis_lens lens_insert_def)
 
 subsection \<open> Equivalence under a frame \<close>
@@ -314,7 +308,7 @@ subsection \<open> Equivalence under a frame \<close>
 lift_definition frame_equiv :: "'a::scene_space \<Rightarrow> 'a \<Rightarrow> 'a frame \<Rightarrow> bool" ("_ \<approx>\<^sub>F _ on _" [65,0,66] 65)
   is "\<lambda> s\<^sub>1 s\<^sub>2 a. s\<^sub>1 \<approx>\<^sub>S s\<^sub>2 on a" .
 
-lemma frame_equiv_empty [simp]: "s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on \<lbrace>\<rbrace>"
+lemma frame_equiv_empty [simp]: "s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on \<lbrace>\<rbrace>\<^sub>F"
   by (transfer, simp)
 
 lemma frame_equiv_refl [simp]: "s \<approx>\<^sub>F s on a"

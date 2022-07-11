@@ -4,6 +4,12 @@ theory Alphabet_Scene_Space_Examples
 imports Alphabet_Scene_Spaces
 begin
 
+syntax
+  "_frame_set" :: "args \<Rightarrow> 'a::scene_space frame"    ("\<lbrace>(_)\<rbrace>\<^sub>F")
+translations
+  "\<lbrace>x, xs\<rbrace>\<^sub>F" \<rightleftharpoons> "CONST lens_insert x \<lbrace>xs\<rbrace>\<^sub>F"
+  "\<lbrace>x\<rbrace>\<^sub>F" \<rightleftharpoons> "CONST lens_insert x \<lbrace>\<rbrace>\<^sub>F"
+
 alphabet test = 
   x :: bool
   y :: nat 
@@ -11,18 +17,18 @@ alphabet test =
 
 alphabet_scene_space test
 
-lemma "UNIV\<^sub>F(test) = \<lbrace>x, y, z\<rbrace>"
+lemma "UNIV\<^sub>F(test) = \<lbrace>x, y, z\<rbrace>\<^sub>F"
   by (simp add: frame)
 
-term "\<lbrace>x, y, z\<rbrace>"
+term "\<lbrace>x, y, z\<rbrace>\<^sub>F"
 
-lemma "z \<in>\<^sub>F \<lbrace>x, y, z\<rbrace>"
+lemma "z \<in>\<^sub>F \<lbrace>x, y, z\<rbrace>\<^sub>F"
   by simp
 
-lemma "\<lbrace>x\<rbrace> \<union>\<^sub>F \<lbrace>y, z\<rbrace> = \<lbrace>x, y, z\<rbrace>"
+lemma "\<lbrace>x\<rbrace>\<^sub>F \<union>\<^sub>F \<lbrace>y, z\<rbrace>\<^sub>F = \<lbrace>x, y, z\<rbrace>\<^sub>F"
   by simp
 
-lemma "\<lbrace>x\<rbrace> \<union>\<^sub>F \<lbrace>x, y, z\<rbrace> = \<lbrace>x, y, z\<rbrace>"
+lemma "\<lbrace>x\<rbrace>\<^sub>F \<union>\<^sub>F \<lbrace>x, y, z\<rbrace>\<^sub>F = \<lbrace>x, y, z\<rbrace>\<^sub>F"
   by simp
 
 alphabet test2 = test +
@@ -31,7 +37,7 @@ alphabet test2 = test +
 
 alphabet_scene_space test2
 
-lemma "UNIV\<^sub>F(test2) = \<lbrace>x, y, z, u, v\<rbrace>"
+lemma "UNIV\<^sub>F(test2) = \<lbrace>x, y, z, u, v\<rbrace>\<^sub>F"
   by (simp add: frame)
 
 alphabet test3 = test2 +
@@ -39,7 +45,7 @@ alphabet test3 = test2 +
 
 alphabet_scene_space test3
 
-lemma "UNIV\<^sub>F(test3) = \<lbrace>x, y, z, u, v, w\<rbrace>"
+lemma "UNIV\<^sub>F(test3) = \<lbrace>x, y, z, u, v, w\<rbrace>\<^sub>F"
   by (simp add: frame)
 
 alphabet test4 = test3 +
@@ -47,7 +53,7 @@ alphabet test4 = test3 +
 
 alphabet_scene_space test4
 
-lemma "UNIV\<^sub>F(test4) = \<lbrace>x, y, z, u, v, w, j\<rbrace>"
+lemma "UNIV\<^sub>F(test4) = \<lbrace>x, y, z, u, v, w, j\<rbrace>\<^sub>F"
   by (simp add: frame)
 
 find_theorems concat set
