@@ -401,6 +401,9 @@ lemma scene_comp_indep [simp]: "A \<bowtie>\<^sub>S B \<Longrightarrow> (A ;\<^s
 lemma scene_comp_bot [simp]: "\<bottom>\<^sub>S ;\<^sub>S x = \<bottom>\<^sub>S"
   by (transfer, auto)
 
+lemma scene_comp_id_lens [simp]: "A ;\<^sub>S 1\<^sub>L = A"
+  by (transfer, auto, simp add: id_lens_def)
+
 lemma scene_union_comp_distl: "a ##\<^sub>S b \<Longrightarrow> (a \<squnion>\<^sub>S b) ;\<^sub>S x = (a ;\<^sub>S x) \<squnion>\<^sub>S (b ;\<^sub>S x)"
   by (transfer, auto simp add: fun_eq_iff)
 

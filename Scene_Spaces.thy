@@ -595,7 +595,7 @@ proof-
   finally show ?thesis .
 qed
 
-lemma prop1:
+lemma scene_union_inter_minus:
   assumes "a \<in> scene_space" "b \<in> scene_space"
   shows "a \<squnion>\<^sub>S (b \<sqinter>\<^sub>S - a) = a \<squnion>\<^sub>S b"
   by (metis assms(1) assms(2) bot_idem_scene idem_scene_space idem_scene_uminus local.scene_union_inter_distrib scene_demorgan1 scene_space_uminus scene_union_compl scene_union_unit(1) uminus_scene_twice)
@@ -638,7 +638,7 @@ next
      apply (rule scene_space_foldr)
     apply auto
     apply (meson Cons.prems(2) assms(1) in_mono scene_space_inter scene_space_uminus set_subset_Cons)
-    apply (metis Cons.prems(2) assms(1) insert_subset list.simps(15) prop1 scene_union_commute)
+    apply (metis Cons.prems(2) assms(1) insert_subset list.simps(15) scene_union_inter_minus scene_union_commute)
     done
   finally show ?case using Cons
     by auto
@@ -675,13 +675,8 @@ proof (induct xs arbitrary: a)
     by (simp add: scene_bot_least)
 next
   case (Cons x xs)
-  then show ?case apply (auto)
-    apply (rule scene_union_lb)
-    using scene_space_compat scene_space_foldr apply presburger
-      apply blast
-     apply (rule Cons(1))
-      apply (simp_all)
-  done
+  then show ?case
+    by (simp add: scene_space_compat scene_space_foldr scene_union_lb)
 qed
 
 lemma var_le_union_choice:
@@ -769,6 +764,9 @@ declare var_lens.axioms(1) [simp]
 locale basis_lens = vwb_lens +
   assumes lens_in_basis: "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars"
 
+sublocale basis_lens \<subseteq> var_lens
+  using lens_in_basis var_lens_axioms_def var_lens_def vwb_lens_axioms by blast
+
 declare basis_lens.lens_in_basis [simp]
 
 text \<open> Effectual variable and basis lenses need to have at least two view elements \<close>
@@ -832,6 +830,9 @@ text \<open> A basis lens within a composite lens remains a basis lens (i.e. it 
 lemma composite_lens_basis_comp [simp]:
   "\<lbrakk> composite_lens a; basis_lens x \<rbrakk> \<Longrightarrow> basis_lens (x ;\<^sub>L a)"
   by (metis basis_lens.lens_in_basis basis_lens_def basis_lens_intro comp_vwb_lens composite_lens.Vars_closed_comp composite_lens_def lens_scene_comp)
+
+lemma id_composite_lens: "composite_lens 1\<^sub>L"
+  by (force intro: composite_lens.intro composite_lens_axioms.intro)
 
 lemma fst_composite_lens: "composite_lens fst\<^sub>L"
   by (rule composite_lens.intro, simp add: fst_vwb_lens, rule composite_lens_axioms.intro, simp add: Vars_prod_def)
