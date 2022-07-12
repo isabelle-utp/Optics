@@ -317,6 +317,9 @@ lift_definition frame_equiv :: "'a::scene_space \<Rightarrow> 'a \<Rightarrow> '
 lemma frame_equiv_empty [simp]: "s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on \<lbrace>\<rbrace>\<^sub>F"
   by (transfer, simp)
 
+lemma frame_equiv_top [simp]: "s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on \<top>\<^sub>F = (s\<^sub>1 = s\<^sub>2)"
+  by (metis frame_equiv.rep_eq scene_equiv_def scene_override_id top_frame.rep_eq)
+
 lemma frame_equiv_refl [simp]: "s \<approx>\<^sub>F s on a"
   by (simp add: of_frame frame_equiv.rep_eq idem_scene_space scene_equiv_def)
 
