@@ -1,0 +1,10 @@
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build Theory
+    steps:
+      - uses: actions/checkout@v3
+      - uses: lexbailey/isabelle-theory-build-github-action@v4
+        with:
+          isabelle-version: '2021-1'
