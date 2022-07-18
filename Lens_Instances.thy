@@ -1,7 +1,7 @@
 section \<open>Lens Instances\<close>
 
 theory Lens_Instances
-  imports Lens_Order Lens_Symmetric Scene_Spaces "HOL-Eisbach.Eisbach"
+  imports Lens_Order Lens_Symmetric Scene_Spaces "HOL-Eisbach.Eisbach" "HOL-Library.Stream"
   keywords "alphabet" "statespace" :: "thy_defn"
 begin
 
@@ -211,6 +211,40 @@ done
 
 lemma hd_tl_lens_pbij: "pbij_lens (hd\<^sub>L +\<^sub>L tl\<^sub>L)"
   by (unfold_locales, auto simp add: lens_defs)
+
+subsection \<open>Stream Lenses\<close>
+primrec stream_update :: "'a stream \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'a stream" where
+"stream_update xs 0 a = a##(stl xs)" |
+"stream_update xs (Suc n) a = shd xs ## (stream_update (stl xs) n a)"
+
+lemma stream_update_snth: "(stream_update xs n a) !! n = a"
+proof (induction n arbitrary: xs a)
+  case 0
+  then show ?case by simp
+next
+  case (Suc n)
+  then show ?case by simp
+qed
+
+lemma stream_update_unchanged: "i \<noteq> j \<Longrightarrow> (stream_update xs i a) !! j = xs !! j"
+  using gr0_conv_Suc by (induct i j arbitrary: xs rule: diff_induct; fastforce)
+
+lemma stream_update_override: "stream_update (stream_update xs n a) n b = stream_update xs n b"
+  by (induction n arbitrary: xs a; simp)
+
+lemma stream_update_nth: "stream_update \<sigma> i (\<sigma> !! i) = \<sigma>"
+  by (metis stream.map_cong stream_smap_nats stream_update_snth stream_update_unchanged)
+
+definition stream_lens :: "nat \<Rightarrow> ('a::two \<Longrightarrow> 'a stream)" where
+[lens_defs]: "stream_lens i = \<lparr> lens_get = (\<lambda> xs. snth xs i)
+                            , lens_put = (\<lambda> xs x. stream_update xs i x)\<rparr>"
+
+lemma stream_vwb_lens: "vwb_lens (stream_lens i)"
+  apply (unfold_locales; simp add: stream_lens_def)
+    apply (rule stream_update_snth)
+    apply (rule stream_update_nth)
+    apply (rule stream_update_override)
+  done
 
 subsection \<open>Record Field Lenses\<close>
 
