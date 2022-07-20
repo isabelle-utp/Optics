@@ -6,7 +6,7 @@ begin
 
 subsection \<open> Signature and Axioms \<close>
 
-text \<open>Prisms are like lenses, but they act on sum types rather than product types~\cite{Gibbons17}. 
+text \<open>Prisms are like lenses, but they act on sum types rather than product types~\cite{Gibbons17}.
   See \url{https://hackage.haskell.org/package/lens-4.15.2/docs/Control-Lens-Prism.html}
   for more information.\<close>
 
@@ -28,6 +28,10 @@ begin
 
   lemma range_build: "range build = dom match"
     using build_match match_build by fastforce
+
+  lemma inj_build: "inj build"
+    by (metis injI match_build option.inject)
+
 end
 
 declare wb_prism.match_build [simp]
@@ -54,6 +58,17 @@ lemma prism_diff_sym: "X \<nabla> Y \<Longrightarrow> Y \<nabla> X"
 
 lemma prism_diff_build: "X \<nabla> Y \<Longrightarrow> build\<^bsub>X\<^esub> u \<noteq> build\<^bsub>Y\<^esub> v"
   by (simp add: disjoint_iff_not_equal prism_diff_def)
+
+subsection \<open> Canonical prisms \<close>
+
+definition prism_id :: "('a \<Longrightarrow>\<^sub>\<triangle> 'a)" ("1\<^sub>\<triangle>") where
+[lens_defs]: "prism_id = \<lparr> prism_match = Some, prism_build = id \<rparr>"
+
+lemma wb_prism_id: "wb_prism 1\<^sub>\<triangle>"
+  unfolding prism_id_def wb_prism_def by simp
+
+lemma prism_id_never_diff: "\<not> 1\<^sub>\<triangle> \<nabla> X"
+  by (simp add: prism_diff_def prism_id_def)
 
 subsection \<open> Summation \<close>
 
@@ -88,6 +103,9 @@ lemma wb_prim_sumr: "wb_prism Inr\<^sub>\<triangle>"
 lemma prism_suml_indep_sumr [simp]: "Inl\<^sub>\<triangle> \<nabla> Inr\<^sub>\<triangle>"
   by (auto simp add: prism_diff_def lens_defs)
 
+lemma prism_sum_plus: "Inl\<^sub>\<triangle> +\<^sub>\<triangle> Inr\<^sub>\<triangle> = 1\<^sub>\<triangle>"
+  unfolding lens_defs prism_plus_def by (auto simp add: Inr_Inl_False sum.case_eq_if)
+
 subsection \<open> Lens correspondence \<close>
 
 text \<open> Every well-behaved prism can be represented by a partial bijective lens. We prove 
@@ -99,6 +117,9 @@ definition prism_lens :: "('a, 's) prism \<Rightarrow> ('a \<Longrightarrow> 's)
 definition lens_prism :: "('a \<Longrightarrow> 's) \<Rightarrow> ('a, 's) prism" where
 "lens_prism X = \<lparr> prism_match = (\<lambda> s. if (s \<in> \<S>\<^bsub>X\<^esub>) then Some (get\<^bsub>X\<^esub> s) else None)
                 , prism_build = create\<^bsub>X\<^esub> \<rparr>"
+
+lemma mwb_prism_lens: "wb_prism a \<Longrightarrow> mwb_lens (prism_lens a)"
+  by (simp add: mwb_lens_axioms_def mwb_lens_def weak_lens_def prism_lens_def)
 
 lemma get_prism_lens: "get\<^bsub>prism_lens X\<^esub> = the \<circ> match\<^bsub>X\<^esub>"
   by (simp add: prism_lens_def fun_eq_iff)
