@@ -63,6 +63,10 @@ lemma map_mwb_lens: "mwb_lens (map_lens x)"
 lemma source_map_lens: "\<S>\<^bsub>map_lens x\<^esub> = {f. x \<in> dom(f)}"
   by (force simp add: map_lens_def lens_source_def)
 
+lemma pget_map_lens: "pget\<^bsub>map_lens k\<^esub> f = f k"
+  by (auto simp add: lens_partial_get_def source_map_lens)
+     (auto simp add: map_lens_def, metis not_Some_eq)
+
 subsection \<open>List Lens\<close>
 
 text \<open>The list lens allows us to view a particular element of a list. In order to show it is mainly
@@ -213,6 +217,7 @@ lemma hd_tl_lens_pbij: "pbij_lens (hd\<^sub>L +\<^sub>L tl\<^sub>L)"
   by (unfold_locales, auto simp add: lens_defs)
 
 subsection \<open>Stream Lenses\<close>
+
 primrec stream_update :: "'a stream \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'a stream" where
 "stream_update xs 0 a = a##(stl xs)" |
 "stream_update xs (Suc n) a = shd xs ## (stream_update (stl xs) n a)"
