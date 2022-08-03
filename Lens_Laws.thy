@@ -49,6 +49,11 @@ text \<open> @{text lens_source} gives the set of constructible sources; that is
 definition lens_source :: "('a \<Longrightarrow> 'b) \<Rightarrow> 'b set" ("\<S>\<index>") where
 "lens_source X = {s. \<exists> v s'. s = put\<^bsub>X\<^esub> s' v}"
 
+text \<open> A partial version of @{const lens_get}, which can be useful for partial lenses. \<close>
+
+definition lens_partial_get :: "('a \<Longrightarrow> 'b) \<Rightarrow> 'b \<Rightarrow> 'a option" ("pget\<index>") where
+"lens_partial_get x s = (if s \<in> \<S>\<^bsub>x\<^esub> then Some (get\<^bsub>x\<^esub> s) else None)"
+
 abbreviation some_source :: "('a \<Longrightarrow> 'b) \<Rightarrow> 'b" ("src\<index>") where
 "some_source X \<equiv> (SOME s. s \<in> \<S>\<^bsub>X\<^esub>)"
 
@@ -122,6 +127,9 @@ end
 
 declare weak_lens.put_get [simp]
 declare weak_lens.create_get [simp]
+
+lemma dom_pget: "dom pget\<^bsub>x\<^esub> = \<S>\<^bsub>x\<^esub>"
+  by (simp add: lens_partial_get_def dom_def)
 
 subsection \<open>Well-behaved Lenses\<close>
 

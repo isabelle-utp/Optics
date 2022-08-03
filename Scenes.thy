@@ -114,7 +114,7 @@ lemma scene_indep_copy:
 
 lemma scene_indep_sym:
   "X \<bowtie>\<^sub>S Y \<Longrightarrow> Y \<bowtie>\<^sub>S X"
-  by (transfer, auto)
+  by (transfer, auto)  
 
 text \<open> Compatibility is a weaker notion than independence; the scenes can overlap but they must
   agree when they do. \<close>
@@ -401,6 +401,9 @@ lemma scene_comp_indep [simp]: "A \<bowtie>\<^sub>S B \<Longrightarrow> (A ;\<^s
 lemma scene_comp_bot [simp]: "\<bottom>\<^sub>S ;\<^sub>S x = \<bottom>\<^sub>S"
   by (transfer, auto)
 
+lemma scene_comp_id_lens [simp]: "A ;\<^sub>S 1\<^sub>L = A"
+  by (transfer, auto, simp add: id_lens_def)
+
 lemma scene_union_comp_distl: "a ##\<^sub>S b \<Longrightarrow> (a \<squnion>\<^sub>S b) ;\<^sub>S x = (a ;\<^sub>S x) \<squnion>\<^sub>S (b ;\<^sub>S x)"
   by (transfer, auto simp add: fun_eq_iff)
 
@@ -499,6 +502,10 @@ lemma get_scene_override_le: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<
 
 lemma put_scene_override_le: "\<lbrakk> vwb_lens x; idem_scene a; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<le> a \<rbrakk> \<Longrightarrow>  put\<^bsub>x\<^esub> s v \<oplus>\<^sub>S s' on a = s \<oplus>\<^sub>S s' on a"
   by (metis lens_override_idem lens_override_put_right_in lens_scene_override sublens_refl subscene_eliminate vwb_lens_mwb)
+
+lemma put_scene_override_le_distrib: 
+  "\<lbrakk> vwb_lens x; idem_scene A; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<le> A \<rbrakk> \<Longrightarrow> put\<^bsub>x\<^esub> (s\<^sub>1 \<oplus>\<^sub>S s\<^sub>2 on A) v = (put\<^bsub>x\<^esub> s\<^sub>1 v) \<oplus>\<^sub>S (put\<^bsub>x\<^esub> s\<^sub>2 v) on A"
+  by (metis put_scene_override_indep put_scene_override_le scene_le_iff_indep_inv scene_override_commute)
 
 lemma lens_plus_scene:
   "\<lbrakk> vwb_lens X; vwb_lens Y; X \<bowtie> Y \<rbrakk> \<Longrightarrow> \<lbrakk>X +\<^sub>L Y\<rbrakk>\<^sub>\<sim> = \<lbrakk>X\<rbrakk>\<^sub>\<sim> \<squnion>\<^sub>S \<lbrakk>Y\<rbrakk>\<^sub>\<sim>"

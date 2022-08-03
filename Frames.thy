@@ -48,6 +48,8 @@ instance
 
 end
 
+lift_definition frame_indep :: "'a::scene_space frame \<Rightarrow> 'a frame \<Rightarrow> bool" is "(\<bowtie>\<^sub>S)" .
+
 instantiation frame :: (scene_space) lattice
 begin
 
@@ -220,6 +222,18 @@ lemma uminus_frame_Inf: "- \<Inter>\<^sub>F A = \<Union>\<^sub>F (uminus ` A)"
 lemma uminus_frame_Sup: "- \<Union>\<^sub>F A = \<Inter>\<^sub>F (uminus ` A)"
   by (simp add: Inf_frame_def SUP_image)
 
+lift_definition frame_comp :: "'a::scene_space frame \<Rightarrow> ('a \<Longrightarrow> 'b) \<Rightarrow> 'b::scene_space frame" (infixl ";\<^sub>F" 80)
+  is "\<lambda> A X. if composite_lens X then (A ;\<^sub>S X) else \<bottom>\<^sub>S"
+  by (auto simp add: composite_lens.scene_space_closed_comp)
+
+lemma frame_comp_assoc:
+  assumes "composite_lens X" "composite_lens Y"
+  shows "(A ;\<^sub>F X) ;\<^sub>F Y = A ;\<^sub>F (X ;\<^sub>L Y)"
+  by (insert assms, transfer, simp add: scene_comp_assoc)
+
+lemma frame_comp_empty: "\<lbrace>\<rbrace>\<^sub>F ;\<^sub>F X = \<lbrace>\<rbrace>\<^sub>F"
+  by (transfer, simp)
+
 subsection \<open> Frames as sets of basis scenes \<close>
 
 lift_definition lens_frame :: "('a \<Longrightarrow> 's::scene_space) \<Rightarrow> 's frame" 
@@ -317,6 +331,9 @@ lift_definition frame_equiv :: "'a::scene_space \<Rightarrow> 'a \<Rightarrow> '
 lemma frame_equiv_empty [simp]: "s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on \<lbrace>\<rbrace>\<^sub>F"
   by (transfer, simp)
 
+lemma frame_equiv_top [simp]: "s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on \<top>\<^sub>F = (s\<^sub>1 = s\<^sub>2)"
+  by (metis frame_equiv.rep_eq scene_equiv_def scene_override_id top_frame.rep_eq)
+
 lemma frame_equiv_refl [simp]: "s \<approx>\<^sub>F s on a"
   by (simp add: of_frame frame_equiv.rep_eq idem_scene_space scene_equiv_def)
 
@@ -352,5 +369,20 @@ qed
 lemma frame_equiv_trans: "\<lbrakk> s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on a; s\<^sub>2 \<approx>\<^sub>F s\<^sub>3 on a \<rbrakk> \<Longrightarrow> s\<^sub>1 \<approx>\<^sub>F s\<^sub>3 on a"
   by (transfer)
      (metis scene_equiv_def scene_override_overshadow_right)
+
+
+lemma put_eq_ebasis_lens_notin:
+  "\<lbrakk> ebasis_lens x; s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on A; x \<notin>\<^sub>F A \<rbrakk> \<Longrightarrow> put\<^bsub>x\<^esub> s\<^sub>1 v \<approx>\<^sub>F put\<^bsub>x\<^esub> s\<^sub>2 v on A"
+  by (simp add: basis_lens_not_member_indep, transfer)
+     (metis basis_lens.axioms(1) idem_scene_space idem_scene_uminus indep_then_compl_in put_scene_override_le_distrib scene_equiv_def scene_override_commute)
+
+lemma put_eq_var_lens_notin: "\<lbrakk> var_lens x; s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on A; x \<in>\<^sub>F A \<rbrakk> \<Longrightarrow> put\<^bsub>x\<^esub> s\<^sub>1 v \<approx>\<^sub>F put\<^bsub>x\<^esub> s\<^sub>2 v on A"
+  unfolding lens_member_def
+  by (transfer, simp, metis idem_scene_space put_scene_override_le_distrib scene_equiv_def var_lens.axioms(1))
+
+lemma put_eq_ebasis_lens:
+  assumes "ebasis_lens x" "s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on A"
+  shows "put\<^bsub>x\<^esub> s\<^sub>1 v \<approx>\<^sub>F put\<^bsub>x\<^esub> s\<^sub>2 v on A"
+  by (meson assms basis_then_var put_eq_ebasis_lens_notin put_eq_var_lens_notin)
 
 end
