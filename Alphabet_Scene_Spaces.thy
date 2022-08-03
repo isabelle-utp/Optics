@@ -122,35 +122,26 @@ lemmas scene_space_lemmas =
    lens_scene_quotient[THEN sym] sublens_greatest lens_quotient_id_denom
    scene_comp_assoc lens_quotient_indep lens_quotient_plus[THEN sym] lens_quotient_bij 
    plus_pred_sublens lens_scene_top_iff_bij_lens lens_indep_scene[THEN sym]
-   lens_indep_left_ext lens_indep_right_ext ball_Un Vars_ext_lens_indep
-   scene_comp_pres_indep scene_indep_sym one_lens_scene scene_top_greatest
+   lens_indep_left_ext lens_indep_right_ext
 
 method basis_lens uses defs =
   (rule basis_lens_intro, simp_all add: scene_space_defs alpha_scene_space_def alpha_scene_space'_def scene_space_lemmas)
 
 method composite_lens =
-  ((rule composite_lens.intro, simp, rule composite_lens_axioms.intro
+  (rule composite_lens.intro, simp, rule composite_lens_axioms.intro
   ,simp add: scene_space_defs alpha_scene_space_def alpha_scene_space'_def scene_space_lemmas image_comp)
-  ;auto)
 
 method more_frame = 
   ((simp add: frame_scene_top frame_scene_foldr)?
   ,(simp_all add: frame_scene_top frame_scene_foldr alpha_scene_space'_def alpha_scene_space_def scene_space_lemmas more_frame_def scene_space_defs image_comp))
 
-method alpha_scene_space uses defs = 
+method alpha_scene_space = 
   (rule scene_space_class.intro
   ,(intro_classes)[1]
   ,simp add: scene_space_defs lens_scene_quotient
   ,rule alpha_scene_space_class_intro alpha_scene_space_class_intro'
   ,simp_all add: scene_indeps_def pairwise_def scene_space_lemmas)
 
-method alpha_scene_space' uses defs =
-  (rule scene_space_class.intro
-  ,(intro_classes)[1]
-  ,unfold defs
-  ,rule alpha_scene_space_class_intro''
-  ,simp_all add: scene_space_lemmas scene_indeps_def pairwise_def)
-                            
 ML_file \<open>Alphabet_Scene_Spaces.ML\<close>
 
 ML \<open>

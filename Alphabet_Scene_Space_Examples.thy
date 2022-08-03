@@ -4,17 +4,6 @@ theory Alphabet_Scene_Space_Examples
 imports Alphabet_Scene_Spaces
 begin
 
-lemma frame_Union_image: "set xs \<subseteq> scene_space \<Longrightarrow> \<Union>\<^sub>F (frame_scene `  set xs) = frame_scene (\<Squnion>\<^sub>S xs)"
-  by (simp add: frame_scene_foldr)
-
-term map_lcomp
-
-lemma composite_lens_frame_lens: "composite_lens y \<Longrightarrow> \<Union>\<^sub>F (frame_scene ` set (map_lcomp Vars y)) = lens_frame y"
-  apply (subst frame_Union_image)
-  using composite_lens.comp_in_Vars apply auto[1]
-  apply (metis composite_implies_var_lens composite_lens.axioms(1) frame_scene_basis_lens map_lcomp_Vars_is_lens)
-  done
-
 alphabet test = 
   x :: bool
   y :: nat 
@@ -70,50 +59,29 @@ alphabet person =
 alphabet_scene_space person
 
 alphabet company =
-  income :: nat
   boss :: person
-  worker :: person  
+  worker :: person
 
-alphabet_scene_space company
-
-lemma "composite_lens more\<^sub>L"
-  by composite_lens
-
-find_theorems set map_lcomp
-
-find_theorems "\<Squnion>\<^sub>S" concat
-
-lemma "\<top>\<^sub>F = \<lbrace>income, boss, worker\<rbrace> \<union>\<^sub>F more_frame more\<^sub>L"
-  apply (simp add: frame_scene_top frame_Union_image)? 
-  apply (unfold Vars_company_ext_def)
-  apply (subst foldr_scene_concat)
-  apply (simp)
-  apply (rule conjI)
-  apply (simp add: frame_scene_top frame_scene_foldr alpha_scene_space'_def alpha_scene_space_def scene_space_lemmas more_frame_def  image_Un Sup_union_distrib)
-  apply (simp add: image_comp)
-  apply (subst composite_lens_frame_lens)
-  apply more_frame
-  oops
-
-(*
 instantiation company_ext :: (scene_space) scene_space
 begin
 
 definition Vars_company_ext :: "'a company_scheme scene list" where
-[scene_space_defs]: "Vars_company_ext = alpha_scene_space' (concat [[\<lbrakk>income\<rbrakk>\<^sub>\<sim>], map_lcomp Vars boss, map_lcomp Vars worker]) more\<^sub>L 1\<^sub>L"
+[scene_space_defs]: "Vars_company_ext = alpha_scene_space' (concat [map_lcomp Vars boss, map_lcomp Vars worker]) more\<^sub>L 1\<^sub>L"
 
-instance by (alpha_scene_space' defs: Vars_company_ext_def)
+instance 
+  apply (rule scene_space_class.intro
+  ,(intro_classes)[1])
+  apply (unfold Vars_company_ext_def)
+  apply (rule alpha_scene_space_class_intro'')
+  apply (simp_all add: ball_Un Vars_ext_lens_indep scene_space_lemmas scene_comp_pres_indep scene_indep_sym one_lens_scene scene_top_greatest scene_indeps_def pairwise_def)
+  done
 
 end
-*)
-lemma "basis_lens income"
-  by basis_lens
 
 lemma "composite_lens boss"
   by composite_lens
 
 lemma "composite_lens worker"
   by composite_lens
-
 
 end
