@@ -59,6 +59,9 @@ lemma prism_diff_sym: "X \<nabla> Y \<Longrightarrow> Y \<nabla> X"
 lemma prism_diff_build: "X \<nabla> Y \<Longrightarrow> build\<^bsub>X\<^esub> u \<noteq> build\<^bsub>Y\<^esub> v"
   by (simp add: disjoint_iff_not_equal prism_diff_def)
 
+lemma prism_diff_build_match: "\<lbrakk> wb_prism X; X \<nabla> Y \<rbrakk> \<Longrightarrow> match\<^bsub>X\<^esub> (build\<^bsub>Y\<^esub> v) = None" 
+  using UNIV_I wb_prism.range_build by (fastforce simp add: prism_diff_def)
+
 subsection \<open> Canonical prisms \<close>
 
 definition prism_id :: "('a \<Longrightarrow>\<^sub>\<triangle> 'a)" ("1\<^sub>\<triangle>") where
@@ -74,11 +77,24 @@ subsection \<open> Summation \<close>
 
 definition prism_plus :: "('a \<Longrightarrow>\<^sub>\<triangle> 's) \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 's) \<Rightarrow> 'a + 'b \<Longrightarrow>\<^sub>\<triangle> 's" (infixl "+\<^sub>\<triangle>" 85) 
   where
-"X +\<^sub>\<triangle> Y = \<lparr> prism_match = (\<lambda> s. case (match\<^bsub>X\<^esub> s, match\<^bsub>Y\<^esub> s) of
+[lens_defs]: "X +\<^sub>\<triangle> Y = \<lparr> prism_match = (\<lambda> s. case (match\<^bsub>X\<^esub> s, match\<^bsub>Y\<^esub> s) of
                                  (Some u, _) \<Rightarrow> Some (Inl u) |
                                  (None, Some v) \<Rightarrow> Some (Inr v) |
                                  (None, None) \<Rightarrow> None),
            prism_build = (\<lambda> v. case v of Inl x \<Rightarrow> build\<^bsub>X\<^esub> x | Inr y \<Rightarrow> build\<^bsub>Y\<^esub> y) \<rparr>"
+
+lemma prism_plus_wb [simp]: "\<lbrakk> wb_prism X; wb_prism Y; X \<nabla> Y \<rbrakk> \<Longrightarrow> wb_prism (X +\<^sub>\<triangle> Y)"
+  apply (unfold_locales)
+   apply (auto simp add: prism_plus_def sum.case_eq_if option.case_eq_if prism_diff_build_match)
+  apply (metis map_option_case map_option_eq_Some option.exhaust option.sel sum.disc(2) sum.sel(1) wb_prism.build_match_iff)
+  apply (metis (no_types, lifting) isl_def not_None_eq option.case_eq_if option.sel sum.sel(2) wb_prism.build_match)
+  done
+
+lemma build_plus_Inl [simp]: "build\<^bsub>c +\<^sub>\<triangle> d\<^esub> (Inl x) = build\<^bsub>c\<^esub> x"
+  by (simp add: prism_plus_def)
+
+lemma build_plus_Inr [simp]: "build\<^bsub>c +\<^sub>\<triangle> d\<^esub> (Inr y) = build\<^bsub>d\<^esub> y"
+  by (simp add: prism_plus_def)
 
 subsection \<open> Instances \<close>
 
