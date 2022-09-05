@@ -44,7 +44,7 @@ text \<open> The relation states that two prisms construct disjoint elements of 
   algebraic datatype. \<close>
 
 definition prism_diff :: "('a \<Longrightarrow>\<^sub>\<triangle> 's) \<Rightarrow> ('b \<Longrightarrow>\<^sub>\<triangle> 's) \<Rightarrow> bool" (infix "\<nabla>" 50) where
-"prism_diff X Y = (range build\<^bsub>X\<^esub> \<inter> range build\<^bsub>Y\<^esub> = {})"
+[lens_defs]: "prism_diff X Y = (range build\<^bsub>X\<^esub> \<inter> range build\<^bsub>Y\<^esub> = {})"
 
 lemma prism_diff_intro:
   "(\<And> s\<^sub>1 s\<^sub>2. build\<^bsub>X\<^esub> s\<^sub>1 = build\<^bsub>Y\<^esub> s\<^sub>2 \<Longrightarrow> False) \<Longrightarrow> X \<nabla> Y"
@@ -96,6 +96,20 @@ lemma build_plus_Inl [simp]: "build\<^bsub>c +\<^sub>\<triangle> d\<^esub> (Inl 
 lemma build_plus_Inr [simp]: "build\<^bsub>c +\<^sub>\<triangle> d\<^esub> (Inr y) = build\<^bsub>d\<^esub> y"
   by (simp add: prism_plus_def)
 
+lemma prism_diff_preserved_1 [simp]: "\<lbrakk> X \<nabla> Y; X \<nabla> Z \<rbrakk> \<Longrightarrow> X \<nabla> Y +\<^sub>\<triangle> Z"
+  by (auto simp add: lens_defs sum.case_eq_if)
+
+lemma prism_diff_preserved_2 [simp]: "\<lbrakk> X \<nabla> Z; Y \<nabla> Z \<rbrakk> \<Longrightarrow> X +\<^sub>\<triangle> Y \<nabla> Z"
+  by (meson prism_diff_preserved_1 prism_diff_sym)
+
+text \<open> The following two lemmas are useful for reasoning about prism sums \<close>
+
+lemma Bex_Sum_iff: "(\<exists>x\<in>A<+>B. P x) \<longleftrightarrow> (\<exists> x\<in>A. P (Inl x)) \<or> (\<exists> y\<in>B. P (Inr y))"
+  by (auto)
+
+lemma Ball_Sum_iff: "(\<forall>x\<in>A<+>B. P x) \<longleftrightarrow> (\<forall> x\<in>A. P (Inl x)) \<and> (\<forall> y\<in>B. P (Inr y))"
+  by (auto)
+
 subsection \<open> Instances \<close>
 
 definition prism_suml :: "('a, 'a + 'b) prism" ("Inl\<^sub>\<triangle>") where
@@ -104,20 +118,20 @@ definition prism_suml :: "('a, 'a + 'b) prism" ("Inl\<^sub>\<triangle>") where
 definition prism_sumr :: "('b, 'a + 'b) prism" ("Inr\<^sub>\<triangle>") where
 [lens_defs]: "prism_sumr = \<lparr> prism_match = (\<lambda> v. case v of Inr x \<Rightarrow> Some x | _ \<Rightarrow> None), prism_build = Inr \<rparr>"
 
-lemma wb_prim_suml: "wb_prism Inl\<^sub>\<triangle>"
+lemma wb_prim_suml [simp]: "wb_prism Inl\<^sub>\<triangle>"
   apply (unfold_locales)
    apply (simp_all add: prism_suml_def sum.case_eq_if)
   apply (metis option.inject option.simps(3) sum.collapse(1))
   done
 
-lemma wb_prim_sumr: "wb_prism Inr\<^sub>\<triangle>"
+lemma wb_prim_sumr [simp]: "wb_prism Inr\<^sub>\<triangle>"
   apply (unfold_locales)
    apply (simp_all add: prism_sumr_def sum.case_eq_if)
   apply (metis option.distinct(1) option.inject sum.collapse(2))
   done
 
 lemma prism_suml_indep_sumr [simp]: "Inl\<^sub>\<triangle> \<nabla> Inr\<^sub>\<triangle>"
-  by (auto simp add: prism_diff_def lens_defs)
+  by (auto simp add: lens_defs)
 
 lemma prism_sum_plus: "Inl\<^sub>\<triangle> +\<^sub>\<triangle> Inr\<^sub>\<triangle> = 1\<^sub>\<triangle>"
   unfolding lens_defs prism_plus_def by (auto simp add: Inr_Inl_False sum.case_eq_if)
