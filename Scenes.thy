@@ -231,8 +231,8 @@ lemma unit_scene_top_eq_bot: "(\<bottom>\<^sub>S :: unit scene) = \<top>\<^sub>S
 
 lemma idem_scene_union [simp]: "\<lbrakk> idem_scene A; idem_scene B \<rbrakk> \<Longrightarrow> idem_scene (A \<squnion>\<^sub>S B)"
   apply (transfer, auto)
-  apply (unfold_locales, auto)
-  apply (metis overrider.ovr_overshadow_left)
+   apply (unfold_locales, auto)
+   apply (metis overrider.ovr_overshadow_left)
   apply (metis overrider.ovr_overshadow_right)
   done
 
@@ -270,7 +270,7 @@ lemma scene_inter_indep:
   using assms
   unfolding lens_defs
   apply (transfer, auto)
-  apply (metis (no_types, opaque_lifting) idem_overrider.ovr_idem overrider.ovr_assoc overrider.ovr_overshadow_right)
+   apply (metis (no_types, opaque_lifting) idem_overrider.ovr_idem overrider.ovr_assoc overrider.ovr_overshadow_right)
   apply (metis (no_types, opaque_lifting) idem_overrider.ovr_idem overrider.ovr_overshadow_right)
   done
 
@@ -309,7 +309,7 @@ lemma scene_union_inter_distrib:
   apply (simp add: inf_scene_def, transfer)
   apply (auto simp add: fun_eq_iff)
      apply (unfold overrider_def idem_overrider_def idem_overrider_axioms_def)
-  apply metis+
+     apply metis+
   done  
 
 lemma idem_scene_uminus [simp]: "idem_scene X \<Longrightarrow> idem_scene (- X)"
@@ -317,7 +317,7 @@ lemma idem_scene_uminus [simp]: "idem_scene X \<Longrightarrow> idem_scene (- X)
 
 lemma scene_minus_cancel: "\<lbrakk> a \<bowtie>\<^sub>S b; idem_scene a; idem_scene b \<rbrakk> \<Longrightarrow> a \<squnion>\<^sub>S (b \<sqinter>\<^sub>S - a) = a \<squnion>\<^sub>S b"
   apply (simp add: lens_defs, transfer, auto simp add: fun_eq_iff)
-  apply (metis (mono_tags, lifting) overrider.ovr_overshadow_left)
+   apply (metis (mono_tags, lifting) overrider.ovr_overshadow_left)
   apply (metis (no_types, opaque_lifting) idem_overrider.ovr_idem overrider.ovr_overshadow_right)
   done
 
@@ -580,7 +580,7 @@ lemma lens_scene_top_iff_bij_lens: "mwb_lens x \<Longrightarrow> \<lbrakk>x\<rbr
   apply (transfer)
   apply (auto simp add: fun_eq_iff lens_override_def)
   apply (unfold_locales)
-  apply auto
+   apply auto
   done
 
 subsection \<open> Function Domain Scene \<close>

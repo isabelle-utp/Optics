@@ -39,7 +39,7 @@ lemma foldr_compat_quotient_dist:
   apply (induct as)
    apply (auto simp add: pairwise_insert)
   apply (subst scene_union_quotient)
-  apply simp_all
+     apply simp_all
   using pairwise_compat_foldr scene_compat_refl apply blast
   apply (meson foldr_scene_indep scene_indep_sym scene_le_iff_indep_inv)
   done
@@ -50,7 +50,7 @@ lemma foldr_scene_union_add_tail:
    apply (simp)
   apply (simp)
   apply (subst scene_union_assoc[THEN sym])
-  apply (auto simp add: pairwise_insert)
+     apply (auto simp add: pairwise_insert)
   using pairwise_compat_foldr scene_compat_refl apply blast
   apply (meson pairwise_compat_foldr scene_compat_sym)
   done
@@ -225,8 +225,7 @@ Vars_scene_space [intro]: "x \<in> set Vars \<Longrightarrow> x \<in> scene_spac
 union_scene_space [intro]: "\<lbrakk> x \<in> scene_space; y \<in> scene_space \<rbrakk> \<Longrightarrow> x \<squnion>\<^sub>S y \<in> scene_space"
 
 lemma idem_scene_space: "a \<in> scene_space \<Longrightarrow> idem_scene a"
-  by (induct rule: scene_space.induct)
-     (auto simp add: idem_scene_Vars)
+  by (induct rule: scene_space.induct) auto
 
 lemma set_Vars_scene_space [simp]: "set Vars \<subseteq> scene_space"
   by blast
@@ -304,13 +303,13 @@ next
     show "set (xs @ ys) \<subseteq> set Vars \<and> \<Squnion>\<^sub>S (xs @ ys) = x \<squnion>\<^sub>S y"
       by (auto simp: xsys)
          (metis (full_types) Vars_compat_scene_space foldr_scene_union_add_tail pairwise_subset 
-          scene_space_compats subsetD union_scene_space.hyps(3) xsys(1))
+           scene_space_compats subsetD union_scene_space.hyps(3) xsys(1))
   qed
 qed
 
 lemma scene_space_vars_decomp_iff: "a \<in> scene_space \<longleftrightarrow> (\<exists>xs. set xs \<subseteq> set Vars \<and> a = foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S)"
   apply (auto simp add: scene_space_vars_decomp scene_space.Vars_scene_space scene_space_foldr)
-  apply (simp add: scene_space.Vars_scene_space scene_space_foldr subset_eq)
+   apply (simp add: scene_space.Vars_scene_space scene_space_foldr subset_eq)
   using scene_space_vars_decomp apply auto[1]
   by (meson dual_order.trans scene_space_foldr set_Vars_scene_space)
 
@@ -338,7 +337,7 @@ lemma Vars_indeps_foldr:
   apply (rule scene_indep_sym)
   apply (metis (no_types, lifting) assms foldr_scene_indep local.indep_Vars pairwiseD pairwise_mono scene_indeps_def scene_space_compats subset_iff)
   done
-  
+
 lemma uminus_var_other_vars:
   assumes "x \<in> set Vars"
   shows "- x = foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S"
@@ -383,13 +382,13 @@ lemma scene_space_inter: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<r
 lemma scene_union_foldr_remove_element:
   assumes "set xs \<subseteq> set Vars"
   shows "a \<squnion>\<^sub>S \<Squnion>\<^sub>S xs = a \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll a xs)"
-using assms proof (induct xs)
+  using assms proof (induct xs)
   case Nil
   then show ?case by simp
 next
   case (Cons a xs)
   then show ?case apply auto
-    apply (metis order_trans scene_space.Vars_scene_space scene_space_foldr scene_space_union_assoc scene_union_idem set_Vars_scene_space)
+     apply (metis order_trans scene_space.Vars_scene_space scene_space_foldr scene_space_union_assoc scene_union_idem set_Vars_scene_space)
     apply (smt (verit, best) Diff_subset dual_order.trans removeAll_id scene_space_foldr scene_space_union_assoc scene_union_commute set_Vars_scene_space set_removeAll subset_iff)
     done
 qed
@@ -420,7 +419,7 @@ lemma scene_in_foldr: "\<lbrakk> a \<in> set xs; set xs \<subseteq> set Vars \<r
 lemma scene_union_foldr_subset:
   assumes "set xs \<subseteq> set ys" "set ys \<subseteq> set Vars"
   shows "\<Squnion>\<^sub>S xs \<subseteq>\<^sub>S \<Squnion>\<^sub>S ys"
-using assms proof (induct xs arbitrary: ys)
+  using assms proof (induct xs arbitrary: ys)
   case Nil
   then show ?case 
     by (simp add: scene_bot_least)
@@ -443,8 +442,8 @@ next
     using a_out Cons apply auto
     apply (rule scene_union_mono)
     using scene_in_foldr apply blast
-    apply blast
-    apply (meson Vars_compat_scene_space dual_order.trans scene_space_foldr set_Vars_scene_space subsetD)
+       apply blast
+      apply (meson Vars_compat_scene_space dual_order.trans scene_space_foldr set_Vars_scene_space subsetD)
     using local.idem_scene_Vars apply blast
     apply (meson idem_scene_space scene_space_foldr set_Vars_scene_space subset_trans)
     done
@@ -455,7 +454,7 @@ lemma union_scene_space_foldrs:
   shows "(foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S) \<squnion>\<^sub>S (foldr (\<squnion>\<^sub>S) ys \<bottom>\<^sub>S) = foldr (\<squnion>\<^sub>S) (xs @ ys) \<bottom>\<^sub>S"
   using assms
   apply (induct ys)
-  apply (simp_all)
+   apply (simp_all)
   apply (metis Vars_compat_scene_space foldr_scene_union_add_tail local.indep_Vars pairwise_mono scene_indep_compat scene_indeps_def scene_space.Vars_scene_space scene_space.union_scene_space scene_space_foldr subset_eq)
   done
 
@@ -465,8 +464,6 @@ lemma scene_space_ub:
   using assms
   apply (auto simp add: scene_space_vars_decomp_iff union_scene_space_foldrs)
   by (smt (verit, ccfv_SIG) foldr_append scene_union_foldr_subset set_append sup.bounded_iff sup_commute sup_ge2)
-
-find_theorems "- ?A \<subseteq>  ?B"
 
 lemma scene_compl_subset_iff:
   assumes "a \<in> scene_space" "b \<in> scene_space"
@@ -688,7 +685,7 @@ lemma var_le_union_iff:
   "\<lbrakk> x \<in> set Vars; a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> x \<le> a \<squnion>\<^sub>S b \<longleftrightarrow> (x \<le> a \<or> x \<le> b)"
   apply (rule iffI, simp add: var_le_union_choice)
   apply (auto)
-  apply (meson idem_scene_space scene_space_ub subscene_trans)
+   apply (meson idem_scene_space scene_space_ub subscene_trans)
   apply (metis idem_scene_space scene_space_ub scene_union_commute subscene_trans)
   done
 
@@ -729,10 +726,6 @@ instance
   by (intro_classes, simp_all add: scene_indeps_def scene_span_def unit_scene_top_eq_bot)
 
 end
-
-find_theorems vwb_lens fst\<^sub>L
-
-find_theorems "(\<Squnion>\<^sub>S)" "(@)"
 
 instantiation prod :: (scene_space, scene_space) scene_space
 begin
