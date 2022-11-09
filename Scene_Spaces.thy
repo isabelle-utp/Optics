@@ -8,7 +8,7 @@ subsection \<open> Preliminaries \<close>
 
 hide_const fold
 
-abbreviation "fold \<equiv> Finite_Set.fold"
+abbreviation (input) "fold \<equiv> Finite_Set.fold"
 
 locale compat_family =
   fixes S :: "'a scene set"
@@ -369,18 +369,15 @@ lemma compat_family_singleton: "idem_scene x \<Longrightarrow> compat_family {x}
   by (simp add: compat_family_def)
 
 abbreviation fold_scene :: "'a scene set \<Rightarrow> 'a scene" ("\<Squnion>\<^sub>S") where
-"fold_scene as \<equiv> Finite_Set.fold (\<squnion>\<^sub>S) \<bottom>\<^sub>S as"
+"fold_scene as \<equiv> Finite_Set.fold (\<squnion>\<^sub>S) \<bottom>\<^sub>S as" 
+
+lemma fold_scene_insert: 
+  assumes "idem_scene x" "compat_family A" "\<forall>s \<in> A. x ##\<^sub>S s"
+  shows "\<Squnion>\<^sub>S (insert x A) = x \<squnion>\<^sub>S (\<Squnion>\<^sub>S A)"
+  by (metis (no_types, opaque_lifting) assms compat_family.fold_insert compat_family_def finite_insert insert_iff pairwise_insert scene_compat_bot(2) scene_compat_sym set_eq_subset)
 
 lemma fold_scene_singleton: "idem_scene x \<Longrightarrow> \<Squnion>\<^sub>S {x} = x"
-proof -
-  assume "idem_scene x"
-  then have "compat_family {x}"
-    by (fact compat_family_singleton)
-  then have "\<Squnion>\<^sub>S {x} = (x \<squnion>\<^sub>S fold (\<squnion>\<^sub>S) \<bottom>\<^sub>S {})"
-    by (simp add: compat_family.fold_insert)
-  then show "\<Squnion>\<^sub>S {x} = x"
-    by simp
-qed
+  by (simp add: compat_family_empty fold_scene_insert)
 
 lemma fold_scene_union:
   assumes "pairwise (##\<^sub>S) (X \<union> Y)" "finite (X \<union> Y)" "\<forall>x \<in> (X \<union> Y). idem_scene x"
@@ -420,6 +417,63 @@ proof induct
   qed
 qed
 
+lemma fold_scene_idem:
+  assumes "compat_family A"
+  shows "idem_scene (\<Squnion>\<^sub>S A)"
+proof -
+  from assms have "finite A"
+    by (simp add: compat_family.S_finite finite_UnionD)
+  then show ?thesis
+    using assms proof induct
+    case empty
+    then show ?case by simp
+  next
+    case (insert x F)
+    then show ?case
+      by (metis compat_family.S_idem compat_family.fold_insert' compat_family_subset dual_order.eq_iff idem_scene_union insertI1 scene_compat_bot(2) subset_insertI) 
+  qed
+qed
+
+lemma compat_family_insertI:
+  assumes "idem_scene x" "compat_family A" "\<forall>s \<in> A. x ##\<^sub>S s"
+  shows "compat_family (insert x A)"
+  by (metis (full_types) assms compat_family_def finite_insert insert_iff pairwise_insert scene_compat_sym)
+
+lemma compat_family_Un_folds_compat:
+  "compat_family (A \<union> B) \<Longrightarrow> \<Squnion>\<^sub>S A ##\<^sub>S \<Squnion>\<^sub>S B"
+  by (simp add: compat_family.fold_compat_folds)
+
+lemma compat_family_union:
+  assumes "compat_family A" "B \<subseteq> A" "C \<subseteq> A"
+  shows "compat_family (B \<union> C)"
+  by (meson Un_least assms compat_family_subset)
+
+lemma compat_family_fold_image:
+  assumes "compat_family (\<Union> A)"
+  shows "compat_family (\<Squnion>\<^sub>S ` A)"
+proof -
+  from assms have "finite A"
+    by (simp add: compat_family.S_finite finite_UnionD)
+  then show ?thesis
+    using assms proof induct
+    case empty
+    then show ?case by simp
+  next
+    case (insert x F)
+    have cf_UF: "compat_family (\<Union> F)"
+      by (meson Union_mono compat_family_subset insert.prems subset_insertI)
+    have cf_x: "compat_family x"
+      by (meson Sup_upper compat_family_subset insert.prems insertI1)
+    have idem: "idem_scene (\<Squnion>\<^sub>S x)"
+      using cf_x fold_scene_idem by blast
+    have compats: "\<forall>s\<in>\<Squnion>\<^sub>S ` F. \<Squnion>\<^sub>S x ##\<^sub>S s"
+      by auto
+        (meson Sup_upper compat_family.fold_compat_folds insert.prems insertCI le_sup_iff scene_compat_bot(2))
+    show ?case
+      by (simp add: cf_UF compat_family_insertI compats idem insert.hyps(3))
+  qed
+qed
+
 lemma fold_scene_Union:
   assumes "compat_family (\<Union> xs)"
   shows "\<Squnion>\<^sub>S (\<Union> xs) = \<Squnion>\<^sub>S (\<Squnion>\<^sub>S ` xs)"
@@ -433,8 +487,28 @@ proof induct
   then show ?case by auto
 next
   case (insert x F)
+  have cf_UF: "compat_family (\<Union> F)"
+    by (meson Union_mono compat_family_subset insert.prems subset_insertI)
+  have cf_x: "compat_family x"
+    by (meson Sup_upper compat_family_subset insert.prems insertI1)
+  with insert have "\<Squnion>\<^sub>S (\<Union> F) = \<Squnion>\<^sub>S (\<Squnion>\<^sub>S ` F)"
+    using cf_UF by blast
   then show ?case
-    oops
+    apply (simp)
+    apply (subst fold_scene_union)
+    apply (metis Sup_insert compat_family.S_compat insert.prems)
+    apply (metis Union_insert compat_family.S_finite insert.prems)
+     apply (metis Sup_insert compat_family.S_idem insert.prems)
+    apply (simp)
+    apply (subst fold_scene_insert)
+       apply (simp_all)
+    apply (rule fold_scene_idem)
+    using cf_x apply linarith
+    using cf_UF compat_family_fold_image apply blast
+    apply (meson Sup_upper compat_family_Un_folds_compat compat_family_union insert.prems insert_iff)
+    done
+  qed
+qed
 
 lemma fold_scene_indeps:
   assumes "\<forall> x \<in> xs. y \<bowtie>\<^sub>S x" "compat_family xs"
@@ -487,9 +561,6 @@ lemma set_Vars_scene_space [simp]: "Vars \<subseteq> scene_space"
 lemma pairwise_compat_Vars_subset: "xs \<subseteq> Vars \<Longrightarrow> pairwise (##\<^sub>S) xs"
   using pairwise_subset scene_space_compats by blast
 
-lemma finite_scene_space: "finite scene_space"
-  sorry
-
 lemma Vars_compat_scene_space: "\<lbrakk> b \<in> scene_space; x \<in> Vars \<rbrakk> \<Longrightarrow> x ##\<^sub>S b"
 proof (induct b rule: scene_space.induct)
   case bot_scene_space
@@ -524,6 +595,73 @@ corollary scene_space_union_assoc:
   assumes "x \<in> scene_space" "y \<in> scene_space" "z \<in> scene_space"
   shows "x \<squnion>\<^sub>S (y \<squnion>\<^sub>S z) = (x \<squnion>\<^sub>S y) \<squnion>\<^sub>S z"
   by (simp add: assms scene_space_compat scene_union_assoc)
+
+lemma scene_space_vars_decomp: "a \<in> scene_space \<Longrightarrow> \<exists>xs. xs \<subseteq> Vars \<and> \<Squnion>\<^sub>S xs = a"
+proof (induct rule: scene_space.induct)
+  case bot_scene_space
+  then show ?case
+    by (simp add: exI[where x="{}"])
+next
+  case (Vars_scene_space x)
+  show ?case
+    apply (rule exI[where x="{x}"])
+    by (simp add: Vars_scene_space fold_scene_singleton)
+next
+  case (union_scene_space x y)
+  then obtain xs ys where xsys: "xs \<subseteq> Vars \<and> \<Squnion>\<^sub>S xs = x"
+                                "ys \<subseteq> Vars \<and> \<Squnion>\<^sub>S ys = y"
+    by blast+    
+  show ?case
+    by (rule exI[where x="xs \<union> ys"])
+       (metis Un_subset_iff compat_family.S_idem compat_family.intro compat_family_subset fold_scene_union infinite_super local.finite_Vars local.idem_scene_Vars pairwise_compat_Vars_subset scene_space_compats xsys(1) xsys(2))
+qed
+
+lemma fold_Vars_in_scene_space:
+  assumes "A \<subseteq> Vars"
+  shows "\<Squnion>\<^sub>S A \<in> scene_space"
+proof -
+  have f: "finite A"
+    using assms finite_subset local.finite_Vars by blast
+  from f assms show ?thesis
+  proof induct
+    case empty
+    then show ?case
+      by auto
+  next
+    case (insert x F)
+    then show ?case 
+      apply (subst fold_scene_insert)
+      apply (auto)
+      using compat_family.intro compat_family_subset local.finite_Vars local.idem_scene_Vars scene_space_compats apply blast
+      apply (simp add: Vars_compat_scene_space scene_space.Vars_scene_space subset_iff)
+      done
+  qed
+qed
+
+lemma scene_space_as_image_power:
+  "scene_space = \<Squnion>\<^sub>S ` Pow Vars"
+proof (rule Set.set_eqI, rule iffI)
+  fix a
+  assume "a \<in> scene_space"
+  then obtain xs where xs: "xs \<subseteq> Vars" "\<Squnion>\<^sub>S xs = a"
+    using scene_space_vars_decomp by blast
+  thus "a \<in> \<Squnion>\<^sub>S ` Pow Vars"
+    by blast
+next
+  fix a
+  assume "a \<in> \<Squnion>\<^sub>S ` Pow Vars"
+  thus "a \<in> scene_space"
+    using fold_Vars_in_scene_space by blast 
+qed
+
+lemma finite_scene_space: "finite scene_space"
+proof -
+  have "scene_space = \<Squnion>\<^sub>S ` Pow Vars"
+    using scene_space_as_image_power by blast
+  also have "finite ..."
+    using local.finite_Vars by blast
+  finally show ?thesis .
+qed 
 
 lemma compat_scene_space: "compat_family scene_space"
 proof
@@ -567,26 +705,6 @@ proof -
   finally show ?thesis .
 qed
 
-lemma scene_space_vars_decomp: "a \<in> scene_space \<Longrightarrow> \<exists>xs. xs \<subseteq> Vars \<and> \<Squnion>\<^sub>S xs = a"
-proof (induct rule: scene_space.induct)
-  case bot_scene_space
-  then show ?case
-    by (simp add: exI[where x="{}"])
-next
-  case (Vars_scene_space x)
-  show ?case
-    apply (rule exI[where x="{x}"])
-    by (simp add: Vars_scene_space fold_scene_singleton)
-next
-  case (union_scene_space x y)
-  then obtain xs ys where xsys: "xs \<subseteq> Vars \<and> \<Squnion>\<^sub>S xs = x"
-                                "ys \<subseteq> Vars \<and> \<Squnion>\<^sub>S ys = y"
-    by blast+    
-  show ?case
-    apply (rule exI[where x="xs \<union> ys"])
-    by (metis compat_family.S_idem compat_family_subset compat_scene_space finite_subset 
-        fold_scene_union le_sup_iff local.finite_Vars pairwise_compat_Vars_subset set_Vars_scene_space xsys)
-qed
 
 (*
 text \<open> Difficult proof, delaying \<close>
@@ -863,32 +981,6 @@ qed
 lemma foldr_scene_union_remdups: "set xs \<subseteq> Vars \<Longrightarrow> \<Squnion>\<^sub>S (remdups xs) = \<Squnion>\<^sub>S xs"
   by (auto intro: foldr_scene_union_eq_sets simp add: pairwise_compat_Vars_subset)
 
-lemma scene_space_as_lists:
-  "scene_space = {\<Squnion>\<^sub>S xs | xs. distinct xs \<and> set xs \<subseteq> Vars}"
-proof (rule Set.set_eqI, rule iffI)
-  fix a
-  assume "a \<in> scene_space"
-  then obtain xs where xs: "set xs \<subseteq> Vars" "\<Squnion>\<^sub>S xs = a"
-    using scene_space_vars_decomp_iff by auto
-  thus "a \<in> {\<Squnion>\<^sub>S xs |xs. distinct xs \<and> set xs \<subseteq> Vars}"
-    by auto (metis distinct_remdups foldr_scene_union_remdups set_remdups)
-next
-  fix a
-  assume "a \<in> {\<Squnion>\<^sub>S xs |xs. distinct xs \<and> set xs \<subseteq> Vars}"
-  thus "a \<in> scene_space"
-    using scene_space_vars_decomp_iff by auto
-qed
-
-lemma finite_scene_space: "finite scene_space"
-proof -
-  have "scene_space = {\<Squnion>\<^sub>S xs | xs. distinct xs \<and> set xs \<subseteq> Vars}"
-    by (simp add: scene_space_as_lists)
-  also have "... = \<Squnion>\<^sub>S ` {xs. distinct xs \<and> set xs \<subseteq> Vars}"
-    by auto
-  also have "finite ..."
-    by (rule finite_imageI, simp add: finite_distinct_lists_subset)
-  finally show ?thesis .
-qed 
 
 lemma scene_space_inter_assoc:
   assumes "x \<in> scene_space" "y \<in> scene_space" "z \<in> scene_space"
