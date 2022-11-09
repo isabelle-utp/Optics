@@ -510,6 +510,21 @@ next
   qed
 qed
 
+locale indep_family =
+  fixes S :: "'a scene set"
+  assumes S_compat: "pairwise (\<bowtie>\<^sub>S) S"
+      and S_finite: "finite S"
+      and S_idem: "s \<in> S \<Longrightarrow> idem_scene s"
+
+sublocale indep_family \<subseteq> compat_family
+  using S_finite S_compat S_idem pairwise_mono by (unfold_locales; fastforce)
+
+
+lemma 
+  assumes "compat_family A" "x \<in> A"
+  shows "x \<le> \<Squnion>\<^sub>S A"
+  oops
+
 lemma fold_scene_indeps:
   assumes "\<forall> x \<in> xs. y \<bowtie>\<^sub>S x" "compat_family xs"
   shows "y \<bowtie>\<^sub>S \<Squnion>\<^sub>S xs"
@@ -638,6 +653,9 @@ proof -
   qed
 qed
 
+lemma scene_space_vars_decomp_iff: "a \<in> scene_space \<longleftrightarrow> (\<exists>A. A \<subseteq> Vars \<and> a = \<Squnion>\<^sub>S A)"
+  using fold_Vars_in_scene_space scene_space_vars_decomp by auto
+
 lemma scene_space_as_image_power:
   "scene_space = \<Squnion>\<^sub>S ` Pow Vars"
 proof (rule Set.set_eqI, rule iffI)
@@ -706,6 +724,9 @@ proof -
 qed
 
 
+lemma basis_decomp_unique: "\<lbrakk> \<bottom>\<^sub>S \<notin> Vars; xs \<subseteq> Vars; ys \<subseteq> Vars; \<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S ys \<rbrakk> \<Longrightarrow> xs = ys"
+  oops
+
 (*
 text \<open> Difficult proof, delaying \<close>
 lemma basis_decomp_unique: "\<bottom>\<^sub>S \<notin> Vars \<Longrightarrow> xs \<subseteq> Vars \<and> \<Squnion>\<^sub>S xs = s \<Longrightarrow> ys \<subseteq> Vars \<and> \<Squnion>\<^sub>S ys = s \<Longrightarrow> xs = ys"
@@ -754,12 +775,6 @@ proof
       by blast
   qed
   oops
-
-lemma scene_space_vars_decomp_iff: "a \<in> scene_space \<longleftrightarrow> (\<exists>xs. set xs \<subseteq> Vars \<and> a = foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S)"
-  apply (auto simp add: scene_space_vars_decomp scene_space.Vars_scene_space scene_space_foldr)
-  apply (simp add: scene_space.Vars_scene_space scene_space_foldr subset_eq)
-  using scene_space_vars_decomp apply auto[1]
-  by (meson dual_order.trans scene_space_foldr set_Vars_scene_space)
 *)
 
 lemma "fold (\<squnion>\<^sub>S) b ((\<lambda>x. x ;\<^sub>S a) ` Vars) = \<lbrakk>a\<rbrakk>\<^sub>\<sim> \<squnion>\<^sub>S b"
