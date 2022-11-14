@@ -395,6 +395,9 @@ lemma scene_comp_idem [simp]: "idem_scene S \<Longrightarrow> idem_scene (S ;\<^
 lemma scene_comp_lens_indep [simp]: "X \<bowtie> Y \<Longrightarrow> (A ;\<^sub>S X) \<bowtie>\<^sub>S (A ;\<^sub>S Y)"
   by (transfer, auto simp add: lens_indep.lens_put_comm lens_indep.lens_put_irr2)
 
+lemma scene_comp_compat [simp]: "A ##\<^sub>S B \<Longrightarrow> (A ;\<^sub>S X) ##\<^sub>S (B ;\<^sub>S X)"
+  by (transfer, auto)
+
 lemma scene_comp_indep [simp]: "A \<bowtie>\<^sub>S B \<Longrightarrow> (A ;\<^sub>S X) \<bowtie>\<^sub>S (B ;\<^sub>S X)"
   by (transfer, auto)
 

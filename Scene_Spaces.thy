@@ -10,6 +10,12 @@ hide_const fold
 
 abbreviation (input) "fold \<equiv> Finite_Set.fold"
 
+abbreviation fold_scene :: "'a scene set \<Rightarrow> 'a scene" ("\<Squnion>\<^sub>S") where
+"fold_scene as \<equiv> Finite_Set.fold (\<squnion>\<^sub>S) \<bottom>\<^sub>S as" 
+
+lemma pairwise_indep_implies_compat [simp]: "pairwise (\<bowtie>\<^sub>S) A \<Longrightarrow> pairwise (##\<^sub>S) A"
+  by (simp add: pairwise_alt)
+  
 locale compat_family =
   fixes S :: "'a scene set"
   assumes S_compat: "pairwise (##\<^sub>S) S"
@@ -388,9 +394,6 @@ proof -
   qed
 qed
 
-abbreviation fold_scene :: "'a scene set \<Rightarrow> 'a scene" ("\<Squnion>\<^sub>S") where
-"fold_scene as \<equiv> Finite_Set.fold (\<squnion>\<^sub>S) \<bottom>\<^sub>S as" 
-
 lemma fold_scene_insert: 
   assumes "idem_scene x" "compat_family A" "\<forall>s \<in> A. x ##\<^sub>S s"
   shows "\<Squnion>\<^sub>S (insert x A) = x \<squnion>\<^sub>S (\<Squnion>\<^sub>S A)"
@@ -558,6 +561,39 @@ next
   qed
 qed
 
+
+lemma compat_family_comp:
+  assumes "compat_family A"
+  shows "compat_family ((\<lambda>a. a ;\<^sub>S x) ` A)"
+proof
+  from assms show "pairwise (##\<^sub>S) ((\<lambda>a. a ;\<^sub>S x) ` A)"
+    by (auto intro!: pairwise_imageI scene_comp_compat)
+       (meson compat_family.S_compat pairwiseD)
+  show "finite ((\<lambda>a. a ;\<^sub>S x) ` A)"
+    using assms compat_family.S_finite by blast
+  show "\<And>s. s \<in> (\<lambda>a. a ;\<^sub>S x) ` A \<Longrightarrow> idem_scene s"
+    using assms compat_family.S_idem by fastforce
+qed
+
+lemma scene_fold_comp_dist:
+  "\<lbrakk> compat_family A; vwb_lens x \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S ((\<lambda>a. a ;\<^sub>S x) ` A) = \<Squnion>\<^sub>S A ;\<^sub>S x"
+  apply (induct rule: cf_induct)
+  apply (simp_all add: fold_scene_insert compat_family_comp)
+  apply (metis compat_family_Un_folds_compat compat_family_insertI fold_scene_singleton insert_def scene_union_comp_distl singleton_conv)
+  done
+
+(*
+lemma scene_fold_compat_quotient_dist:
+  "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> a\<in>set as. a \<le> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<rbrakk> \<Longrightarrow> foldr (\<squnion>\<^sub>S) (map (\<lambda>a. a /\<^sub>S x) as) \<bottom>\<^sub>S = \<Squnion>\<^sub>S as /\<^sub>S x"
+  apply (induct as)
+   apply (auto simp add: pairwise_insert)
+  apply (subst scene_union_quotient)
+     apply simp_all
+  using pairwise_compat_foldr scene_compat_refl apply blast
+  apply (meson foldr_scene_indep scene_indep_sym scene_le_iff_indep_inv)
+  done
+*)
+
 locale indep_family =
   fixes S :: "'a scene set"
   assumes S_compat: "pairwise (\<bowtie>\<^sub>S) S"
@@ -617,35 +653,6 @@ proof -
   qed
 *)
 
-
-lemma 
-  assumes "indep_family A" "indep_family B" "\<Squnion>\<^sub>S A = \<Squnion>\<^sub>S B" "\<bottom>\<^sub>S \<notin> A" "\<bottom>\<^sub>S \<notin> B"
-  shows "A = B"
-proof -
-  have f: "finite A"
-    by (simp add: assms(1) indep_family.S_finite)
-  from f assms show ?thesis
-  proof (induct arbitrary: B)
-    case empty
-    then show ?case 
-      using compat_family_fold_bot by force
-  next
-    case (insert x A')
-    hence "idem_scene x"
-      using indep_family.S_idem by blast
-    with insert have "indep_family A'"
-      by (simp add: indep_family_insert_iff)
-
-    with insert show ?case
-      apply (auto)
-  qed
-
-lemma fold_scene_indeps:
-  assumes "\<forall> x \<in> xs. y \<bowtie>\<^sub>S x" "compat_family xs"
-  shows "y \<bowtie>\<^sub>S \<Squnion>\<^sub>S xs"
-proof (induct xs)
-  oops
-
 subsection \<open> Predicates \<close>
 
 text \<open> All scenes in the set are independent \<close>
@@ -656,7 +663,7 @@ definition scene_indeps :: "'s scene set \<Rightarrow> bool" where
 text \<open> All scenes in the set cover the entire state space \<close>
 
 definition scene_span :: "'s scene set \<Rightarrow> bool" where
-"scene_span S = (Finite_Set.fold (\<squnion>\<^sub>S) \<bottom>\<^sub>S S = \<top>\<^sub>S)"
+"scene_span S = (\<Squnion>\<^sub>S S = \<top>\<^sub>S)"
 
 text \<open> cf. @{term finite_dimensional_vector_space}, which scene spaces are based on. \<close>  
 
@@ -701,6 +708,9 @@ lemma set_Vars_scene_space [simp]: "Vars \<subseteq> scene_space"
 
 lemma pairwise_compat_Vars_subset: "xs \<subseteq> Vars \<Longrightarrow> pairwise (##\<^sub>S) xs"
   using pairwise_subset scene_space_compats by blast
+
+lemma all_Vars_top [simp]: "\<Squnion>\<^sub>S Vars = \<top>\<^sub>S"
+  using local.span_Vars scene_span_def by blast
 
 lemma Vars_compat_scene_space: "\<lbrakk> b \<in> scene_space; x \<in> Vars \<rbrakk> \<Longrightarrow> x ##\<^sub>S b"
 proof (induct b rule: scene_space.induct)
@@ -842,10 +852,10 @@ lemma top_scene_eq: "\<top>\<^sub>S = \<Squnion>\<^sub>S Vars"
 
 lemma top_scene_space: "\<top>\<^sub>S \<in> scene_space"
 proof -
-  have "\<top>\<^sub>S = fold (\<squnion>\<^sub>S) \<bottom>\<^sub>S  Vars"
+  have "\<top>\<^sub>S = \<Squnion>\<^sub>S Vars"
     using span_Vars by (simp add: scene_span_def)
   also have "... \<in> scene_space"
-    by (simp add: scene_space_fold)
+    using scene_space_fold by blast
   finally show ?thesis .
 qed
 
@@ -1247,18 +1257,15 @@ end
 
 subsection \<open> Mapping a lens over a scene list \<close>
 
-definition map_lcomp :: "'b scene list \<Rightarrow> ('b \<Longrightarrow> 'a) \<Rightarrow> 'a scene list" where
-"map_lcomp ss a = map (\<lambda> x. x ;\<^sub>S a) ss"
+definition map_lcomp :: "'b scene set \<Rightarrow> ('b \<Longrightarrow> 'a) \<Rightarrow> 'a scene set" where
+"map_lcomp ss a = (\<lambda> x. x ;\<^sub>S a) ` ss"
 
 lemma map_lcomp_dist: 
-  "\<lbrakk> pairwise (##\<^sub>S) (set xs); vwb_lens a \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S (map_lcomp xs a) = \<Squnion>\<^sub>S xs ;\<^sub>S a"
-  by (simp add: foldr_compat_dist map_lcomp_def)
+  "\<lbrakk> compat_family A; vwb_lens a \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S (map_lcomp A a) = \<Squnion>\<^sub>S A ;\<^sub>S a"
+  by (simp add: map_lcomp_def scene_fold_comp_dist)
 
 lemma map_lcomp_Vars_is_lens [simp]: "vwb_lens a \<Longrightarrow> \<Squnion>\<^sub>S (map_lcomp Vars a) = \<lbrakk>a\<rbrakk>\<^sub>\<sim>"
-  by (metis map_lcomp_dist scene_comp_top_scene scene_space_compats top_scene_eq)
-
-lemma set_map_lcomp [simp]: "set (map_lcomp xs a) = (\<lambda>x. x ;\<^sub>S a) ` set xs"
-  by (simp add: map_lcomp_def)
+  by (metis compat_family_subset compat_scene_space map_lcomp_dist scene_comp_top_scene set_Vars_scene_space top_scene_eq)
 
 subsection \<open> Instances \<close>
 
@@ -1279,24 +1286,26 @@ find_theorems "(\<Squnion>\<^sub>S)" "(@)"
 instantiation prod :: (scene_space, scene_space) scene_space
 begin
 
-definition Vars_prod :: "('a \<times> 'b) scene set" where "Vars_prod = (\<lambda> x. x ;\<^sub>S fst\<^sub>L) ` Vars \<union> (\<lambda> x. x ;\<^sub>S snd\<^sub>L) ` Vars"
+definition Vars_prod :: "('a \<times> 'b) scene set" where "Vars_prod = map_lcomp Vars fst\<^sub>L \<union> map_lcomp Vars snd\<^sub>L"
+
+find_theorems "(\<squnion>\<^sub>S)" "(\<Squnion>\<^sub>S)" "(\<union>)"
 
 instance proof
-  have pw: "pairwise (\<bowtie>\<^sub>S) ((\<lambda> x. x ;\<^sub>S fst\<^sub>L) ` (Vars :: 'a scene set) \<union> (\<lambda> x. x ;\<^sub>S snd\<^sub>L) ` (Vars :: 'b scene set))"
-    by (auto simp add: pairwise_def Vars_ext_lens_indep scene_comp_pres_indep scene_indep_sym)
+  have pw: "pairwise (\<bowtie>\<^sub>S) (map_lcomp (Vars :: 'a scene set) fst\<^sub>L \<union> map_lcomp (Vars :: 'b scene set) snd\<^sub>L)"
+    by (auto simp add: pairwise_def map_lcomp_def Vars_ext_lens_indep scene_comp_pres_indep scene_indep_sym)
   show "\<And>x:: ('a \<times> 'b) scene. x \<in> Vars \<Longrightarrow> idem_scene x"
-    by (auto simp add: Vars_prod_def)
+    by (auto simp add: Vars_prod_def map_lcomp_def)
+  have finite: "finite (map_lcomp Vars fst\<^sub>L)" "finite (map_lcomp Vars snd\<^sub>L)"
+    by (simp_all add: finite_Vars map_lcomp_def)
+  thus "finite (Vars :: ('a \<times> 'b) scene set)"
+    by (simp add: Vars_prod_def)
   from pw show "scene_indeps (Vars :: ('a \<times> 'b) scene set)"
-    by (simp add: Vars_prod_def scene_indeps_def)
+    by (simp add: Vars_prod_def scene_indeps_def map_lcomp_def)
+  have idem: "\<forall>x\<in>map_lcomp Vars fst\<^sub>L \<union> map_lcomp Vars snd\<^sub>L. idem_scene x"
+    by (auto simp add: map_lcomp_def)
   show "scene_span (Vars :: ('a \<times> 'b) scene set)"
-    apply (simp add: scene_span_def Vars_prod_def)
-    thm union_scene_space_folds[THEN sym]
-    apply (subst fold_scene_union)
-    apply (metis pairwise_def pw scene_indep_compat)
-    apply (simp add: finite_Vars)
-    apply (simp add: pw)
-    apply (simp only: scene_span_def Vars_prod_def)
-       (metis fst_vwb_lens lens_plus_scene lens_scene_top_iff_bij_lens plus_mwb_lens scene_union_commute snd_fst_lens_indep snd_vwb_lens swap_bij_lens vwb_lens_mwb)
+    by (simp add: scene_span_def Vars_prod_def fold_scene_union pw finite idem map_lcomp_dist fst_vwb_lens snd_vwb_lens)
+       (metis fst_snd_id_lens fst_snd_lens_indep fst_vwb_lens lens_plus_scene one_lens_scene snd_vwb_lens)
 qed  
 
 end
@@ -1344,13 +1353,12 @@ lemma scene_space_closed_comp:
   assumes "a \<in> scene_space"
   shows "a ;\<^sub>S x \<in> scene_space"
 proof -
-  obtain xs where xs: "a = \<Squnion>\<^sub>S xs" "set xs \<subseteq> Vars"
+  obtain A where xs: "a = \<Squnion>\<^sub>S A" "A \<subseteq> Vars"
     using assms scene_space_vars_decomp by blast
-  have "(\<Squnion>\<^sub>S xs) ;\<^sub>S x = \<Squnion>\<^sub>S (map (\<lambda> a. a ;\<^sub>S x) xs)"
-    by (metis foldr_compat_dist pairwise_subset scene_space_compats xs(2))
+  have "(\<Squnion>\<^sub>S A) ;\<^sub>S x = \<Squnion>\<^sub>S ((\<lambda> a. a ;\<^sub>S x) ` A)"
+    by (metis compat_family_subset compat_scene_space scene_fold_comp_dist set_Vars_scene_space vwb_lens_axioms xs(2))
   also have "... \<in> scene_space"
-    by (auto simp add: scene_space_vars_decomp_iff)
-       (metis comp_in_Vars image_Un le_iff_sup le_supE list.set_map xs(2))
+    by (metis comp_in_Vars fold_Vars_in_scene_space image_Un le_supE subset_Un_eq xs(2))
   finally show ?thesis
     by (simp add: xs)
 qed
@@ -1383,9 +1391,9 @@ lemma id_composite_lens: "composite_lens 1\<^sub>L"
   by (force intro: composite_lens.intro composite_lens_axioms.intro)
 
 lemma fst_composite_lens: "composite_lens fst\<^sub>L"
-  by (rule composite_lens.intro, simp add: fst_vwb_lens, rule composite_lens_axioms.intro, simp add: Vars_prod_def)
+  by (rule composite_lens.intro, simp add: fst_vwb_lens, rule composite_lens_axioms.intro, simp add: Vars_prod_def map_lcomp_def)
 
 lemma snd_composite_lens: "composite_lens snd\<^sub>L"
-  by (rule composite_lens.intro, simp add: snd_vwb_lens, rule composite_lens_axioms.intro, simp add: Vars_prod_def)
+  by (rule composite_lens.intro, simp add: snd_vwb_lens, rule composite_lens_axioms.intro, simp add: Vars_prod_def map_lcomp_def)
 
 end
