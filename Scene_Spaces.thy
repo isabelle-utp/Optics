@@ -1253,6 +1253,34 @@ text \<open> There is a unique decomposition of scene spaces \<close>
 lemma basis_decomp_unique: "\<lbrakk> \<bottom>\<^sub>S \<notin> Vars; A \<subseteq> Vars; B \<subseteq> Vars; \<Squnion>\<^sub>S A = \<Squnion>\<^sub>S B \<rbrakk> \<Longrightarrow> A = B"
   by (metis in_mono le_fold_Vars_implies_in scene_in_fold set_eq_subset subsetI)
 
+(*
+text \<open> Obtain the smallest set of basis scenes (omitting the bottom scene) for a given scene \<close>
+
+definition basis_decomp :: "'a scene \<Rightarrow> 'a scene set" where
+"basis_decomp s = (LEAST xs. xs \<subseteq> Vars \<and> \<Squnion>\<^sub>S xs = s)"
+
+lemma basis_decomp_Un: "s \<in> scene_space \<Longrightarrow> \<Squnion>\<^sub>S (basis_decomp s) = s"
+  unfolding basis_decomp_def using scene_space_vars_decomp oops
+
+lemma basis_decomp_Vars: "s \<in> scene_space \<Longrightarrow> basis_decomp s \<subseteq> Vars"
+  oops
+
+lemma scene_space_algebra: "algebra Vars (basis_decomp ` scene_space)"
+proof
+  show "(set \<circ> basis_decomp) ` scene_space \<subseteq> Pow (Vars)"
+    using basis_decomp_Vars by auto
+  show "{} \<in> (set \<circ> basis_decomp) ` scene_space"
+  proof
+    show "{} = (set \<circ> basis_decomp) \<bottom>\<^sub>S"
+      unfolding basis_decomp_def
+      apply auto
+      sorry
+    show "\<bottom>\<^sub>S \<in> scene_space"
+      by blast
+  qed
+  oops
+*)
+
 end
 
 subsection \<open> Mapping a lens over a scene list \<close>
