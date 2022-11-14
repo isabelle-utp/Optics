@@ -8,15 +8,15 @@ begin
 text \<open> The scene space for an alphabet is constructed using the set of scenes corresponding to
   each lens, the base lens, and the more lens, to allow for extension. \<close>
 
-definition alpha_scene_space :: "'s scene list \<Rightarrow> ('b::scene_space \<Longrightarrow> 's) \<Rightarrow> 's scene list" where
-"alpha_scene_space xs m\<^sub>L = xs @ map (\<lambda> x. x ;\<^sub>S m\<^sub>L) Vars"
+definition alpha_scene_space :: "'s scene list \<Rightarrow> ('b::list_scene_space \<Longrightarrow> 's) \<Rightarrow> 's scene list" where
+"alpha_scene_space xs m\<^sub>L = xs @ map (\<lambda> x. x ;\<^sub>S m\<^sub>L) VarList"
 
-definition alpha_scene_space' :: "'s scene list \<Rightarrow> ('b::scene_space \<Longrightarrow> 's) \<Rightarrow> ('c \<Longrightarrow> 's) \<Rightarrow> 'c scene list" where
+definition alpha_scene_space' :: "'s scene list \<Rightarrow> ('b::list_scene_space \<Longrightarrow> 's) \<Rightarrow> ('c \<Longrightarrow> 's) \<Rightarrow> 'c scene list" where
 "alpha_scene_space' xs m\<^sub>L p\<^sub>L = alpha_scene_space (map (\<lambda> x. x /\<^sub>S p\<^sub>L) xs) (m\<^sub>L /\<^sub>L p\<^sub>L)"
 
 lemma mem_alpha_scene_space_iff [simp]: 
-  "x \<in> set (alpha_scene_space xs m\<^sub>L) \<longleftrightarrow> (x \<in> set xs \<or> x \<in> (\<lambda> x. x ;\<^sub>S m\<^sub>L) ` set Vars)"
-  by (simp add: alpha_scene_space_def)
+  "x \<in> set (alpha_scene_space xs m\<^sub>L) \<longleftrightarrow> (x \<in> set xs \<or> x \<in> (\<lambda> x. x ;\<^sub>S m\<^sub>L) ` set VarList)"
+  by (simp add: alpha_scene_space_def) 
 
 lemma alpha_scene_space_class_intro:
   assumes 
@@ -25,18 +25,18 @@ lemma alpha_scene_space_class_intro:
     "vwb_lens m\<^sub>L" \<comment> \<open> The more lens \<close>
     "\<forall> x\<in>set xs. x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"  
     "(foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>) = \<top>\<^sub>S"
-  shows "class.scene_space (alpha_scene_space xs m\<^sub>L)"
+  shows "class.list_scene_space (set (alpha_scene_space xs m\<^sub>L)) (alpha_scene_space xs m\<^sub>L)"
 proof (simp add: alpha_scene_space_def, unfold_locales)
-  show "\<And>x. x \<in> set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars) \<Longrightarrow> idem_scene x"
-    using assms(1) idem_scene_Vars by fastforce
-  show "scene_indeps (set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars))"
+  show "\<And>x. x \<in> set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) VarList) \<Longrightarrow> idem_scene x"
+    using assms(1) idem_scene_VarList by fastforce
+  show "scene_indeps (set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) VarList))"
     apply (auto simp add: scene_indeps_def pairwise_def)
     apply (metis assms(2) pairwiseD scene_indeps_def)
-    using assms(1) assms(4) idem_scene_Vars scene_comp_pres_indep apply blast
-    using assms(1) assms(4) idem_scene_Vars scene_comp_pres_indep scene_indep_sym apply blast
+    using assms(1) assms(4) idem_scene_VarList scene_comp_pres_indep apply blast
+    using assms(1) assms(4) idem_scene_VarList scene_comp_pres_indep scene_indep_sym apply blast
     apply (metis indep_Vars pairwiseD scene_comp_indep scene_indeps_def)
     done
-  show "scene_span (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) Vars)"
+  show "scene_span (set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) VarList))"
     apply (simp add: scene_span_def)
     apply (subst foldr_compat_dist)
     apply (simp)

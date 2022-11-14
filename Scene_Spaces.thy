@@ -669,17 +669,22 @@ text \<open> cf. @{term finite_dimensional_vector_space}, which scene spaces are
 
 subsection \<open> Scene space class \<close>
 
-class scene_space =
+class Vars =
   fixes Vars :: "'a scene set"
+
+class scene_space = Vars +
   assumes idem_scene_Vars [simp]: "\<And> x. x \<in> Vars \<Longrightarrow> idem_scene x"
   and finite_Vars: "finite Vars"
   and indep_Vars: "scene_indeps Vars"
   and span_Vars: "scene_span Vars"
   (* "\<bottom>\<^sub>S \<in> Vars" *)
 
-class executable_scene_space = scene_space +
+class list_scene_space = Vars +
   fixes VarList :: "'a scene list"
-  assumes "Vars = set VarList"
+  assumes Vars_VarList: "Vars = set VarList"
+  and idem_scene_VarList : "\<And> x. x \<in> set VarList \<Longrightarrow> idem_scene x"
+  and indep_Vars: "scene_indeps (set VarList)"
+  and span_Vars: "scene_span (set VarList)"
 
 context scene_space
 begin
@@ -1253,7 +1258,6 @@ text \<open> There is a unique decomposition of scene spaces \<close>
 lemma basis_decomp_unique: "\<lbrakk> \<bottom>\<^sub>S \<notin> Vars; A \<subseteq> Vars; B \<subseteq> Vars; \<Squnion>\<^sub>S A = \<Squnion>\<^sub>S B \<rbrakk> \<Longrightarrow> A = B"
   by (metis in_mono le_fold_Vars_implies_in scene_in_fold set_eq_subset subsetI)
 
-(*
 text \<open> Obtain the smallest set of basis scenes (omitting the bottom scene) for a given scene \<close>
 
 definition basis_decomp :: "'a scene \<Rightarrow> 'a scene set" where
@@ -1262,6 +1266,7 @@ definition basis_decomp :: "'a scene \<Rightarrow> 'a scene set" where
 lemma basis_decomp_Un: "s \<in> scene_space \<Longrightarrow> \<Squnion>\<^sub>S (basis_decomp s) = s"
   unfolding basis_decomp_def using scene_space_vars_decomp oops
 
+(*
 lemma basis_decomp_Vars: "s \<in> scene_space \<Longrightarrow> basis_decomp s \<subseteq> Vars"
   oops
 
