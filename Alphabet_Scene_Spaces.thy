@@ -18,6 +18,21 @@ lemma mem_alpha_scene_space_iff [simp]:
   "x \<in> set (alpha_scene_space xs m\<^sub>L) \<longleftrightarrow> (x \<in> set xs \<or> x \<in> (\<lambda> x. x ;\<^sub>S m\<^sub>L) ` set VarList)"
   by (simp add: alpha_scene_space_def) 
 
+lemma pairwise_compat_foldr: 
+  "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> b \<in> set as. a ##\<^sub>S b \<rbrakk> \<Longrightarrow> a ##\<^sub>S foldr (\<squnion>\<^sub>S) as \<bottom>\<^sub>S"
+  apply (induct as)
+   apply (simp)
+  apply (auto simp add: pairwise_insert scene_union_pres_compat)
+  done
+
+lemma foldr_compat_dist:
+  "pairwise (##\<^sub>S) (set as) \<Longrightarrow> foldr (\<squnion>\<^sub>S) (map (\<lambda>a. a ;\<^sub>S x) as) \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) as \<bottom>\<^sub>S ;\<^sub>S x"
+  apply (induct as)
+   apply (simp)
+  apply (auto simp add: pairwise_insert)
+  apply (metis pairwise_compat_foldr scene_compat_refl scene_union_comp_distl)
+  done  
+
 lemma alpha_scene_space_class_intro:
   assumes 
     "\<forall> x\<in>set xs. idem_scene x"
@@ -27,22 +42,28 @@ lemma alpha_scene_space_class_intro:
     "(foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>) = \<top>\<^sub>S"
   shows "class.list_scene_space (set (alpha_scene_space xs m\<^sub>L)) (alpha_scene_space xs m\<^sub>L)"
 proof (simp add: alpha_scene_space_def, unfold_locales)
-  show "\<And>x. x \<in> set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) VarList) \<Longrightarrow> idem_scene x"
+  show idem: "\<And>x. x \<in> set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) VarList) \<Longrightarrow> idem_scene x"
     using assms(1) idem_scene_VarList by fastforce
-  show "scene_indeps (set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) VarList))"
+  show indeps: "scene_indeps (set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) VarList))"
     apply (auto simp add: scene_indeps_def pairwise_def)
     apply (metis assms(2) pairwiseD scene_indeps_def)
     using assms(1) assms(4) idem_scene_VarList scene_comp_pres_indep apply blast
     using assms(1) assms(4) idem_scene_VarList scene_comp_pres_indep scene_indep_sym apply blast
-    apply (metis indep_Vars pairwiseD scene_comp_indep scene_indeps_def)
+    using Vars_VarList Vars_ext_lens_indep apply blast
     done
+  have cf: "compat_family (set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) VarList))"
+    by (metis List.finite_set idem indep_family_def indep_implies_compat_family indeps scene_indeps_def)
+
   show "scene_span (set (xs @ map (\<lambda>x. x ;\<^sub>S m\<^sub>L) VarList))"
-    apply (simp add: scene_span_def)
-    apply (subst foldr_compat_dist)
+    unfolding scene_span_def
+    apply (subst foldr_scene_via_foldr)
+    apply (rule cf)
     apply (simp)
-    apply (metis assms(3) assms(5) scene_comp_top_scene scene_span_def span_Vars)    
+    apply (subst foldr_compat_dist)
+    apply (metis Vars_VarList scene_space_compats)
+    apply (metis Vars_VarList assms(3) assms(5) compat_family.intro finite_Vars foldr_scene_via_foldr idem_scene_VarList scene_comp_top_scene scene_space_compats top_scene_eq)    
     done
-qed
+qed (simp)
 
 lemma alpha_scene_space_class_intro':
   assumes 

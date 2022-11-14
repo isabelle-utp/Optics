@@ -423,6 +423,9 @@ lemma scene_quotient_idem: "idem_scene S \<Longrightarrow> idem_scene (S /\<^sub
   by (transfer, unfold_locales, auto simp add: lens_create_def lens_override_def)
      (metis (no_types, lifting) overrider.ovr_overshadow_right) 
 
+lemma scene_quotient_compat: "A ##\<^sub>S B \<Longrightarrow> (A /\<^sub>S X) ##\<^sub>S (B /\<^sub>S X)"
+  by (transfer, auto simp add: lens_create_def lens_override_def)
+
 lemma scene_quotient_indep: "A \<bowtie>\<^sub>S B \<Longrightarrow> (A /\<^sub>S X) \<bowtie>\<^sub>S (B /\<^sub>S X)"
   by (transfer, auto simp add: lens_create_def lens_override_def)
 

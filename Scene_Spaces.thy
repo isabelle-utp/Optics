@@ -576,23 +576,49 @@ proof
 qed
 
 lemma scene_fold_comp_dist:
-  "\<lbrakk> compat_family A; vwb_lens x \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S ((\<lambda>a. a ;\<^sub>S x) ` A) = \<Squnion>\<^sub>S A ;\<^sub>S x"
+  "\<lbrakk> compat_family A \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S ((\<lambda>a. a ;\<^sub>S x) ` A) = \<Squnion>\<^sub>S A ;\<^sub>S x"
   apply (induct rule: cf_induct)
   apply (simp_all add: fold_scene_insert compat_family_comp)
   apply (metis compat_family_Un_folds_compat compat_family_insertI fold_scene_singleton insert_def scene_union_comp_distl singleton_conv)
   done
 
-(*
-lemma scene_fold_compat_quotient_dist:
-  "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> a\<in>set as. a \<le> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<rbrakk> \<Longrightarrow> foldr (\<squnion>\<^sub>S) (map (\<lambda>a. a /\<^sub>S x) as) \<bottom>\<^sub>S = \<Squnion>\<^sub>S as /\<^sub>S x"
-  apply (induct as)
-   apply (auto simp add: pairwise_insert)
+lemma compat_family_quot:
+  assumes "compat_family A"
+  shows "compat_family ((\<lambda>a. a /\<^sub>S x) ` A)"
+proof
+  from assms show "pairwise (##\<^sub>S) ((\<lambda>a. a /\<^sub>S x) ` A)"
+    by (auto intro!: pairwise_imageI scene_quotient_compat)
+       (meson compat_family.S_compat pairwiseD)
+  show "finite ((\<lambda>a. a /\<^sub>S x) ` A)"
+    using assms compat_family.S_finite by blast
+  show "\<And>s. s \<in> (\<lambda>a. a /\<^sub>S x) ` A \<Longrightarrow> idem_scene s"
+    using assms compat_family.S_idem scene_quotient_idem by fastforce
+qed
+
+lemma scene_fold_quotient_dist:
+  "\<lbrakk> compat_family A; \<forall> a\<in>A. a \<le> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S ((\<lambda>a. a /\<^sub>S x) ` A) = \<Squnion>\<^sub>S A /\<^sub>S x"
+  apply (induct rule: cf_induct)
+   apply (auto)
+  apply (simp_all add: fold_scene_insert scene_quotient_idem compat_family_quot scene_quotient_compat)
   apply (subst scene_union_quotient)
      apply simp_all
-  using pairwise_compat_foldr scene_compat_refl apply blast
-  apply (meson foldr_scene_indep scene_indep_sym scene_le_iff_indep_inv)
+   apply (simp add: compat_family.fold_compat_single)
+  apply (simp add: scene_le_iff_indep_inv[THEN sym])
+  using fold_scene_indep scene_indep_sym apply blast
   done
-*)
+
+lemma foldr_scene_via_foldr:
+  assumes "compat_family (set xs)"
+  shows "\<Squnion>\<^sub>S (set xs) = foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"
+using assms proof (induct xs)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a xs)
+  then show ?case 
+    by (simp, metis compat_family.fold_insert compat_family_subset equalityD2 scene_compat_bot(2) subset_insertI)
+qed
+
 
 locale indep_family =
   fixes S :: "'a scene set"
@@ -683,8 +709,25 @@ class list_scene_space = Vars +
   fixes VarList :: "'a scene list"
   assumes Vars_VarList: "Vars = set VarList"
   and idem_scene_VarList : "\<And> x. x \<in> set VarList \<Longrightarrow> idem_scene x"
-  and indep_Vars: "scene_indeps (set VarList)"
-  and span_Vars: "scene_span (set VarList)"
+  and indep_VarList: "scene_indeps (set VarList)"
+  and span_VarList: "scene_span (set VarList)"
+
+context list_scene_space
+begin
+
+subclass scene_space
+proof
+  show "\<And>x. x \<in> Vars \<Longrightarrow> idem_scene x"
+    using local.Vars_VarList local.idem_scene_VarList by auto
+  show "finite Vars"
+    using local.Vars_VarList by blast
+  show "scene_indeps Vars"
+    by (simp add: local.Vars_VarList local.indep_VarList)
+  show "scene_span Vars"
+    by (simp add: local.Vars_VarList local.span_VarList)
+qed
+
+end
 
 context scene_space
 begin
@@ -1297,7 +1340,7 @@ lemma map_lcomp_dist:
   "\<lbrakk> compat_family A; vwb_lens a \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S (map_lcomp A a) = \<Squnion>\<^sub>S A ;\<^sub>S a"
   by (simp add: map_lcomp_def scene_fold_comp_dist)
 
-lemma map_lcomp_Vars_is_lens [simp]: "vwb_lens a \<Longrightarrow> \<Squnion>\<^sub>S (map_lcomp Vars a) = \<lbrakk>a\<rbrakk>\<^sub>\<sim>"
+lemma map_lcomp_Vars_is_lens [simp]: "vwb_lens a \<Longrightarrow> \<Squnion>\<^sub>S (map_lcomp (Vars :: 'a::scene_space scene set) a) = \<lbrakk>a\<rbrakk>\<^sub>\<sim>"
   by (metis compat_family_subset compat_scene_space map_lcomp_dist scene_comp_top_scene set_Vars_scene_space top_scene_eq)
 
 subsection \<open> Instances \<close>
@@ -1328,13 +1371,13 @@ instance proof
     by (auto simp add: pairwise_def map_lcomp_def Vars_ext_lens_indep scene_comp_pres_indep scene_indep_sym)
   show "\<And>x:: ('a \<times> 'b) scene. x \<in> Vars \<Longrightarrow> idem_scene x"
     by (auto simp add: Vars_prod_def map_lcomp_def)
-  have finite: "finite (map_lcomp Vars fst\<^sub>L)" "finite (map_lcomp Vars snd\<^sub>L)"
+  have finite: "finite (map_lcomp (Vars :: 'a scene set) fst\<^sub>L)" "finite (map_lcomp (Vars :: 'b scene set) snd\<^sub>L)"
     by (simp_all add: finite_Vars map_lcomp_def)
   thus "finite (Vars :: ('a \<times> 'b) scene set)"
     by (simp add: Vars_prod_def)
   from pw show "scene_indeps (Vars :: ('a \<times> 'b) scene set)"
     by (simp add: Vars_prod_def scene_indeps_def map_lcomp_def)
-  have idem: "\<forall>x\<in>map_lcomp Vars fst\<^sub>L \<union> map_lcomp Vars snd\<^sub>L. idem_scene x"
+  have idem: "\<forall>x\<in>(map_lcomp Vars fst\<^sub>L \<union> map_lcomp Vars snd\<^sub>L)::('a \<times> 'b) scene set. idem_scene x"
     by (auto simp add: map_lcomp_def)
   show "scene_span (Vars :: ('a \<times> 'b) scene set)"
     by (simp add: scene_span_def Vars_prod_def fold_scene_union pw finite idem map_lcomp_dist fst_vwb_lens snd_vwb_lens)
@@ -1352,7 +1395,7 @@ declare var_lens.lens_in_scene_space [simp]
 declare var_lens.axioms(1) [simp]
 
 locale basis_lens = vwb_lens +
-  assumes lens_in_basis: "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> Vars"
+  assumes lens_in_basis: "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> (Vars :: 'a::scene_space scene set)"
 
 sublocale basis_lens \<subseteq> var_lens
   using lens_in_basis var_lens_axioms_def var_lens_def vwb_lens_axioms by blast
@@ -1376,7 +1419,7 @@ lemma basis_lens_intro: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> 
 subsection \<open> Composite lenses \<close>
 
 locale composite_lens = vwb_lens +
-  assumes comp_in_Vars: "(\<lambda> a. a ;\<^sub>S x) ` Vars \<subseteq> Vars"
+  assumes comp_in_Vars: "(\<lambda> a. a ;\<^sub>S x) ` (Vars :: 'b::scene_space scene set) \<subseteq> (Vars :: 'a::scene_space scene set)"
 begin
 
 lemma Vars_closed_comp: "a \<in> Vars \<Longrightarrow> a ;\<^sub>S x \<in> Vars"
