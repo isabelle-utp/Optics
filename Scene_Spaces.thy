@@ -1381,6 +1381,11 @@ lemma composite_lens_comp [simp]:
   "\<lbrakk> composite_lens a; var_lens x \<rbrakk> \<Longrightarrow> var_lens (x ;\<^sub>L a)"
   by (metis comp_vwb_lens composite_lens.scene_space_closed_comp composite_lens_def lens_scene_comp var_lens_axioms_def var_lens_def)
 
+lemma comp_composite_lens [simp]:
+  "\<lbrakk> composite_lens a; composite_lens x \<rbrakk> \<Longrightarrow> composite_lens (x ;\<^sub>L a)"
+  by (auto intro!: composite_lens.intro simp add: composite_lens_axioms_def)
+     (metis composite_lens.Vars_closed_comp composite_lens.axioms(1) scene_comp_assoc)
+
 text \<open> A basis lens within a composite lens remains a basis lens (i.e. it remains atomic) \<close>
 
 lemma composite_lens_basis_comp [simp]:

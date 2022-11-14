@@ -126,7 +126,7 @@ end
 instantiation frame :: (scene_space) "{Inf, Sup}"
 begin
 
-lift_definition Sup_frame :: "'a frame set \<Rightarrow> 'a frame" is "\<lambda> A. \<Squnion>\<^sub>S (SOME xs. set xs = A)"
+lift_definition Sup_frame :: "'a frame set \<Rightarrow> 'a frame" is "\<lambda> A. \<Squnion>\<^sub>S A"
 proof -
   fix A :: "'a scene set"
   assume a: "\<And>x. x \<in> A \<Longrightarrow> x \<in> scene_space"
@@ -134,14 +134,8 @@ proof -
     by (simp add: a subsetI)
   hence "finite A"
     using finite_scene_space rev_finite_subset by blast
-  then obtain xs where A: "A = set xs"
-    using finite_list by blast
-  hence "\<Squnion>\<^sub>S xs \<in> scene_space"
-    using A_ss scene_space_foldr by blast
-  moreover have "\<Squnion>\<^sub>S (SOME xs. set xs = A) = \<Squnion>\<^sub>S xs"
-    by (metis (mono_tags, lifting) A A_ss foldr_scene_union_eq_scene_space someI)
-  ultimately show "\<Squnion>\<^sub>S (SOME xs. set xs = A) \<in> scene_space"
-    by simp
+  with A_ss show "\<Squnion>\<^sub>S A \<in> scene_space"
+    by (simp add: scene_space_fold)
 qed
 
 definition Inf_frame :: "'a frame set \<Rightarrow> 'a frame" where "Inf_frame A = - (Sup (uminus ` A))"
@@ -170,10 +164,8 @@ proof
     proof (transfer)
       fix x and A :: "'a scene set"
       assume x: "x \<in> scene_space" "\<forall>x\<in>A. x \<in> scene_space" "x \<in> A"
-      then obtain xs where xs: "set xs = A"
-        by (metis finite_list finite_scene_space rev_finite_subset subsetI)
-      thus "x \<subseteq>\<^sub>S \<Squnion>\<^sub>S (SOME xs. set xs = A)"
-        by (metis (mono_tags, lifting) scene_space_in_foldr someI subset_iff x(2) x(3))
+      thus "x \<subseteq>\<^sub>S \<Squnion>\<^sub>S A"
+        by (simp add: scene_space_in_foldr subsetI)
     qed
   qed
   show "\<And>(x:: 'a frame) A. x \<in> A \<Longrightarrow> \<Inter>\<^sub>F A \<le> x"
@@ -192,10 +184,8 @@ proof
   proof transfer
     fix z and A :: "'a scene set"
     assume a: "\<forall>x\<in>A. x \<in> scene_space" "z \<in> scene_space" "\<And>x. x \<in> scene_space \<Longrightarrow> x \<in> A \<Longrightarrow> x \<subseteq>\<^sub>S z"
-    then obtain xs where xs: "set xs = A"
-      by (metis finite_list finite_scene_space rev_finite_subset subsetI)
-    with a show "\<Squnion>\<^sub>S (SOME xs. set xs = A) \<subseteq>\<^sub>S z"
-      by (metis (mono_tags, lifting) scene_space_foldr_lb subset_iff tfl_some)
+    with a show "\<Squnion>\<^sub>S A \<subseteq>\<^sub>S z"
+      by (simp add: scene_space_foldr_lb subset_iff)
   qed
   show "\<And>(A :: 'a frame set) z. (\<And>x. x \<in> A \<Longrightarrow> z \<le> x) \<Longrightarrow> z \<le> \<Inter>\<^sub>F A"
   proof -
@@ -209,12 +199,11 @@ proof
   qed
 qed
 
-lemma frame_scene_foldr: "\<lbrakk> set xs \<subseteq> scene_space \<rbrakk> \<Longrightarrow> [\<Squnion>\<^sub>S xs]\<^sub>F = \<Union>\<^sub>F (set (map frame_scene xs))"
-  by (transfer, auto simp add: image_constant_conv Int_absorb2 scene_space_foldr)
-     (metis (mono_tags, lifting) foldr_scene_union_eq_scene_space tfl_some)
+lemma frame_scene_foldr: "\<lbrakk> A \<subseteq> scene_space \<rbrakk> \<Longrightarrow> [\<Squnion>\<^sub>S A]\<^sub>F = \<Union>\<^sub>F (frame_scene ` A)"
+  by (transfer) (auto simp add: image_constant_conv Int_absorb2 scene_space_fold)
 
 lemma frame_scene_top: "\<top>\<^sub>F = [\<Squnion>\<^sub>S Vars]\<^sub>F"
-  by (simp add: frame_top top_scene_eq)  
+  by (simp add: frame_top)  
 
 lemma uminus_frame_Inf: "- \<Inter>\<^sub>F A = \<Union>\<^sub>F (uminus ` A)"
   by (simp add: Inf_frame_def)
