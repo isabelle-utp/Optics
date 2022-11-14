@@ -368,6 +368,26 @@ lemma compat_family_empty: "compat_family {}"
 lemma compat_family_singleton: "idem_scene x \<Longrightarrow> compat_family {x}"
   by (simp add: compat_family_def)
 
+lemma cf_induct [case_names empty insert, consumes 1]:
+  assumes 
+    "compat_family A" 
+    "P {}" 
+    "\<And> a S. \<lbrakk> idem_scene a; compat_family S; \<And> b. b\<in>S \<Longrightarrow> a ##\<^sub>S b; P S \<rbrakk> \<Longrightarrow> P (insert a S)"
+  shows "P A"
+proof -
+  from assms have fA: "finite A"
+    using compat_family_def by blast
+  from fA assms show ?thesis
+  proof (induct rule: finite.induct)
+    case emptyI
+    then show ?case by simp
+  next
+    case (insertI A a)
+    then show ?case
+      by (metis compat_family_def compat_family_subset insertI1 insert_absorb pairwise_insert subset_insertI) 
+  qed
+qed
+
 abbreviation fold_scene :: "'a scene set \<Rightarrow> 'a scene" ("\<Squnion>\<^sub>S") where
 "fold_scene as \<equiv> Finite_Set.fold (\<squnion>\<^sub>S) \<bottom>\<^sub>S as" 
 
@@ -433,6 +453,34 @@ proof -
       by (metis compat_family.S_idem compat_family.fold_insert' compat_family_subset dual_order.eq_iff idem_scene_union insertI1 scene_compat_bot(2) subset_insertI) 
   qed
 qed
+
+lemma fold_scene_indep:
+  assumes "compat_family A" "\<forall> b\<in>A. a \<bowtie>\<^sub>S b"
+  shows "a \<bowtie>\<^sub>S \<Squnion>\<^sub>S A"
+proof -
+  have fA: "finite A"
+    using assms(1) compat_family_def by blast
+  from fA assms show ?thesis
+  proof induct
+    case empty
+    then show ?case by simp
+  next
+    case (insert b A')
+    then show ?case
+      by (metis compat_family.fold_insert' compat_family_subset insertI1 insertI2 scene_compat_bot(2) scene_indep_pres_compat set_eq_subset subset_insertI) 
+  qed
+qed
+
+lemma compat_family_fold_bot:
+  assumes "compat_family S" "\<Squnion>\<^sub>S S = \<bottom>\<^sub>S"
+  shows "S \<subseteq> {\<bottom>\<^sub>S}"
+  by (metis assms compat_family.S_idem compat_family.fold_insert compat_family.fold_member_un_idem fold_empty fold_scene_singleton scene_compat_bot(2) singleton_iff subsetI)
+
+lemma compat_family_fold_bot_iff:
+  assumes "compat_family S"
+  shows "\<Squnion>\<^sub>S S = \<bottom>\<^sub>S \<longleftrightarrow> S \<subseteq> {\<bottom>\<^sub>S}"
+  using assms compat_family_fold_bot 
+  by (auto simp add: subset_singleton_iff fold_scene_singleton)
 
 lemma compat_family_insertI:
   assumes "idem_scene x" "compat_family A" "\<forall>s \<in> A. x ##\<^sub>S s"
@@ -519,11 +567,78 @@ locale indep_family =
 sublocale indep_family \<subseteq> compat_family
   using S_finite S_compat S_idem pairwise_mono by (unfold_locales; fastforce)
 
+lemma indep_implies_compat_family [simp]: "indep_family S \<Longrightarrow> compat_family S"
+  by (simp add: compat_family.intro indep_family_def pairwise_alt)
+
+lemma indep_family_insert_iff:
+  "\<lbrakk> idem_scene x; x \<notin> S \<rbrakk> \<Longrightarrow> indep_family (insert x S) \<longleftrightarrow> (indep_family S \<and> (\<forall> y\<in>S. x \<bowtie>\<^sub>S y))"
+  using scene_indep_sym by (auto simp add: indep_family_def pairwise_insert)
+
+lemma indep_family_induct [case_names empty insert, consumes 1]:
+  assumes 
+    "indep_family A" 
+    "P {}" 
+    "\<And> a S. \<lbrakk> idem_scene a; indep_family S; \<And> b. b\<in>S \<Longrightarrow> a \<bowtie>\<^sub>S b; P S \<rbrakk> \<Longrightarrow> P (insert a S)"
+  shows "P A"
+proof -
+  from assms have fA: "finite A"
+    using indep_family.S_finite by auto
+  from fA assms show ?thesis
+  proof (induct rule: finite.induct)
+    case emptyI
+    then show ?case by simp
+  next
+    case (insertI A a)
+    then show ?case
+      by (metis indep_family_def indep_family_insert_iff insertI1 insert_absorb) 
+  qed
+qed
+
 
 lemma 
   assumes "compat_family A" "x \<in> A"
   shows "x \<le> \<Squnion>\<^sub>S A"
   oops
+
+(*
+lemma 
+  assumes "indep_family A" "indep_family B" "\<Squnion>\<^sub>S A = \<Squnion>\<^sub>S B" "x \<in> A" "x \<noteq> \<bottom>\<^sub>S"
+  shows "x \<in> B"
+proof -
+  have f: "finite A"
+    by (simp add: assms(1) indep_family.S_finite)
+  from f assms show ?thesis
+  proof (induct arbitrary: B)
+    case empty
+    then show ?case by simp
+  next
+    case (insert x F)
+    then show ?case 
+  qed
+*)
+
+
+lemma 
+  assumes "indep_family A" "indep_family B" "\<Squnion>\<^sub>S A = \<Squnion>\<^sub>S B" "\<bottom>\<^sub>S \<notin> A" "\<bottom>\<^sub>S \<notin> B"
+  shows "A = B"
+proof -
+  have f: "finite A"
+    by (simp add: assms(1) indep_family.S_finite)
+  from f assms show ?thesis
+  proof (induct arbitrary: B)
+    case empty
+    then show ?case 
+      using compat_family_fold_bot by force
+  next
+    case (insert x A')
+    hence "idem_scene x"
+      using indep_family.S_idem by blast
+    with insert have "indep_family A'"
+      by (simp add: indep_family_insert_iff)
+
+    with insert show ?case
+      apply (auto)
+  qed
 
 lemma fold_scene_indeps:
   assumes "\<forall> x \<in> xs. y \<bowtie>\<^sub>S x" "compat_family xs"
@@ -553,10 +668,21 @@ class scene_space =
   and finite_Vars: "finite Vars"
   and indep_Vars: "scene_indeps Vars"
   and span_Vars: "scene_span Vars"
+  (* "\<bottom>\<^sub>S \<in> Vars" *)
+
+class executable_scene_space = scene_space +
+  fixes VarList :: "'a scene list"
+  assumes "Vars = set VarList"
+
+context scene_space
 begin
 
 lemma scene_space_compats [simp]: "pairwise (##\<^sub>S) Vars"
   by (metis local.indep_Vars pairwise_alt scene_indep_compat scene_indeps_def)
+
+lemma indep_family_Vars [simp]: "indep_family Vars"
+  using indep_Vars finite_Vars
+  by (unfold_locales, simp_all add: scene_indeps_def)
 
 lemma Vars_ext_lens_indep: "\<lbrakk> a ;\<^sub>S x \<noteq> b ;\<^sub>S x; a \<in> Vars; b \<in> Vars \<rbrakk> \<Longrightarrow> a ;\<^sub>S x \<bowtie>\<^sub>S b ;\<^sub>S x"
   by (metis indep_Vars pairwiseD scene_comp_indep scene_indeps_def)
@@ -723,9 +849,27 @@ proof -
   finally show ?thesis .
 qed
 
+(*
+lemma 
+  assumes "x \<in> Vars" "A \<in> scene_space" "B \<in> scene_space" "A \<bowtie>\<^sub>S B" "x \<le> A \<squnion>\<^sub>S B"
+  shows "x \<le> A \<or> x \<le> B"
 
-lemma basis_decomp_unique: "\<lbrakk> \<bottom>\<^sub>S \<notin> Vars; xs \<subseteq> Vars; ys \<subseteq> Vars; \<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S ys \<rbrakk> \<Longrightarrow> xs = ys"
-  oops
+lemma 
+  assumes "x \<le> \<Squnion>\<^sub>S A" "x \<in> Vars" "x \<noteq> \<bottom>\<^sub>S" "A \<subseteq> Vars"
+  shows "x \<in> A"
+proof -
+  have fA: "finite A"
+    using assms(3) infinite_super local.finite_Vars by blast
+  from fA assms show ?thesis
+  proof (induct arbitrary: x)
+    case empty
+    then show ?case 
+      by (simp add: scene_bot_least subscene_antisym)
+  next
+    case (insert y A')
+    then show ?case
+  qed
+*)
 
 (*
 text \<open> Difficult proof, delaying \<close>
@@ -780,198 +924,151 @@ proof
 lemma "fold (\<squnion>\<^sub>S) b ((\<lambda>x. x ;\<^sub>S a) ` Vars) = \<lbrakk>a\<rbrakk>\<^sub>\<sim> \<squnion>\<^sub>S b"
   oops
 
-lemma Vars_indep_foldr:
+lemma Vars_indep_fold:
   assumes "x \<in> Vars" "xs \<subseteq> Vars"
   shows "x \<bowtie>\<^sub>S \<Squnion>\<^sub>S (xs - {x})"
 proof (rule fold_scene_indep)
-  show "pairwise (##\<^sub>S) (set (removeAll x xs))"
-    by (simp, metis Diff_subset assms(2) pairwise_mono scene_space_compats)
-  from assms show "\<forall>b\<in>set (removeAll x xs). x \<bowtie>\<^sub>S b"
-    by (simp)
-       (metis DiffE insertI1 local.indep_Vars pairwiseD scene_indeps_def subset_iff)
+  show "compat_family (xs - {x})"
+    by (meson Diff_subset assms(2) compat_family_subset compat_scene_space set_Vars_scene_space)
+  from assms show "\<forall>b\<in>xs - {x}. x \<bowtie>\<^sub>S b"
+    by (metis DiffD1 DiffD2 in_mono indep_family.S_compat indep_family_Vars pairwiseD singleton_iff)
 qed
 
 lemma Vars_indeps_foldr:
-  assumes "set xs \<subseteq> Vars"
-  shows "foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S \<bowtie>\<^sub>S foldr (\<squnion>\<^sub>S) (filter (\<lambda>x. x \<notin> set xs) Vars) \<bottom>\<^sub>S"
-  apply (rule foldr_scene_indep)
-   apply (meson filter_is_subset pairwise_subset scene_space_compats)
-  apply (simp)
-  apply auto
-  apply (rule scene_indep_sym)
-  apply (metis (no_types, lifting) assms foldr_scene_indep local.indep_Vars pairwiseD pairwise_mono scene_indeps_def scene_space_compats subset_iff)
+  assumes "A \<subseteq> Vars"
+  shows "\<Squnion>\<^sub>S A \<bowtie>\<^sub>S \<Squnion>\<^sub>S (Vars - A)"
+  apply (rule fold_scene_indep)
+  apply (meson Diff_subset compat_family_subset indep_family_Vars indep_implies_compat_family)
+  apply (metis DiffD1 DiffD2 Diff_empty Diff_insert0 Vars_indep_fold assms scene_indep_sym)
   done
-  
+
 lemma uminus_var_other_vars:
   assumes "x \<in> Vars"
-  shows "- x = foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S"
+  shows "- x = \<Squnion>\<^sub>S (Vars - {x})"
 proof (rule scene_union_indep_uniq[where Z="x"])
-    show "idem_scene (foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S)"
-      by (metis Diff_subset idem_scene_space order_trans scene_space_foldr set_Vars_scene_space set_removeAll)
-    show "idem_scene x" "idem_scene (-x)"
-      by (simp_all add: assms local.idem_scene_Vars)
-    show "foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S \<bowtie>\<^sub>S x"
-      using Vars_indep_foldr assms scene_indep_sym by blast
+    show idem_x: "idem_scene x" "idem_scene (-x)"
+      by (simp_all add: assms)
+    show "idem_scene (\<Squnion>\<^sub>S (Vars - {x}))"
+      by (meson Diff_subset fold_Vars_in_scene_space idem_scene_space)
+    show "\<Squnion>\<^sub>S (Vars - {x}) \<bowtie>\<^sub>S x"
+      using Vars_indep_fold assms scene_indep_sym by blast
     show "- x \<bowtie>\<^sub>S x"
       using scene_indep_self_compl scene_indep_sym by blast
-    show "- x \<squnion>\<^sub>S x = foldr (\<squnion>\<^sub>S) (removeAll x Vars) \<bottom>\<^sub>S \<squnion>\<^sub>S x"
-      by (metis \<open>idem_scene (- x)\<close> assms foldr_scene_union_removeAll local.span_Vars scene_space_compats scene_span_def scene_union_compl uminus_scene_twice)
+    show "- x \<squnion>\<^sub>S x = (\<Squnion>\<^sub>S (Vars - {x})) \<squnion>\<^sub>S x"
+      by (metis idem_x(1) assms compat_family.fold_rec compat_scene_space scene_compat_bot(2) scene_union_commute scene_union_compl set_Vars_scene_space top_scene_eq)
 qed
 
 lemma uminus_vars_other_vars:
-  assumes "set xs \<subseteq> Vars"
-  shows "- \<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set xs) Vars)"
-proof (rule scene_union_indep_uniq[where Z="foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"])
-  show "idem_scene (- foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S)" "idem_scene (foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S)"
+  assumes "A \<subseteq> Vars"
+  shows "- \<Squnion>\<^sub>S A = \<Squnion>\<^sub>S (Vars - A)"
+proof (rule scene_union_indep_uniq[where Z="\<Squnion>\<^sub>S A"])
+  show iUA: "idem_scene (- \<Squnion>\<^sub>S A)" "idem_scene (\<Squnion>\<^sub>S A)"
     using assms idem_scene_space idem_scene_uminus scene_space_vars_decomp_iff by blast+
-  show "idem_scene (foldr (\<squnion>\<^sub>S) (filter (\<lambda>x. x \<notin> set xs) Vars) \<bottom>\<^sub>S)"
-    by (meson filter_is_subset idem_scene_space scene_space_vars_decomp_iff)
-  show "- foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S \<bowtie>\<^sub>S foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"
+  show "idem_scene (\<Squnion>\<^sub>S (Vars - A))"
+    by (simp add: fold_Vars_in_scene_space idem_scene_space)
+  show "- \<Squnion>\<^sub>S A \<bowtie>\<^sub>S \<Squnion>\<^sub>S A"
     by (metis scene_indep_self_compl uminus_scene_twice)
-  show "foldr (\<squnion>\<^sub>S) (filter (\<lambda>x. x \<notin> set xs) Vars) \<bottom>\<^sub>S \<bowtie>\<^sub>S foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S"
+  show "\<Squnion>\<^sub>S (Vars - A) \<bowtie>\<^sub>S \<Squnion>\<^sub>S A"
     using Vars_indeps_foldr assms scene_indep_sym by blast
-  show "- \<Squnion>\<^sub>S xs \<squnion>\<^sub>S \<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set xs) Vars) \<squnion>\<^sub>S \<Squnion>\<^sub>S xs"
-    using foldr_scene_union_filter[of Vars xs, THEN sym]
-    by (simp add: assms)
-       (metis \<open>idem_scene (- \<Squnion>\<^sub>S xs)\<close> local.span_Vars scene_span_def scene_union_compl uminus_scene_twice)
+  show "- \<Squnion>\<^sub>S A \<squnion>\<^sub>S \<Squnion>\<^sub>S A = \<Squnion>\<^sub>S (Vars - A) \<squnion>\<^sub>S \<Squnion>\<^sub>S A"
+    by (metis Un_Diff_cancel iUA(2) assms compat_family_def fold_scene_union indep_family_Vars indep_implies_compat_family le_iff_sup scene_union_commute scene_union_compl top_scene_eq)
 qed
 
 lemma scene_space_uminus: "\<lbrakk> a \<in> scene_space \<rbrakk> \<Longrightarrow> - a \<in> scene_space"
   by (auto simp add: scene_space_vars_decomp_iff uminus_vars_other_vars)
-     (metis filter_is_subset)
 
 lemma scene_space_inter: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
   by (simp add: inf_scene_def scene_space.union_scene_space scene_space_uminus)
 
-lemma scene_union_foldr_remove_element:
-  assumes "set xs \<subseteq> Vars"
-  shows "a \<squnion>\<^sub>S \<Squnion>\<^sub>S xs = a \<squnion>\<^sub>S \<Squnion>\<^sub>S (removeAll a xs)"
-using assms proof (induct xs)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a xs)
-  then show ?case apply auto
-    apply (metis order_trans scene_space.Vars_scene_space scene_space_foldr scene_space_union_assoc scene_union_idem set_Vars_scene_space)
-    apply (smt (verit, best) Diff_subset dual_order.trans removeAll_id scene_space_foldr scene_space_union_assoc scene_union_commute set_Vars_scene_space set_removeAll subset_iff)
-    done
+lemma scene_union_fold_remove_element:
+  assumes "A \<subseteq> Vars"
+  shows "a \<squnion>\<^sub>S \<Squnion>\<^sub>S A = a \<squnion>\<^sub>S \<Squnion>\<^sub>S (A - {a})"
+  by (metis Diff_empty Diff_insert0 assms compat_family.fold_insert compat_family.fold_rec indep_family_Vars indep_implies_compat_family insert_absorb scene_compat_bot(2))
+
+lemma scene_in_fold: 
+  assumes "a \<in> A" "A \<subseteq> Vars"
+  shows "a \<subseteq>\<^sub>S \<Squnion>\<^sub>S A"
+proof -
+  have cf_A: "compat_family A"
+    by (meson assms(2) compat_family_subset compat_scene_space set_Vars_scene_space)
+  from cf_A assms show ?thesis
+  proof (induct rule: cf_induct)
+    case empty
+    then show ?case by simp
+  next
+    case (insert b S)
+    consider (eq) "a = b" | (mem) "a \<in> S"
+      using insert.prems(1) by fastforce
+    thus ?case 
+    proof cases
+      case eq
+      with insert show ?thesis
+        by (simp add: fold_scene_insert)
+           (metis Diff_insert_absorb Vars_indep_fold fold_scene_idem fold_scene_insert insert.hyps(1) insert.prems(2) insert_absorb scene_union_ub)
+    next
+      case mem
+      with insert show ?thesis
+        by (simp add: fold_scene_insert)
+           (metis Diff_empty Diff_insert0 Vars_indep_fold fold_scene_idem fold_scene_insert insert.hyps(1) insert_absorb scene_indep_sym scene_union_commute scene_union_ub subscene_trans)
+    qed
+  qed
 qed
-
-lemma scene_union_foldr_Cons_removeAll:
-  assumes "set xs \<subseteq> Vars" "a \<in> set xs"
-  shows "foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) (a # removeAll a xs) \<bottom>\<^sub>S"
-  by (metis assms(1) assms(2) foldr_scene_union_eq_sets insert_Diff list.simps(15) pairwise_subset scene_space_compats set_removeAll)
-
-lemma scene_union_foldr_Cons_removeAll':
-  assumes "set xs \<subseteq> Vars" "a \<in> Vars"
-  shows "foldr (\<squnion>\<^sub>S) (a # xs) \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) (a # removeAll a xs) \<bottom>\<^sub>S"
-  by (simp add: assms(1) scene_union_foldr_remove_element)
-
-lemma scene_in_foldr: "\<lbrakk> a \<in> set xs; set xs \<subseteq> Vars \<rbrakk> \<Longrightarrow> a \<subseteq>\<^sub>S \<Squnion>\<^sub>S xs"
-  apply (induct xs)
-   apply (simp)
-  apply (subst scene_union_foldr_Cons_removeAll')
-    apply simp
-   apply simp
-  apply (auto)
-  apply (rule scene_union_ub)
-    apply (metis Diff_subset dual_order.trans idem_scene_space scene_space_vars_decomp_iff set_removeAll)
-  using Vars_indep_foldr apply blast
-  apply (metis Vars_indep_foldr foldr_scene_union_removeAll idem_scene_space local.idem_scene_Vars order.trans pairwise_mono removeAll_id scene_indep_sym scene_space_compats scene_space_foldr scene_union_commute scene_union_ub set_Vars_scene_space subscene_trans)
-  done
 
 lemma scene_union_foldr_subset:
-  assumes "set xs \<subseteq> set ys" "set ys \<subseteq> Vars"
-  shows "\<Squnion>\<^sub>S xs \<subseteq>\<^sub>S \<Squnion>\<^sub>S ys"
-using assms proof (induct xs arbitrary: ys)
-  case Nil
-  then show ?case 
-    by (simp add: scene_bot_least)
-next
-  case (Cons a xs)
-  { assume "a \<in> set xs"
-    with Cons have "foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) (a # removeAll a xs) \<bottom>\<^sub>S"
-      apply (subst scene_union_foldr_Cons_removeAll)
-        apply (auto)
-      done
-  } note a_in = this
-  { assume "a \<notin> set xs"
-    then have "a \<squnion>\<^sub>S foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) (a # xs) \<bottom>\<^sub>S"
-      by simp
-  } note a_out = this
-  show ?case apply (simp)
-    apply (cases "a \<in> set xs")
-    using a_in Cons apply auto
-     apply (metis dual_order.trans scene_union_foldr_remove_element)
-    using a_out Cons apply auto
-    apply (rule scene_union_mono)
-    using scene_in_foldr apply blast
-    apply blast
-    apply (meson Vars_compat_scene_space dual_order.trans scene_space_foldr set_Vars_scene_space subsetD)
-    using local.idem_scene_Vars apply blast
-    apply (meson idem_scene_space scene_space_foldr set_Vars_scene_space subset_trans)
-    done
+  assumes "A \<subseteq> B" "B \<subseteq> Vars"
+  shows "\<Squnion>\<^sub>S A \<subseteq>\<^sub>S \<Squnion>\<^sub>S B"
+proof -
+  have cfA: "compat_family A"
+    by (meson assms(1) assms(2) compat_family_subset indep_family_Vars indep_implies_compat_family)
+  from cfA assms show ?thesis
+  proof (induct A arbitrary: B rule: cf_induct)
+    case empty
+    then show ?case
+      by (simp add: scene_bot_least) 
+  next
+    case (insert a S)
+    then show ?case
+      by (auto simp add: fold_scene_insert)
+         (metis scene_bot_least scene_in_fold scene_union_incompat scene_union_lb)
+  qed
 qed
 
-lemma union_scene_space_foldrs:
-  assumes "set xs \<subseteq> Vars" "set ys \<subseteq> Vars"
-  shows "(foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S) \<squnion>\<^sub>S (foldr (\<squnion>\<^sub>S) ys \<bottom>\<^sub>S) = foldr (\<squnion>\<^sub>S) (xs @ ys) \<bottom>\<^sub>S"
-  using assms
-  apply (induct ys)
-  apply (simp_all)
-  apply (metis Vars_compat_scene_space foldr_scene_union_add_tail local.indep_Vars pairwise_mono scene_indep_compat scene_indeps_def scene_space.Vars_scene_space scene_space.union_scene_space scene_space_foldr subset_eq)
-  done
+lemma union_scene_space_folds:
+  assumes "A \<subseteq> Vars" "B \<subseteq> Vars"
+  shows "(\<Squnion>\<^sub>S A) \<squnion>\<^sub>S (\<Squnion>\<^sub>S B) = \<Squnion>\<^sub>S (A \<union> B)"
+  by (metis assms(1) assms(2) compat_family_def compat_family_subset compat_scene_space fold_scene_union set_Vars_scene_space sup.bounded_iff)
 
 lemma scene_space_ub:
   assumes "a \<in> scene_space" "b \<in> scene_space"
   shows "a \<subseteq>\<^sub>S a \<squnion>\<^sub>S b"
   using assms
-  apply (auto simp add: scene_space_vars_decomp_iff union_scene_space_foldrs)
-  by (smt (verit, ccfv_SIG) foldr_append scene_union_foldr_subset set_append sup.bounded_iff sup_commute sup_ge2)
+  by (auto simp add: scene_space_vars_decomp_iff union_scene_space_folds scene_union_foldr_subset)
 
 lemma scene_compl_subset_iff:
   assumes "a \<in> scene_space" "b \<in> scene_space"
-  shows "- a \<subseteq>\<^sub>S -b \<longleftrightarrow> b \<subseteq>\<^sub>S a"
+  shows "- a \<subseteq>\<^sub>S - b \<longleftrightarrow> b \<subseteq>\<^sub>S a"
   by (metis scene_indep_sym scene_le_iff_indep_inv uminus_scene_twice)
 
-lemma inter_scene_space_foldrs:
-  assumes "set xs \<subseteq> Vars" "set ys \<subseteq> Vars"
-  shows "\<Squnion>\<^sub>S xs \<sqinter>\<^sub>S \<Squnion>\<^sub>S ys = \<Squnion>\<^sub>S (filter (\<lambda> x. x \<in> set xs \<inter> set ys) Vars)"
+lemma inter_scene_space_folds:
+  assumes "A \<subseteq> Vars" "B \<subseteq> Vars"
+  shows "\<Squnion>\<^sub>S A \<sqinter>\<^sub>S \<Squnion>\<^sub>S B = \<Squnion>\<^sub>S (A \<inter> B)"
 proof -
-  have "\<Squnion>\<^sub>S xs \<sqinter>\<^sub>S \<Squnion>\<^sub>S ys = - (- \<Squnion>\<^sub>S xs \<squnion>\<^sub>S - \<Squnion>\<^sub>S ys)"
+  have "\<Squnion>\<^sub>S A \<sqinter>\<^sub>S \<Squnion>\<^sub>S B = - (- \<Squnion>\<^sub>S A \<squnion>\<^sub>S - \<Squnion>\<^sub>S B)"
     by (simp add: inf_scene_def)
-  also have "... = - (\<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set xs) Vars) \<squnion>\<^sub>S \<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set ys) Vars))"
+  also have "... = - (\<Squnion>\<^sub>S (Vars - A) \<squnion>\<^sub>S \<Squnion>\<^sub>S (Vars - B))"
     by (simp add: uminus_vars_other_vars assms)
-  also have "... = - \<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set xs) Vars @ filter (\<lambda>x. x \<notin> set ys) Vars)"
-    by (simp add: union_scene_space_foldrs assms)
-  also have "... =  \<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set (filter (\<lambda>x. x \<notin> set xs) Vars @ filter (\<lambda>x. x \<notin> set ys) Vars)) Vars)"
-    by (subst uminus_vars_other_vars, simp_all)
-  also have "... = \<Squnion>\<^sub>S (filter (\<lambda> x. x \<in> set xs \<inter> set ys) Vars)"
-  proof -
-    have "\<And>x. x \<in> Vars \<Longrightarrow> ((x \<in> Vars \<longrightarrow> x \<in> set xs) \<and> (x \<in> Vars \<longrightarrow> x \<in> set ys)) = (x \<in> set xs \<and> x \<in> set ys)"
-      by auto
-    thus ?thesis
-      by (simp cong: arg_cong[where f="\<Squnion>\<^sub>S"] filter_cong add: assms)
-  qed
+  also have "... = - (\<Squnion>\<^sub>S ((Vars - A) \<union> (Vars - B)))"
+    by (simp add: union_scene_space_folds assms)
+  also have "... = \<Squnion>\<^sub>S (A \<inter> B)"
+    by (metis Diff_Int assms(2) inf_le2 order_trans uminus_scene_twice uminus_vars_other_vars)
   finally show ?thesis .
 qed
 
 lemma scene_inter_distrib_lemma:
-  assumes "set xs \<subseteq> Vars" "set ys \<subseteq> Vars" "set zs \<subseteq> Vars"
-  shows "\<Squnion>\<^sub>S xs \<squnion>\<^sub>S (\<Squnion>\<^sub>S ys \<sqinter>\<^sub>S \<Squnion>\<^sub>S zs) = (\<Squnion>\<^sub>S xs \<squnion>\<^sub>S \<Squnion>\<^sub>S ys) \<sqinter>\<^sub>S (\<Squnion>\<^sub>S xs \<squnion>\<^sub>S \<Squnion>\<^sub>S zs)"
+  assumes "A \<subseteq> Vars" "B \<subseteq> Vars" "C \<subseteq> Vars"
+  shows "\<Squnion>\<^sub>S A \<squnion>\<^sub>S (\<Squnion>\<^sub>S B \<sqinter>\<^sub>S \<Squnion>\<^sub>S C) = (\<Squnion>\<^sub>S A \<squnion>\<^sub>S \<Squnion>\<^sub>S B) \<sqinter>\<^sub>S (\<Squnion>\<^sub>S A \<squnion>\<^sub>S \<Squnion>\<^sub>S C)"
   using assms
-  apply (simp only: union_scene_space_foldrs inter_scene_space_foldrs)
-  apply (subst union_scene_space_foldrs)
-    apply (simp add: assms)
-   apply (simp add: assms)
-  apply (subst inter_scene_space_foldrs)
-    apply (simp)
-   apply (simp)
-  apply (rule foldr_scene_union_eq_sets)
-  apply (simp)
-   apply (smt (verit, ccfv_threshold) Un_subset_iff mem_Collect_eq pairwise_subset scene_space_compats subset_iff)
-  apply (auto)
-  done
+  by (simp add: assms le_infI1 union_scene_space_folds inter_scene_space_folds Un_Int_distrib)
 
 lemma scene_union_inter_distrib:
   assumes "a \<in> scene_space" "b \<in> scene_space" "c \<in> scene_space"
@@ -993,9 +1090,10 @@ proof -
     by (metis (mono_tags, lifting) "1" "2" "3" infinite_super)
 qed
 
+(*
 lemma foldr_scene_union_remdups: "set xs \<subseteq> Vars \<Longrightarrow> \<Squnion>\<^sub>S (remdups xs) = \<Squnion>\<^sub>S xs"
   by (auto intro: foldr_scene_union_eq_sets simp add: pairwise_compat_Vars_subset)
-
+*)
 
 lemma scene_space_inter_assoc:
   assumes "x \<in> scene_space" "y \<in> scene_space" "z \<in> scene_space"
@@ -1035,9 +1133,10 @@ lemma scene_union_inter_minus:
   shows "a \<squnion>\<^sub>S (b \<sqinter>\<^sub>S - a) = a \<squnion>\<^sub>S b"
   by (metis assms(1) assms(2) bot_idem_scene idem_scene_space idem_scene_uminus local.scene_union_inter_distrib scene_demorgan1 scene_space_uminus scene_union_compl scene_union_unit(1) uminus_scene_twice)
 
+(*
 lemma scene_union_foldr_minus_element:
-  assumes "a \<in> scene_space" "set xs \<subseteq> scene_space"
-  shows "a \<squnion>\<^sub>S \<Squnion>\<^sub>S xs = a \<squnion>\<^sub>S \<Squnion>\<^sub>S (map (\<lambda> x. x \<sqinter>\<^sub>S - a) xs)"
+  assumes "a \<in> scene_space" "B \<subseteq> scene_space"
+  shows "a \<squnion>\<^sub>S \<Squnion>\<^sub>S B = a \<squnion>\<^sub>S \<Squnion>\<^sub>S ((\<lambda> x. x \<sqinter>\<^sub>S - a) ` A)"
 using assms proof (induct xs)
   case Nil
   then show ?case by (simp)
@@ -1078,46 +1177,53 @@ next
   finally show ?case using Cons
     by auto
 qed
+*)
 
-lemma scene_space_in_foldr: "\<lbrakk> a \<in> set xs; set xs \<subseteq> scene_space \<rbrakk> \<Longrightarrow> a \<subseteq>\<^sub>S \<Squnion>\<^sub>S xs"
-proof (induct xs)
-  case Nil
-  then show ?case
-    by simp
-next
-  case (Cons y ys)
-  have ysp: "y \<squnion>\<^sub>S \<Squnion>\<^sub>S ys = y \<squnion>\<^sub>S \<Squnion>\<^sub>S (map (\<lambda> x. x \<sqinter>\<^sub>S - y) ys)"
-    using Cons.prems(2) scene_union_foldr_minus_element by force
-  show ?case
-  proof (cases "a \<subseteq>\<^sub>S y")
-    case False
-    with Cons show ?thesis
-      by (simp)
-         (metis (no_types, lifting) idem_scene_space scene_space_foldr scene_space_ub scene_union_commute subscene_trans)
+lemma scene_space_in_foldr: 
+  assumes "a \<in> A" "A \<subseteq> scene_space"
+  shows "a \<subseteq>\<^sub>S \<Squnion>\<^sub>S A"
+proof -
+  have cfA: "compat_family A"
+    using assms(2) compat_family_subset compat_scene_space by blast
+  from cfA assms show ?thesis
+  proof (induct rule: cf_induct)
+    case empty
+    then show ?case by simp
   next
-    case True
-    with Cons show ?thesis
-      by (simp)
-         (meson idem_scene_space scene_space_foldr scene_space_ub subscene_trans)
+    case (insert b S)
+    then show ?case 
+      by (auto simp add: fold_scene_insert scene_space_fold scene_space_ub)
+         (metis fold_scene_idem scene_space_fold scene_space_ub scene_union_commute subscene_trans)
   qed
 qed
 
 lemma scene_space_foldr_lb: 
-  "\<lbrakk> a \<in> scene_space; set xs \<subseteq> scene_space; \<forall> b\<in>set xs. b \<le> a \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S xs \<subseteq>\<^sub>S a"
-proof (induct xs arbitrary: a)
-  case Nil
-  then show ?case
-    by (simp add: scene_bot_least)
-next
-  case (Cons x xs)
-  then show ?case
-    by (simp add: scene_space_compat scene_space_foldr scene_union_lb)
+  assumes "a \<in> scene_space" "A \<subseteq> scene_space" "\<forall> b\<in>A. b \<le> a" 
+  shows "\<Squnion>\<^sub>S A \<subseteq>\<^sub>S a"
+proof -
+  have cfA: "compat_family A"
+    using assms(2) compat_family_subset compat_scene_space by blast
+  from cfA assms show ?thesis
+  proof (induct rule: cf_induct)
+    case empty
+    then show ?case
+      by (simp add: scene_bot_least) 
+  next
+    case (insert b S)
+    then show ?case
+      by (simp add: compat_family.fold_compat_single fold_scene_insert scene_union_lb) 
+  qed
 qed
+
+lemma le_fold_Vars_implies_in:
+  assumes "x \<in> Vars" "A \<subseteq> Vars" "x \<subseteq>\<^sub>S \<Squnion>\<^sub>S A" "x \<noteq> \<bottom>\<^sub>S"
+  shows "x \<in> A"
+  by (metis Diff_insert_absorb Vars_indep_fold assms compat_family_subset compat_scene_space fold_scene_idem insertCI insert_Diff insert_Diff_single local.idem_scene_Vars scene_bot_least scene_indep_pres_compat scene_le_iff_indep_inv scene_union_compl set_Vars_scene_space subscene_antisym subset_insert_iff uminus_bot_scene)
 
 lemma var_le_union_choice:
   "\<lbrakk> x \<in> Vars; a \<in> scene_space; b \<in> scene_space; x \<le> a \<squnion>\<^sub>S b \<rbrakk> \<Longrightarrow> (x \<le> a \<or> x \<le> b)"
-  by (auto simp add: scene_space_vars_decomp_iff)
-     (metis Vars_indep_foldr bot_idem_scene idem_scene_space removeAll_id scene_bot_least scene_indep_pres_compat scene_le_iff_indep_inv scene_space.union_scene_space scene_space_foldr scene_space_in_foldr scene_union_compl set_Vars_scene_space subscene_trans subset_trans uminus_scene_twice uminus_top_scene)
+  by (auto simp add: scene_space_vars_decomp_iff union_scene_space_folds)
+     (metis Un_iff le_fold_Vars_implies_in scene_bot_least scene_in_fold sup.bounded_iff)
 
 lemma var_le_union_iff:
   "\<lbrakk> x \<in> Vars; a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> x \<le> a \<squnion>\<^sub>S b \<longleftrightarrow> (x \<le> a \<or> x \<le> b)"
@@ -1130,13 +1236,14 @@ lemma var_le_union_iff:
 text \<open> @{term Vars} may contain the empty scene, as we want to allow vacuous lenses in alphabets \<close>
 
 lemma le_vars_then_equal: "\<lbrakk> x \<in> Vars; y \<in> Vars; x \<le> y; x \<noteq> \<bottom>\<^sub>S \<rbrakk> \<Longrightarrow> x = y"
-  by (metis bot_idem_scene foldr_scene_removeAll local.idem_scene_Vars local.indep_Vars local.span_Vars pairwiseD scene_bot_least scene_indep_pres_compat scene_indeps_def scene_le_iff_indep_inv scene_space_compats scene_span_def scene_union_annhil subscene_antisym uminus_scene_twice uminus_top_scene uminus_var_other_vars)
+  by (metis local.idem_scene_Vars local.indep_Vars pairwiseD scene_bot_least scene_indep_pres_compat scene_indeps_def scene_le_iff_indep_inv scene_union_compl subscene_antisym uminus_bot_scene)
+
+text \<open> There is a unique decomposition of scene spaces \<close>
+
+lemma basis_decomp_unique: "\<lbrakk> \<bottom>\<^sub>S \<notin> Vars; A \<subseteq> Vars; B \<subseteq> Vars; \<Squnion>\<^sub>S A = \<Squnion>\<^sub>S B \<rbrakk> \<Longrightarrow> A = B"
+  by (metis in_mono le_fold_Vars_implies_in scene_in_fold set_eq_subset subsetI)
 
 end
-
-lemma foldr_scene_union_eq_scene_space: 
-  "\<lbrakk> set xs \<subseteq> scene_space; set xs = set ys \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S ys"
-  by (metis foldr_scene_union_eq_sets pairwise_def pairwise_subset scene_space_compat)
 
 subsection \<open> Mapping a lens over a scene list \<close>
 
@@ -1158,10 +1265,10 @@ subsection \<open> Instances \<close>
 instantiation unit :: scene_space
 begin
 
-definition Vars_unit :: "unit scene list" where [simp]: "Vars_unit = []"
+definition Vars_unit :: "unit scene set" where [simp]: "Vars_unit = {}"
 
 instance
-  by (intro_classes, simp_all add: scene_indeps_def scene_span_def)
+  by (intro_classes, simp_all add: scene_indeps_def scene_span_def unit_scene_top_eq_bot)
 
 end
 
@@ -1172,17 +1279,23 @@ find_theorems "(\<Squnion>\<^sub>S)" "(@)"
 instantiation prod :: (scene_space, scene_space) scene_space
 begin
 
-definition Vars_prod :: "('a \<times> 'b) scene list" where "Vars_prod = map_lcomp Vars fst\<^sub>L @ map_lcomp Vars snd\<^sub>L"
+definition Vars_prod :: "('a \<times> 'b) scene set" where "Vars_prod = (\<lambda> x. x ;\<^sub>S fst\<^sub>L) ` Vars \<union> (\<lambda> x. x ;\<^sub>S snd\<^sub>L) ` Vars"
 
 instance proof
-  have pw: "pairwise (\<bowtie>\<^sub>S) (set (map_lcomp Vars fst\<^sub>L @ map_lcomp Vars snd\<^sub>L))"
+  have pw: "pairwise (\<bowtie>\<^sub>S) ((\<lambda> x. x ;\<^sub>S fst\<^sub>L) ` (Vars :: 'a scene set) \<union> (\<lambda> x. x ;\<^sub>S snd\<^sub>L) ` (Vars :: 'b scene set))"
     by (auto simp add: pairwise_def Vars_ext_lens_indep scene_comp_pres_indep scene_indep_sym)
   show "\<And>x:: ('a \<times> 'b) scene. x \<in> Vars \<Longrightarrow> idem_scene x"
     by (auto simp add: Vars_prod_def)
-  from pw show "scene_indeps (set (Vars :: ('a \<times> 'b) scene list))"
+  from pw show "scene_indeps (Vars :: ('a \<times> 'b) scene set)"
     by (simp add: Vars_prod_def scene_indeps_def)
-  show "scene_span (Vars :: ('a \<times> 'b) scene list)"
-    by (simp only: scene_span_def Vars_prod_def foldr_scene_append pw pairwise_indep_then_compat map_lcomp_Vars_is_lens fst_vwb_lens snd_vwb_lens)
+  show "scene_span (Vars :: ('a \<times> 'b) scene set)"
+    apply (simp add: scene_span_def Vars_prod_def)
+    thm union_scene_space_folds[THEN sym]
+    apply (subst fold_scene_union)
+    apply (metis pairwise_def pw scene_indep_compat)
+    apply (simp add: finite_Vars)
+    apply (simp add: pw)
+    apply (simp only: scene_span_def Vars_prod_def)
        (metis fst_vwb_lens lens_plus_scene lens_scene_top_iff_bij_lens plus_mwb_lens scene_union_commute snd_fst_lens_indep snd_vwb_lens swap_bij_lens vwb_lens_mwb)
 qed  
 
