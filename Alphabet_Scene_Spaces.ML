@@ -12,7 +12,7 @@ open HOLogic;
 
 fun alpha_scene_space_term xs more parent =
   (* FIXME: Use following code to determine whether a field has a scene space, and use if present by mapping over Vars *)
-  (* Sorts.of_sort (Sign.classes_of @{theory}) (@{typ test}, @{sort scene_space}) *)
+  (* Sorts.of_sort (Sign.classes_of @{theory}) (@{typ test}, @{sort list_scene_space}) *)
   let val vs = map (fn x => (const @{const_name lens_scene}) $ const x) xs
   in const @{const_name alpha_scene_space'} $ mk_list dummyT vs  $ const more $ const parent
   end;
