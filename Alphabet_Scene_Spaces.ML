@@ -17,6 +17,9 @@ fun alpha_scene_space_term xs more parent =
   in const @{const_name alpha_scene_space'} $ mk_list dummyT vs  $ const more $ const parent
   end;
  
+fun set_alpha_scene_space_term xs more parent =
+  const @{const_name set} $ alpha_scene_space_term xs more parent;
+
 val basis_lens_suffix = "_basis_lens"
 
 fun mk_basis_lens t = mk_Trueprop (const @{const_name basis_lens} $ t)
@@ -98,7 +101,7 @@ fun mk_alpha_scene_space tname thy =
   val r_ext = fst (#extension info)
   fun mk_def ty x v = Const ("Pure.eq", ty --> ty --> Term.propT) $ Free (x, ty) $ v;
   val xs = map (Lens_Lib.remove_lens_suffix o fst) (#fields info)
-  val ctx0 = Class.instantiation_cmd ([r_ext], ["scene_space"], "scene_space") thy;
+  val ctx0 = Class.instantiation_cmd ([r_ext], ["list_scene_space"], "list_scene_space") thy;
   val parent =     
       (case #parent info of
        NONE => @{const_name id_lens} |
@@ -109,11 +112,15 @@ fun mk_alpha_scene_space tname thy =
   val (_, ctx1) = Local_Theory.begin_nested ctx0
 
   val def_ty = Syntax.read_typ ctx0 ("'a " ^ r_ext ^ " scene list");                                                                                                                                                     
-  val (_, ctx2) = Specification.definition (SOME (Binding.name ("Vars_" ^ tname ^ "_ext"), NONE, NoSyn)) [] [] ((Binding.empty, @{attributes [scene_space_defs]}), mk_def def_ty ("Vars_" ^ tname ^ "_ext") (alpha_scene_space_term xs more parent)) ctx1
+  val def_ty_set = Syntax.read_typ ctx0 ("'a " ^ r_ext ^ " scene set");
+  val (_, ctx2) = Specification.definition (SOME (Binding.name ("VarList_" ^ tname ^ "_ext"), NONE, NoSyn)) [] [] ((Binding.empty, @{attributes [scene_space_defs]}), mk_def def_ty ("VarList_" ^ tname ^ "_ext") (alpha_scene_space_term xs more parent)) ctx1
 
-  val ctx3 = Local_Theory.end_nested ctx2
+  val (_, ctx3) = Specification.definition (SOME (Binding.name ("Vars_" ^ tname ^ "_ext"), NONE, NoSyn)) [] [] ((Binding.empty, @{attributes [scene_space_defs]}), mk_def def_ty_set ("Vars_" ^ tname ^ "_ext") (set_alpha_scene_space_term xs more parent)) ctx2
 
-  val thy2 = Class.prove_instantiation_exit (fn _ => NO_CONTEXT_TACTIC ctx3 (Method_Closure.apply_method ctx3 @{method alpha_scene_space} [] [] [] ctx3 [])) ctx3
+  val ctx4 = Local_Theory.end_nested ctx3
+
+  val thy2 = Class.prove_instantiation_exit (fn _ => NO_CONTEXT_TACTIC ctx4 (Method_Closure.apply_method ctx4 @{method alpha_scene_space} [] [] [] ctx4 [])) ctx4
+
 
   val thy3 = basis_lenses xs thy2
 

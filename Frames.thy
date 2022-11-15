@@ -203,7 +203,7 @@ lemma frame_scene_foldr: "\<lbrakk> A \<subseteq> scene_space \<rbrakk> \<Longri
   by (transfer) (auto simp add: image_constant_conv Int_absorb2 scene_space_fold)
 
 lemma frame_scene_top: "\<top>\<^sub>F = [\<Squnion>\<^sub>S Vars]\<^sub>F"
-  by (simp add: frame_top)  
+  by (simp add: all_Vars_top frame_top)  
 
 lemma uminus_frame_Inf: "- \<Inter>\<^sub>F A = \<Union>\<^sub>F (uminus ` A)"
   by (simp add: Inf_frame_def)

@@ -5,6 +5,93 @@ theory Alphabet_Scene_Spaces
   keywords "alphabet_scene_space" :: "thy_defn"
 begin
 
+subsection \<open> List constructors \<close>
+
+text \<open> For ease of proof and computation, we often want to represent elements of a scene space as 
+  a list of scenes. We therefore introduce a subclass of @{class scene_space}, and a constructor
+  for scene spaces using lists. \<close>
+
+class list_scene_space = Vars +
+  fixes VarList :: "'a scene list"
+  assumes Vars_VarList: "Vars = set VarList"
+  and idem_scene_VarList : "\<And> x. x \<in> set VarList \<Longrightarrow> idem_scene x"
+  and indep_VarList: "scene_indeps (set VarList)"
+  and span_VarList: "scene_span (set VarList)"
+
+context list_scene_space
+begin
+
+lemma set_VarList: "set VarList = Vars"
+  by (simp add: local.Vars_VarList)
+
+subclass scene_space
+proof
+  show "\<And>x. x \<in> Vars \<Longrightarrow> idem_scene x"
+    using local.Vars_VarList local.idem_scene_VarList by auto
+  show "finite Vars"
+    using local.Vars_VarList by blast
+  show "scene_indeps Vars"
+    by (simp add: local.Vars_VarList local.indep_VarList)
+  show "scene_span Vars"
+    by (simp add: local.Vars_VarList local.span_VarList)
+qed
+
+end
+
+abbreviation foldr_scene :: "'a scene list \<Rightarrow> 'a scene" ("foldr\<^sub>S") where
+"foldr_scene as \<equiv> foldr (\<squnion>\<^sub>S) as \<bottom>\<^sub>S"
+
+lemma pairwise_compat_foldr: 
+  "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> b \<in> set as. a ##\<^sub>S b \<rbrakk> \<Longrightarrow> a ##\<^sub>S foldr\<^sub>S as"
+  apply (induct as)
+   apply (simp)
+  apply (auto simp add: pairwise_insert scene_union_pres_compat)
+  done
+
+lemma pairwise_indep_foldr:
+  "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> b \<in> set as. a \<bowtie>\<^sub>S b \<rbrakk> \<Longrightarrow> a \<bowtie>\<^sub>S foldr\<^sub>S as"
+  apply (induct as)
+   apply (simp)
+  apply (auto intro: scene_indep_pres_compat simp add: pairwise_insert )
+  done
+
+lemma foldr_compat_dist:
+  "pairwise (##\<^sub>S) (set as) \<Longrightarrow> foldr (\<squnion>\<^sub>S) (map (\<lambda>a. a ;\<^sub>S x) as) \<bottom>\<^sub>S = foldr\<^sub>S as ;\<^sub>S x"
+  apply (induct as)
+   apply (simp)
+  apply (auto simp add: pairwise_insert)
+  apply (metis pairwise_compat_foldr scene_compat_refl scene_union_comp_distl)
+  done  
+
+lemma foldr_compat_quotient_dist:
+  "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> a\<in>set as. a \<le> \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<rbrakk> 
+    \<Longrightarrow> foldr\<^sub>S (map (\<lambda>a. a /\<^sub>S x) as) = foldr\<^sub>S as /\<^sub>S x"
+  apply (induct as)
+   apply (auto simp add: pairwise_insert)
+  apply (metis pairwise_compat_foldr pairwise_indep_foldr scene_compat_refl scene_indep_sym scene_le_iff_indep_inv scene_union_quotient)
+  done
+
+lemma foldr_scene_union_add_tail:
+  "\<lbrakk> pairwise (##\<^sub>S) (set xs); \<forall> x\<in>set xs. x ##\<^sub>S b \<rbrakk> \<Longrightarrow> foldr\<^sub>S xs \<squnion>\<^sub>S b = foldr (\<squnion>\<^sub>S) xs b"
+  apply (induct xs)
+   apply (simp)
+  apply (simp)
+  apply (metis pairwise_compat_foldr pairwise_insert scene_compat_refl scene_compat_sym scene_union_assoc)
+  done
+
+lemma scene_compats_members: "\<lbrakk> pairwise (##\<^sub>S) A; x \<in> A; y \<in> A \<rbrakk> \<Longrightarrow> x ##\<^sub>S y"
+  by (metis pairwise_def scene_compat_refl)
+
+lemma foldr_scene_append:
+  "\<lbrakk> pairwise (##\<^sub>S) (set (xs @ ys)) \<rbrakk> \<Longrightarrow> foldr\<^sub>S (xs @ ys) = foldr\<^sub>S xs \<squnion>\<^sub>S foldr\<^sub>S ys"
+  by (simp add: foldr_scene_union_add_tail pairwise_compat_foldr pairwise_subset scene_compats_members)
+
+lemma foldr_scene_concat:
+  "\<lbrakk> pairwise (##\<^sub>S) (set (concat xs)) \<rbrakk> \<Longrightarrow> foldr\<^sub>S (concat xs) = foldr\<^sub>S (map foldr\<^sub>S xs)"
+  by (induct xs, simp_all, metis foldr_append foldr_scene_append pairwise_subset set_append set_concat sup_ge2)
+
+subsection \<open> Constructing alphabet scene spaces \<close>
+
 text \<open> The scene space for an alphabet is constructed using the set of scenes corresponding to
   each lens, the base lens, and the more lens, to allow for extension. \<close>
 
@@ -17,21 +104,6 @@ definition alpha_scene_space' :: "'s scene list \<Rightarrow> ('b::list_scene_sp
 lemma mem_alpha_scene_space_iff [simp]: 
   "x \<in> set (alpha_scene_space xs m\<^sub>L) \<longleftrightarrow> (x \<in> set xs \<or> x \<in> (\<lambda> x. x ;\<^sub>S m\<^sub>L) ` set VarList)"
   by (simp add: alpha_scene_space_def) 
-
-lemma pairwise_compat_foldr: 
-  "\<lbrakk> pairwise (##\<^sub>S) (set as); \<forall> b \<in> set as. a ##\<^sub>S b \<rbrakk> \<Longrightarrow> a ##\<^sub>S foldr (\<squnion>\<^sub>S) as \<bottom>\<^sub>S"
-  apply (induct as)
-   apply (simp)
-  apply (auto simp add: pairwise_insert scene_union_pres_compat)
-  done
-
-lemma foldr_compat_dist:
-  "pairwise (##\<^sub>S) (set as) \<Longrightarrow> foldr (\<squnion>\<^sub>S) (map (\<lambda>a. a ;\<^sub>S x) as) \<bottom>\<^sub>S = foldr (\<squnion>\<^sub>S) as \<bottom>\<^sub>S ;\<^sub>S x"
-  apply (induct as)
-   apply (simp)
-  apply (auto simp add: pairwise_insert)
-  apply (metis pairwise_compat_foldr scene_compat_refl scene_union_comp_distl)
-  done  
 
 lemma alpha_scene_space_class_intro:
   assumes 
@@ -75,7 +147,7 @@ lemma alpha_scene_space_class_intro':
     "\<forall>a\<in>set xs. a \<subseteq>\<^sub>S \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
     "\<forall> x\<in>set xs. x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"
     "foldr (\<squnion>\<^sub>S) xs \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim> = \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
-  shows "class.scene_space (alpha_scene_space' xs m\<^sub>L p\<^sub>L)"
+  shows "class.list_scene_space (set (alpha_scene_space' xs m\<^sub>L p\<^sub>L)) (alpha_scene_space' xs m\<^sub>L p\<^sub>L)"
   unfolding alpha_scene_space'_def
   apply (rule alpha_scene_space_class_intro)
       apply (simp_all add: assms scene_quotient_idem)
@@ -93,7 +165,7 @@ lemma alpha_scene_space_class_intro':
   apply (simp add: lens_scene_quotient assms)
   apply (subst scene_union_quotient[THEN sym])
   apply (metis assms(2) assms(3) assms(4) assms(5) assms(7) assms(8) bot_idem_scene empty_iff foldr.simps(1) foldr_scene_union_add_tail id_apply list.set(1) order_eq_refl pairwise_compat_foldr pairwise_empty pairwise_mono scene_bot_least scene_indep_compat scene_indeps_def scene_union_incompat sublens'_implies_subscene sublens_implies_sublens' subscene_antisym)
-  apply (metis assms(2) assms(6) foldr_scene_indep pairwise_def scene_indep_compat scene_indep_sym scene_indeps_def scene_le_iff_indep_inv)
+  apply (metis assms(2) assms(6) pairwise_indep_foldr pairwise_def scene_indep_compat scene_indep_sym scene_indeps_def scene_le_iff_indep_inv)
   apply (simp add: assms(3) assms(4) assms(5) sublens'_implies_subscene sublens_implies_sublens')
   apply (subst foldr_scene_union_add_tail)
   apply (metis assms(2) pairwiseD pairwiseI scene_indep_compat scene_indeps_def)
@@ -111,25 +183,26 @@ lemma alpha_scene_space_class_intro'':
     "m\<^sub>L \<subseteq>\<^sub>L p\<^sub>L"
     "\<forall>a\<in>set (concat xs). a \<subseteq>\<^sub>S \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
     "\<forall> x\<in>set (concat xs). x \<bowtie>\<^sub>S \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"
-    "\<Squnion>\<^sub>S (map \<Squnion>\<^sub>S xs @ [\<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>]) = \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
-  shows "class.scene_space (alpha_scene_space' (concat xs) m\<^sub>L p\<^sub>L)"
+    "foldr\<^sub>S (map foldr\<^sub>S xs @ [\<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>]) = \<lbrakk>p\<^sub>L\<rbrakk>\<^sub>\<sim>"
+  shows "class.list_scene_space (set (alpha_scene_space' (concat xs) m\<^sub>L p\<^sub>L)) (alpha_scene_space' (concat xs) m\<^sub>L p\<^sub>L)"
 proof -
+  thm assms
   have p1: "pairwise (##\<^sub>S) (set (concat xs))"
     by (metis assms(2) pairwise_def scene_indep_compat scene_indeps_def)
   have p2: "pairwise (##\<^sub>S) (set (concat xs @ [\<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>]))"
     by (metis (no_types, lifting) assms(7) insertE list.simps(15) p1 pairwise_def rotate1.simps(2) scene_compat_sym scene_indep_compat set_rotate1)
-  have "foldr (\<squnion>\<^sub>S) (concat xs) \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim> = \<Squnion>\<^sub>S (concat (xs @ [[\<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>]]))"
+  have "foldr (\<squnion>\<^sub>S) (concat xs) \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim> = foldr (\<squnion>\<^sub>S) (concat (xs @ [[\<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>]])) \<bottom>\<^sub>S"
     by simp
-  also have "... = \<Squnion>\<^sub>S (map \<Squnion>\<^sub>S (xs @ [[\<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>]]))"
+  also have "... = foldr (\<squnion>\<^sub>S) (map (\<lambda> xs. foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S) (xs @ [[\<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>]])) \<bottom>\<^sub>S"
     by (metis append_self_conv concat.simps(2) concat_append foldr_scene_concat p2)
-  also have "... = foldr (\<squnion>\<^sub>S) (map \<Squnion>\<^sub>S xs) \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"
+  also have "... = foldr (\<squnion>\<^sub>S) (map (\<lambda> xs. foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S) xs) \<lbrakk>m\<^sub>L\<rbrakk>\<^sub>\<sim>"
     by simp
   finally show ?thesis
     using assms by (rule_tac alpha_scene_space_class_intro', simp_all)
 qed
 
 definition more_frame :: "('a::scene_space \<Longrightarrow> 'b::scene_space) \<Rightarrow> 'b frame" where
-"more_frame m\<^sub>L = \<Union>\<^sub>F ((\<lambda>x. [x ;\<^sub>S m\<^sub>L]\<^sub>F) ` set Vars)"
+"more_frame m\<^sub>L = \<Union>\<^sub>F ((\<lambda>x. [x ;\<^sub>S m\<^sub>L]\<^sub>F) ` Vars)"
 
 lemma more_frame_unit [simp]: "more_frame (m\<^sub>L :: unit \<Longrightarrow> 'b::scene_space) = \<lbrace>\<rbrace>\<^sub>F"
   by (simp add: more_frame_def)
@@ -154,10 +227,10 @@ method composite_lens =
 
 method more_frame = 
   ((simp add: frame_scene_top frame_scene_foldr)?
-  ,(simp_all add: frame_scene_top frame_scene_foldr alpha_scene_space'_def alpha_scene_space_def scene_space_lemmas more_frame_def scene_space_defs image_comp))
+  ,(simp_all add: frame_scene_top frame_scene_foldr alpha_scene_space'_def alpha_scene_space_def scene_space_lemmas more_frame_def scene_space_defs image_comp set_VarList))
 
 method alpha_scene_space = 
-  (rule scene_space_class.intro
+  (rule list_scene_space_class.intro
   ,(intro_classes)[1]
   ,simp add: scene_space_defs lens_scene_quotient
   ,rule alpha_scene_space_class_intro alpha_scene_space_class_intro'
@@ -172,8 +245,6 @@ val _ =
     (Parse.name
     >> (fn n =>
         Toplevel.theory (Alphabet_Scene_Spaces.mk_alpha_scene_space n)));
-
-
 \<close>
 
 end

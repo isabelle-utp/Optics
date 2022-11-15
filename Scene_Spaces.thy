@@ -704,32 +704,6 @@ class scene_space = Vars +
   and indep_Vars: "scene_indeps Vars"
   and span_Vars: "scene_span Vars"
   (* "\<bottom>\<^sub>S \<in> Vars" *)
-
-class list_scene_space = Vars +
-  fixes VarList :: "'a scene list"
-  assumes Vars_VarList: "Vars = set VarList"
-  and idem_scene_VarList : "\<And> x. x \<in> set VarList \<Longrightarrow> idem_scene x"
-  and indep_VarList: "scene_indeps (set VarList)"
-  and span_VarList: "scene_span (set VarList)"
-
-context list_scene_space
-begin
-
-subclass scene_space
-proof
-  show "\<And>x. x \<in> Vars \<Longrightarrow> idem_scene x"
-    using local.Vars_VarList local.idem_scene_VarList by auto
-  show "finite Vars"
-    using local.Vars_VarList by blast
-  show "scene_indeps Vars"
-    by (simp add: local.Vars_VarList local.indep_VarList)
-  show "scene_span Vars"
-    by (simp add: local.Vars_VarList local.span_VarList)
-qed
-
-end
-
-context scene_space
 begin
 
 lemma scene_space_compats [simp]: "pairwise (##\<^sub>S) Vars"
@@ -757,7 +731,7 @@ lemma set_Vars_scene_space [simp]: "Vars \<subseteq> scene_space"
 lemma pairwise_compat_Vars_subset: "xs \<subseteq> Vars \<Longrightarrow> pairwise (##\<^sub>S) xs"
   using pairwise_subset scene_space_compats by blast
 
-lemma all_Vars_top [simp]: "\<Squnion>\<^sub>S Vars = \<top>\<^sub>S"
+lemma all_Vars_top: "\<Squnion>\<^sub>S Vars = \<top>\<^sub>S"
   using local.span_Vars scene_span_def by blast
 
 lemma Vars_compat_scene_space: "\<lbrakk> b \<in> scene_space; x \<in> Vars \<rbrakk> \<Longrightarrow> x ##\<^sub>S b"
@@ -1380,7 +1354,7 @@ instance proof
   have idem: "\<forall>x\<in>(map_lcomp Vars fst\<^sub>L \<union> map_lcomp Vars snd\<^sub>L)::('a \<times> 'b) scene set. idem_scene x"
     by (auto simp add: map_lcomp_def)
   show "scene_span (Vars :: ('a \<times> 'b) scene set)"
-    by (simp add: scene_span_def Vars_prod_def fold_scene_union pw finite idem map_lcomp_dist fst_vwb_lens snd_vwb_lens)
+    by (simp add: scene_span_def Vars_prod_def all_Vars_top fold_scene_union pw finite idem map_lcomp_dist fst_vwb_lens snd_vwb_lens)
        (metis fst_snd_id_lens fst_snd_lens_indep fst_vwb_lens lens_plus_scene one_lens_scene snd_vwb_lens)
 qed  
 
