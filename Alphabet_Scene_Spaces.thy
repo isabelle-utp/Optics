@@ -53,19 +53,12 @@ begin
 
 definition VarList_prod :: "('a \<times> 'b) scene list" where "VarList_prod = map (\<lambda> x. x ;\<^sub>S fst\<^sub>L) VarList @ map (\<lambda> x. x ;\<^sub>S snd\<^sub>L) VarList"
 
-instance proof
-  have pw: "pairwise (\<bowtie>\<^sub>S) (set (map (\<lambda> x. x ;\<^sub>S fst\<^sub>L) VarList @ map (\<lambda> x. x ;\<^sub>S snd\<^sub>L) VarList))"
-    by (auto simp add: pairwise_def Vars_ext_lens_indep scene_comp_pres_indep scene_indep_sym Vars_VarList)
-  show "\<And>x:: ('a \<times> 'b) scene. x \<in> set VarList \<Longrightarrow> idem_scene x"
-    by (auto simp add: VarList_prod_def Vars_VarList)
-  from pw show "scene_indeps (set (VarList :: ('a \<times> 'b) scene list))"
-    by (simp add: VarList_prod_def scene_indeps_def Vars_VarList)
-  show "scene_span (set (VarList :: ('a \<times> 'b) scene list))"
-    by (simp only: scene_span_def VarList_prod_def pw map_lcomp_Vars_is_lens fst_vwb_lens snd_vwb_lens Vars_VarList)
-       (simp add: VarList_prod_def Vars_VarList Vars_prod_def map_lcomp_def top_scene_eq)
-  show "Vars = (set (VarList :: ('a \<times> 'b) scene list))"
+instance proof -
+  have Vars: "Vars = (set (VarList :: ('a \<times> 'b) scene list))"
     by (simp add: VarList_prod_def Vars_prod_def map_lcomp_def Vars_VarList)
-qed  
+  thus "OFCLASS('a \<times> 'b, list_scene_space_class)"
+    by (intro_classes, simp_all add: indep_Vars span_Vars)
+qed
 
 end
 
