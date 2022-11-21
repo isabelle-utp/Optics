@@ -348,6 +348,10 @@ lemma subscene_antisym: "\<lbrakk> idem_scene Y; X \<subseteq>\<^sub>S Y; Y \<su
   apply (metis (full_types) idem_overrider.ovr_idem overrider.ovr_overshadow_left)
   done
 
+lemma scene_union_subscene_absorb: "\<lbrakk>a ##\<^sub>S b; a \<subseteq>\<^sub>S b\<rbrakk> \<Longrightarrow> a \<squnion>\<^sub>S b = b"
+  apply (simp add: less_eq_scene_def, transfer, auto)
+  by (metis (no_types, lifting) ext overrider_def)
+
 lemma subscene_copy_def:
   assumes "idem_scene X" "idem_scene Y"
   shows "X \<subseteq>\<^sub>S Y = (\<forall> s\<^sub>1 s\<^sub>2. cp\<^bsub>X\<^esub> s\<^sub>1 \<circ> cp\<^bsub>Y\<^esub> s\<^sub>2 = cp\<^bsub>Y\<^esub> (cp\<^bsub>X\<^esub> s\<^sub>1 s\<^sub>2))"
@@ -373,6 +377,7 @@ lemma scene_union_lb: "\<lbrakk> a ##\<^sub>S b; a \<le> c; b \<le> c \<rbrakk> 
 
 lemma scene_union_mono: "\<lbrakk> a \<subseteq>\<^sub>S c; b \<subseteq>\<^sub>S c; a ##\<^sub>S b; idem_scene a; idem_scene b \<rbrakk> \<Longrightarrow> a \<squnion>\<^sub>S b \<subseteq>\<^sub>S c"
   by (simp add: less_eq_scene_def, transfer, auto)
+
 
 lemma scene_le_then_compat: "\<lbrakk> idem_scene X; idem_scene Y; X \<le> Y \<rbrakk> \<Longrightarrow> X ##\<^sub>S Y"
   unfolding less_eq_scene_def
@@ -619,6 +624,7 @@ lemma fun_dom_scene_always_compat [simp]: "fds(A) ##\<^sub>S fds(B)"
 lemma fun_dom_scene_le [simp]: "fds(A) \<subseteq>\<^sub>S fds(B) \<longleftrightarrow> A \<subseteq> B"
   unfolding less_eq_scene_def
   by (transfer, auto simp add: override_on_def fun_eq_iff, meson two_diff)
+
 
 text \<open> Hide implementation details for scenes \<close>  
 

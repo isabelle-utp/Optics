@@ -1,7 +1,7 @@
 section \<open> Scene Spaces \<close>
 
 theory Scene_Spaces
-  imports Scenes
+  imports Scenes "HOL-Analysis.Sigma_Algebra"
 begin
 
 subsection \<open> Preliminaries \<close>
@@ -281,7 +281,7 @@ proof -
 proof induct
 case (insert x F)
   have "fold (\<squnion>\<^sub>S) z (A \<union> insert x F) = x \<squnion>\<^sub>S (fold (\<squnion>\<^sub>S) (fold (\<squnion>\<^sub>S) z A) F)"
-    using insert by (simp add: fold_insert)
+    using insert by simp
   also have "\<dots> = fold (\<squnion>\<^sub>S) (fold (\<squnion>\<^sub>S) z A) (insert x F)"
     using insert fold_insert apply auto
     by (metis (full_types) S_finite compat_family.fold_graph_compat compat_family_axioms finite_subset fold_graph_fold fold_insert insert.prems(2) scene_compat_sym)
@@ -1012,6 +1012,9 @@ lemma scene_space_uminus: "\<lbrakk> a \<in> scene_space \<rbrakk> \<Longrightar
 lemma scene_space_inter: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
   by (simp add: inf_scene_def scene_space.union_scene_space scene_space_uminus)
 
+lemma scene_space_minus: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a - b \<in> scene_space"
+  by (simp add: minus_scene_def scene_space_inter scene_space_uminus)
+
 lemma scene_union_fold_remove_element:
   assumes "A \<subseteq> Vars"
   shows "a \<squnion>\<^sub>S \<Squnion>\<^sub>S A = a \<squnion>\<^sub>S \<Squnion>\<^sub>S (A - {a})"
@@ -1163,7 +1166,7 @@ qed
 lemma scene_union_inter_minus:
   assumes "a \<in> scene_space" "b \<in> scene_space"
   shows "a \<squnion>\<^sub>S (b \<sqinter>\<^sub>S - a) = a \<squnion>\<^sub>S b"
-  by (metis assms(1) assms(2) bot_idem_scene idem_scene_space idem_scene_uminus local.scene_union_inter_distrib scene_demorgan1 scene_space_uminus scene_union_compl scene_union_unit(1) uminus_scene_twice)
+  by (metis assms bot_idem_scene idem_scene_space idem_scene_uminus local.scene_union_inter_distrib scene_demorgan1 scene_space_uminus scene_union_compl scene_union_unit(1) uminus_scene_twice)
 
 (*
 lemma scene_union_foldr_minus_element:
@@ -1272,37 +1275,166 @@ lemma le_vars_then_equal: "\<lbrakk> x \<in> Vars; y \<in> Vars; x \<le> y; x \<
 
 text \<open> There is a unique decomposition of scene spaces \<close>
 
-lemma basis_decomp_unique: "\<lbrakk> \<bottom>\<^sub>S \<notin> Vars; A \<subseteq> Vars; B \<subseteq> Vars; \<Squnion>\<^sub>S A = \<Squnion>\<^sub>S B \<rbrakk> \<Longrightarrow> A = B"
+lemma basis_decomp_unique: "\<lbrakk> \<bottom>\<^sub>S \<notin> A; \<bottom>\<^sub>S \<notin> B; A \<subseteq> Vars; B \<subseteq> Vars; \<Squnion>\<^sub>S A = \<Squnion>\<^sub>S B \<rbrakk> \<Longrightarrow> A = B"
   by (metis in_mono le_fold_Vars_implies_in scene_in_fold set_eq_subset subsetI)
+
+corollary basis_decomp_ex1: 
+  assumes "s \<in> scene_space"
+  shows "\<exists>!xs. xs \<subseteq> Vars \<and> \<Squnion>\<^sub>S xs = s \<and> \<bottom>\<^sub>S \<notin> xs"
+proof -
+  obtain xs where xs: "xs \<subseteq> Vars \<and> \<Squnion>\<^sub>S xs = s"
+    using assms scene_space_vars_decomp by presburger
+  then have "\<Squnion>\<^sub>S (xs - {\<bottom>\<^sub>S}) = s"
+    by (metis scene_union_fold_remove_element scene_union_unit(2))
+  then have "\<exists>xs. xs \<subseteq> Vars \<and> \<Squnion>\<^sub>S xs = s \<and> \<bottom>\<^sub>S \<notin> xs"
+    by (metis DiffD2 singletonI subset_insertI2 subset_insert_iff xs)
+  then show "\<exists>!xs. xs \<subseteq> Vars \<and> \<Squnion>\<^sub>S xs = s \<and> \<bottom>\<^sub>S \<notin> xs"
+    by (auto; metis basis_decomp_unique)
+qed
 
 text \<open> Obtain the smallest set of basis scenes (omitting the bottom scene) for a given scene \<close>
 
 definition basis_decomp :: "'a scene \<Rightarrow> 'a scene set" where
-"basis_decomp s = (LEAST xs. xs \<subseteq> Vars \<and> \<Squnion>\<^sub>S xs = s)"
+"basis_decomp s = (THE xs. xs \<subseteq> Vars \<and> \<Squnion>\<^sub>S xs = s \<and> \<bottom>\<^sub>S \<notin> xs)"
 
-lemma basis_decomp_Un: "s \<in> scene_space \<Longrightarrow> \<Squnion>\<^sub>S (basis_decomp s) = s"
-  unfolding basis_decomp_def using scene_space_vars_decomp oops
+lemma basis_decomp_props: 
+  assumes "s \<in> scene_space"
+  shows "basis_decomp s \<subseteq> Vars \<and> \<Squnion>\<^sub>S (basis_decomp s) = s \<and> \<bottom>\<^sub>S \<notin> basis_decomp s"
+  unfolding basis_decomp_def
+  by (smt (verit, ccfv_threshold) assms basis_decomp_ex1 theI')
 
-(*
-lemma basis_decomp_Vars: "s \<in> scene_space \<Longrightarrow> basis_decomp s \<subseteq> Vars"
-  oops
+named_theorems basis_decomp
 
-lemma scene_space_algebra: "algebra Vars (basis_decomp ` scene_space)"
+lemma
+  assumes "s \<in> scene_space"
+  shows basis_decomp_Un: " \<Squnion>\<^sub>S (basis_decomp s) = s"
+    and basis_decomp_Vars: "basis_decomp s \<subseteq> Vars"
+    and basis_decomp_not_bot: "\<bottom>\<^sub>S \<notin> basis_decomp s"
+  using basis_decomp_props assms by blast+
+
+lemma basis_decomp_bot[simp]: "basis_decomp \<bottom>\<^sub>S = {}"
+  by (simp add: basis_decomp_props basis_decomp_unique scene_space.bot_scene_space)
+
+lemma basis_decomp_top[simp]: "basis_decomp \<top>\<^sub>S = Vars - {\<bottom>\<^sub>S}"
+  apply auto
+   using basis_decomp_Vars top_scene_space apply blast
+   apply (simp add: basis_decomp_not_bot top_scene_space)
+   apply (metis basis_decomp_props le_fold_Vars_implies_in scene_top_greatest top_scene_space)
+   done
+
+lemma basis_decomp_eq_iff:
+  assumes "x \<in> scene_space"
+  shows "basis_decomp x = y \<longleftrightarrow> \<Squnion>\<^sub>S y = x \<and> y \<subseteq> Vars \<and> \<bottom>\<^sub>S \<notin> y"
+  by (metis assms basis_decomp_props local.basis_decomp_unique)
+
+lemma basis_decomp_in_vars [basis_decomp]: "\<lbrakk>x \<in> Vars; x \<noteq> \<bottom>\<^sub>S\<rbrakk> \<Longrightarrow> basis_decomp x = {x}"
+  apply auto
+   apply (metis basis_decomp_Un basis_decomp_Vars basis_decomp_not_bot in_mono le_vars_then_equal scene_in_fold scene_space.Vars_scene_space)
+   apply (metis basis_decomp_props le_fold_Vars_implies_in scene_space.Vars_scene_space subscene_refl)
+  done
+
+lemma basis_decomp_less [basis_decomp]:
+  assumes "x \<in> scene_space" "y \<in> scene_space"
+  shows "x \<subseteq>\<^sub>S y = (basis_decomp x \<subseteq> basis_decomp y)"
+  by (smt (verit, ccfv_SIG) assms basis_decomp_props idem_scene_space le_fold_Vars_implies_in 
+            scene_in_fold scene_union_foldr_subset subscene_trans subset_iff)
+
+lemma basis_decomp_union [basis_decomp]:
+  assumes "x \<in> scene_space" "y \<in> scene_space"
+  shows "basis_decomp (x \<squnion>\<^sub>S y) = basis_decomp x \<union> basis_decomp y"
+  using assms proof (induct x arbitrary: y)
+  case bot_scene_space
+  then show ?case by simp
+next
+  case (Vars_scene_space x)
+  then have ?case if "x = \<bottom>\<^sub>S"
+    using that by simp
+  moreover {
+    assume "x \<noteq> \<bottom>\<^sub>S"
+    then have decomp_x: "basis_decomp x = {x}"
+      using Vars_scene_space by (simp add: basis_decomp_in_vars)
+    have "basis_decomp (x \<squnion>\<^sub>S y) = basis_decomp y \<union> {x}"
+    proof (rule ccontr)
+      assume "basis_decomp (x \<squnion>\<^sub>S y) \<noteq> basis_decomp y \<union> {x}"
+      then have "\<exists>s. s \<in> basis_decomp y \<union> {x} \<and> s \<notin> basis_decomp (x \<squnion>\<^sub>S y)"
+        apply (simp add: set_eq_iff)
+        by (smt (verit, ccfv_SIG) Vars_scene_space.hyps Vars_scene_space.prems basis_decomp_Un basis_decomp_Vars basis_decomp_not_bot in_mono le_fold_Vars_implies_in le_vars_then_equal scene_in_fold scene_space.Vars_scene_space scene_space.union_scene_space var_le_union_iff)
+      then show False
+        by (smt (verit, best) UnE Un_insert_right Vars_scene_space.hyps Vars_scene_space.prems basis_decomp_Un basis_decomp_Vars basis_decomp_not_bot decomp_x in_mono insert_subset le_fold_Vars_implies_in scene_in_fold scene_space.Vars_scene_space scene_space.union_scene_space sup_bot.right_neutral sup_commute union_scene_space_folds)
+    qed
+  }
+  ultimately show ?case
+    using Vars_scene_space.hyps basis_decomp_in_vars by blast
+next
+  case (union_scene_space x y)
+  then show ?case
+    by (smt (verit, ccfv_threshold) scene_space.union_scene_space scene_space_union_assoc sup_commute sup_left_commute)
+qed
+
+lemma basis_decomp_intersection [basis_decomp]:
+  assumes "x \<in> scene_space" "y \<in> scene_space"
+  shows "basis_decomp (x \<sqinter>\<^sub>S y) = basis_decomp x \<inter> basis_decomp y"
+  by (smt (verit, del_insts) assms basis_decomp_Un basis_decomp_Vars basis_decomp_ex1 basis_decomp_not_bot inf_le2 inter_scene_space_folds scene_space_inter subset_iff)
+
+lemma basis_decomp_uminus [basis_decomp]:
+  assumes "x \<in> scene_space"
+  shows "basis_decomp (-x) = (Vars - {\<bottom>\<^sub>S}) - basis_decomp x"
+proof (subst basis_decomp_eq_iff[OF assms[THEN scene_space_uminus]]; auto)
+  have "basis_decomp x \<subseteq> Vars"
+    by (simp add: assms basis_decomp_Vars)
+  then have "\<Squnion>\<^sub>S (Vars - basis_decomp x) = - x"
+    apply (simp add: uminus_vars_other_vars[THEN sym])
+    using assms basis_decomp_Un by force
+  then show "\<Squnion>\<^sub>S (Vars - {\<bottom>\<^sub>S} - basis_decomp x) = - x"
+    by (smt (verit, ccfv_SIG) Diff_insert Diff_insert2 Diff_subset inf.absorb_iff2 local.all_Vars_top local.inter_scene_space_folds local.scene_union_fold_remove_element local.uminus_vars_other_vars scene_demorgan2 uminus_scene_twice uminus_top_scene verit_comp_simplify1(2))
+qed
+
+lemma basis_decomp_diff:
+  assumes "x \<in> scene_space" "y \<in> scene_space"
+  shows "basis_decomp (x-y) = basis_decomp x - basis_decomp y"
+proof -
+  have "-y \<in> scene_space"
+    by (simp add: assms(2) local.scene_space_uminus)
+  then show ?thesis
+    unfolding minus_scene_def using assms apply (simp add: basis_decomp)
+    by (metis Diff_insert0 Diff_insert2 Int_Diff Int_absorb1 inf_commute basis_decomp_props)
+qed
+
+lemma basis_decomp_indep:
+  assumes "x \<in> scene_space" "y \<in> scene_space"
+  shows "x \<bowtie>\<^sub>S y \<longleftrightarrow> basis_decomp x \<inter> basis_decomp y = {}" (is "?L \<longleftrightarrow> ?R")
 proof
-  show "(set \<circ> basis_decomp) ` scene_space \<subseteq> Pow (Vars)"
-    using basis_decomp_Vars by auto
-  show "{} \<in> (set \<circ> basis_decomp) ` scene_space"
-  proof
-    show "{} = (set \<circ> basis_decomp) \<bottom>\<^sub>S"
-      unfolding basis_decomp_def
-      apply auto
-      sorry
-    show "\<bottom>\<^sub>S \<in> scene_space"
-      by blast
+  assume ?L then show ?R
+    by (smt (verit, del_insts) assms basis_decomp_props basis_decomp_bot basis_decomp_ex1 
+        idem_scene_space in_mono inf_le2 inter_scene_space_folds order.trans scene_inter_indep 
+        scene_space.bot_scene_space)
+next
+  assume *: ?R show ?L
+    using assms(1) *
+  proof induct
+    case bot_scene_space
+    then show ?case
+      by (simp add: scene_indep_sym)
+  next
+    case (Vars_scene_space x)
+    { assume "x \<noteq> \<bottom>\<^sub>S"
+      then have "basis_decomp x = {x}"
+        using Vars_scene_space basis_decomp_in_vars by presburger
+      then have "\<forall>s \<in> basis_decomp y. x \<bowtie>\<^sub>S y"
+        by (metis Diff_Int Diff_cancel Diff_empty Vars_indep_fold Vars_scene_space.hyps Vars_scene_space.prems assms(2) basis_decomp_props boolean_algebra.disj_zero_right)
+      then have ?case
+        using assms(2) basis_decomp_props by fastforce
+    }
+    then show ?case
+      using scene_indep_bot scene_indep_sym by blast
+  next
+    case (union_scene_space j k)
+    then have "basis_decomp j \<inter> basis_decomp y = {}" "basis_decomp k \<inter> basis_decomp y = {}"
+      by (simp_all add: basis_decomp_union disjoint_eq_subset_Compl)
+    then show ?case
+      by (simp add: scene_indep_pres_compat scene_indep_sym union_scene_space.hyps(2) union_scene_space.hyps(4))
   qed
-  oops
-*)
-
+qed
 end
 
 subsection \<open> Mapping a lens over a scene list \<close>
