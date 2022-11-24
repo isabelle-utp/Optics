@@ -60,14 +60,8 @@ lift_definition inf_frame :: "'a frame \<Rightarrow> 'a frame \<Rightarrow> 'a f
   by (simp add: scene_space_inter)
 
 instance
-  apply (intro_classes; transfer)
-  apply (metis scene_compl_subset_iff scene_demorgan2 scene_space_inter scene_space_ub scene_space_uminus)
-  apply (metis inf_scene_def scene_indep_sym scene_le_iff_indep_inv scene_space_ub scene_space_uminus scene_union_commute)
-  apply (metis idem_scene_space scene_compl_subset_iff scene_demorgan2 scene_space_compat scene_space_inter scene_space_uminus scene_union_mono)
-  using scene_space_ub apply blast
-  apply (simp add: scene_space_ub scene_union_commute)
-  apply (meson idem_scene_space scene_space_compat scene_union_mono)
-  done
+  by (intro_classes; transfer)
+     (simp_all add: basis_decomp scene_space_closure)
 
 end
 

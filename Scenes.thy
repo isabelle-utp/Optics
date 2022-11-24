@@ -349,8 +349,8 @@ lemma subscene_antisym: "\<lbrakk> idem_scene Y; X \<subseteq>\<^sub>S Y; Y \<su
   done
 
 lemma scene_union_subscene_absorb: "\<lbrakk>a ##\<^sub>S b; a \<subseteq>\<^sub>S b\<rbrakk> \<Longrightarrow> a \<squnion>\<^sub>S b = b"
-  apply (simp add: less_eq_scene_def, transfer, auto)
-  by (metis (no_types, lifting) ext overrider_def)
+  by (simp add: less_eq_scene_def, transfer, auto)
+     (metis (no_types, lifting) ext overrider_def)
 
 lemma subscene_copy_def:
   assumes "idem_scene X" "idem_scene Y"
