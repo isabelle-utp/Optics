@@ -169,7 +169,7 @@ text \<open>Finally we can create the list lenses, of which there are three vari
   us to view an index, one that allows us to view the head, and one that allows us to view the tail.
   They are all mainly well-behaved lenses.\<close>
     
-definition list_lens :: "nat \<Rightarrow> ('a::two \<Longrightarrow> 'a list)" where
+definition list_lens :: "nat \<Rightarrow> ('a \<Longrightarrow> 'a list)" where
 [lens_defs]: "list_lens i = \<lparr> lens_get = (\<lambda> xs. nth' xs i)
                             , lens_put = (\<lambda> xs x. list_augment xs i x) \<rparr>"
 
