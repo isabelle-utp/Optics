@@ -5,7 +5,7 @@ jobs:
     name: Build Theory
     steps:
       - uses: actions/checkout@v3
-      - uses: lexbailey/isabelle-theory-build-github-action@v6
+      - uses: lexbailey/isabelle-theory-build-github-action@v7
         with:
           isabelle-version: '2021-1'
           report_url: 'https://isabelle-utp-ci-dashboard.link/submit_job_log'
