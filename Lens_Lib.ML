@@ -61,7 +61,7 @@ fun lensT a b = Type (@{type_name lens_ext}, [a, b, unitT])
 fun isLensT (Type (n, _)) = (n = @{type_name lens_ext}) |
     isLensT _ = false
 
-val astateT = (TFree ("'st", [@{class type}, @{class scene_space}]))
+val astateT = (TFree ("'st", [@{class scene_space}]))
 
 fun pairWith _ [] = []
   | pairWith x (y :: ys) = [(x, y), (y, x)] @ pairWith x ys;
