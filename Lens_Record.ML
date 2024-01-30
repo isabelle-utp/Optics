@@ -38,6 +38,8 @@ val lens_defsN = "lens_defs"
 val lens_defs = (Binding.empty, [Token.make_src (lens_defsN, Position.none) []])
 val alpha_splitsN = "alpha_splits"
 val alpha_splits = [Token.make_src (alpha_splitsN, Position.none) []]
+val alpha_defsN = "alpha_defs"
+val alpha_defs = (Binding.empty, [Token.make_src (alpha_defsN, Position.none) []])
 val equivN = "equivs"
 val splits_suffix = ".splits"
 val defs_suffix = ".defs"
@@ -102,7 +104,7 @@ fun lens_sym_proof tname thy =
 
 fun prove_lens_goal tname thy ctx =
   let open Simplifier; open Global_Theory in
-  auto_tac (fold add_simp (get_thms thy lens_defsN @ 
+  auto_tac (fold add_simp (get_thms thy lens_defsN @ get_thms thy alpha_defsN @
                            get_thms thy (tname ^ splits_suffix) @ 
                            [@{thm prod.case_eq_if}]) ctx)
 end
@@ -148,7 +150,7 @@ fun lens_bij_proof tname thy =
                                     $ const (Context.theory_name {long = false} thy ^ "." ^ tname ^ "." ^ child_lensN)))]))
       (fn {context = context, prems = _}
                            => EVERY [ Locale.intro_locales_tac {strict = true, eager = true} context []
-                                    , auto_tac (fold add_simp (get_thms thy lens_defsN @ [@{thm prod.case_eq_if}])
+                                    , auto_tac (fold add_simp (get_thms thy lens_defsN @ get_thms thy alpha_defsN @ [@{thm prod.case_eq_if}])
                                                                          context)])
   end
 
@@ -227,7 +229,7 @@ fun lenses_bij_proof tname parent thy fs =
                                       ]))
       (fn {context = context, prems = _}
                            => EVERY [ Locale.intro_locales_tac {strict = true, eager = true} context []
-                                    , auto_tac (fold add_simp (get_thms thy lens_defsN @ [@{thm prod.case_eq_if}])
+                                    , auto_tac (fold add_simp (get_thms thy lens_defsN @ get_thms thy alpha_defsN @ [@{thm prod.case_eq_if}])
                                                                          context)])
   end
 
@@ -323,8 +325,8 @@ fun add_alphabet (params, binding) raw_parent ty_fields thy =
     val attrs = map (Attrib.attribute (Named_Target.theory_init thy)) @{attributes [simp, code_unfold, lens]}
  in thy     (* Add a new record for the new alphabet lenses *)
          |> add_record_cmd {overloaded = false} (params, binding) raw_parent fields
-            (* Add the record definition theorems to lens_defs *)
-         |> Named_Target.theory_map (snd o Specification.theorems_cmd "" [((Binding.empty, []), [(Facts.named (tname ^ defs_suffix), snd lens_defs)])] [] false)
+            (* Add the record definition theorems to alpha_defs *)
+         |> Named_Target.theory_map (snd o Specification.theorems_cmd "" [((Binding.empty, []), [(Facts.named (tname ^ defs_suffix), snd alpha_defs)])] [] false)
             (* Add the record splitting theorems to the alpha_splits set for proof automation *)
          |> Named_Target.theory_map (snd o Specification.theorems_cmd "" [((Binding.empty, []), [(Facts.named (tname ^ splits_suffix), alpha_splits)])] [] false)
             (* Reorder parent splitting theorems, so the child ones have higher priority *)
@@ -340,7 +342,7 @@ fun add_alphabet (params, binding) raw_parent ty_fields thy =
             (* Add definitions for each of the lenses corresponding to each record field in-situ *)
          |> Sign.qualified_path false binding
          |> Named_Target.theory_map
-              (fold (fn (n, d) => snd o Specification.definition_cmd (SOME (Binding.make (n, Position.none), NONE, NoSyn)) [] [] (lens_defs, d) true) (map ldef lnames @ [bldef, mldef]))
+              (fold (fn (n, d) => snd o Specification.definition_cmd (SOME (Binding.make (n, Position.none), NONE, NoSyn)) [] [] (alpha_defs, d) true) (map ldef lnames @ [bldef, mldef]))
             (* Add definition of the underlying symmetric lens *)
          |> Named_Target.theory_map
               (fold (fn (n, d) => Specification.abbreviation_cmd Syntax.mode_default (SOME (Binding.make (n, Position.none), NONE, NoSyn)) [] d true) [sldef])

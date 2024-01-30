@@ -301,7 +301,7 @@ ML_file \<open>Lens_Record.ML\<close>
 text \<open>The following theorem attribute stores splitting theorems for alphabet types which which is useful
   for proof automation.\<close>
 
-named_theorems alpha_splits
+named_theorems alpha_splits and alpha_defs
 
 text \<open> We supply a helpful tactic to remove the subscripted v characters from subgoals. These
   exist because the internal names of record fields have them. \<close>
