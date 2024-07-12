@@ -56,6 +56,13 @@ fun defs qual inds f ctx =
         let val (thm, ctx') = def qual (i, f i) ctx 
         in (thms @ [thm], ctx') end) inds ([], ctx)
 
+fun mk_chantyperep chans ctx = 
+  let open HOLogic; open Syntax  
+  fun mk_chanrep (n, t) = check_term ctx (const @{const_name Chanrep} $ mk_literal n $ mk_literal t $ parse_term ctx (is_prefix ^ n ^ ctor_suffix))
+  in
+  @{print} (mk_list dummyT (map mk_chanrep chans))
+  end
+
 fun compile_chantype (name, chans) ctx =
   let 
     open BNF_FP_Def_Sugar; open BNF_FP_Rec_Sugar_Util; open BNF_LFP; open Ctr_Sugar
@@ -69,18 +76,28 @@ fun compile_chantype (name, chans) ctx =
     val prefix = thypfx ^ name ^ "."
     val attrs = @{attributes [simp, code_unfold]}
     val dummy_disc = absdummy dummyT @{term True}
+    val ctx1 = co_datatype_cmd Least_FP construct_lfp 
+               ((K Plugin_Name.default_filter, true), 
+               [((((([],Binding.name name), Mixfix.NoSyn), ctrs), (Binding.empty, Binding.empty, Binding.empty)),[])]) ctx
+    val typ = read_typ ctx1 name
   in
-  (co_datatype_cmd Least_FP construct_lfp 
-       ((K Plugin_Name.default_filter, true), 
-        [((((([],Binding.name name), Mixfix.NoSyn), ctrs), (Binding.empty, Binding.empty, Binding.empty)),[])])
+  (
   (* The datatype package does not produce a discriminator for the second constructor when
      there are two constructors. We here generate one for uniformity. *)
-  #> (if (length pnames = 2)
+    (if (length pnames = 2)
       then abbreviation 
              Syntax.mode_default (SOME (Binding.qualify false name (Binding.name (is_prefix ^ nth pnames 1 ^ ctor_suffix)), NONE, NoSyn)) [] 
              (mk_def dummyT 
                 (is_prefix ^ nth pnames 1 ^ ctor_suffix) 
                 (const @{const_name comp} $ @{term Not} $ const (prefix ^ is_prefix ^ nth pnames 0 ^ ctor_suffix))) false
+      else I)
+  (* The datatype also does not produce a discrimator when the length is 1 *)
+  #> (if (length pnames = 1)
+      then abbreviation
+             Syntax.mode_default (SOME (Binding.qualify false name (Binding.name (is_prefix ^ nth pnames 0 ^ ctor_suffix)), NONE, NoSyn)) [] 
+             (mk_def dummyT 
+                (is_prefix ^ nth pnames 0 ^ ctor_suffix) 
+                (Abs ("x", typ, @{term "True"}))) false
       else I)
   #> defs name pnames (fn x => (const @{const_name ctor_prism}
                          $ const (prefix ^ x ^ ctor_suffix)
@@ -89,8 +106,9 @@ fun compile_chantype (name, chans) ctx =
   #> (fn (thms, ctx) =>
        (fold (fn x => fn thy => snd (note ((Binding.qualify false name (Binding.name (x ^ wb_prism_suffix)), attrs), [wb_prism_proof x thms thy]) thy)) pnames
        #> (snd o note ((Binding.qualify false name (Binding.name codepsN), attrs), map (codep_proof thms ctx) (pairings pnames)))
-       ) ctx))
-  ctx
+       ) ctx)
+  (* #> (fn ctx => snd ((def name ("ctrep", mk_chantyperep chans ctx1)) ctx)) *))
+  ctx1
   end;
 
 end;
