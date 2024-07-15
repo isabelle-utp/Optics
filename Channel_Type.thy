@@ -43,16 +43,32 @@ lemma evs_of_Chanrep [simp]: "evs_of (Chanrep n t P) = Collect P"
 
 text \<open> A channel type is represented by a list of channels \<close>
 
-type_synonym 'a chantyperep = "'a chanrep list"
+type_synonym 'a raw_chantyperep = "'a chanrep list"
 
 text \<open> Well-formed channel type representations \<close>
 
-definition wf_chantyperep :: "'a chanrep list \<Rightarrow> bool" where 
+definition wf_chantyperep :: "'a raw_chantyperep \<Rightarrow> bool" where 
 "wf_chantyperep ct = 
   (distinct (map chan_name ct) \<comment> \<open> Each channel name is unique \<close> 
   \<and> (\<forall> x. foldr (\<or>) (map (\<lambda> c. is_chan c x) ct) False) \<comment> \<open> Every event has a channel \<close>
   \<and> (\<forall> c1\<in>set ct. \<forall> c2\<in>set ct. \<forall> e. is_chan c1 e \<and> is_chan c2 e \<longrightarrow> c1 = c2) \<comment> \<open> Every event has exactly one channel \<close>
   \<and> (\<forall> c\<in>set ct. \<exists> e. is_chan c e))" \<comment> \<open> Every channel has at least one event \<close>
+
+typedef 'a chantyperep = "{ctr::'a raw_chantyperep. wf_chantyperep ctr}"
+  apply (rule_tac x="[Chanrep STR ''x'' STR ''t'' (\<lambda> x. True)]" in exI)
+  apply (auto simp add: wf_chantyperep_def)
+  done
+
+setup_lifting type_definition_chantyperep
+
+lift_definition pred_of_chan :: "'a chantyperep \<Rightarrow> String.literal \<Rightarrow> 'a \<Rightarrow> bool" 
+is "\<lambda> ct c e. find (\<lambda> c. is_chan c e) ct \<noteq> None" .
+
+definition set_chan :: "'a chantyperep \<Rightarrow> String.literal \<Rightarrow> 'a set" where
+"set_chan n ct = Collect (pred_of_chan n ct)"
+
+definition set_chans :: "'a chantyperep \<Rightarrow> String.literal set \<Rightarrow> 'a set" where
+"set_chans ct ns = \<Union> (set_chan ct ` ns)" 
 
 method wf_chantyperep uses disc def = (force intro: disc simp add: wf_chantyperep_def def)
 
@@ -64,7 +80,7 @@ text \<open> Every event has a channel \<close>
 lemma chantyperep_ev_has_chan: "wf_chantyperep ct \<Longrightarrow> \<exists> c\<in>set ct. is_chan c e"
   using foldr_disj_one_True by (fastforce simp add: wf_chantyperep_def)
 
-definition find_chanrep :: "'a chantyperep \<Rightarrow> 'a \<Rightarrow> 'a chanrep option" where 
+definition find_chanrep :: "'a raw_chantyperep \<Rightarrow> 'a \<Rightarrow> 'a chanrep option" where 
 "find_chanrep ct e = find (\<lambda> c. is_chan c e) ct"
 
 lemma find_chanrep_Some: "wf_chantyperep ct \<Longrightarrow> \<exists> c\<in>set ct. find_chanrep ct e = Some c"
@@ -79,7 +95,7 @@ lemma evs_of_inj: "\<lbrakk> wf_chantyperep ct; c \<in> set ct; d \<in> set ct; 
   by (metis evs_of_def mem_Collect_eq wf_chantyperep_def)
 
 class chantyperep = 
-  fixes chantyperep :: "'a itself \<Rightarrow> 'a chantyperep"
+  fixes chantyperep :: "'a itself \<Rightarrow> 'a raw_chantyperep"
   assumes wf_chantyperep: "wf_chantyperep (chantyperep TYPE('a))"
 
 syntax "_chantyperep" :: "type \<Rightarrow> logic" ("CHANTYPEREP'(_')")
