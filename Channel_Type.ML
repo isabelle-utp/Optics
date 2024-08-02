@@ -77,8 +77,8 @@ fun chantyperep_instance name raw_chans thy =
   open Syntax; open HOLogic; open Global_Theory;
   val ty = Syntax.read_typ (Named_Target.theory_init thy) name;
   val tyco = fst (dest_Type ty);
-  val disc_intro_thms = if length raw_chans = 1 then [] else get_thms thy (tyco ^ ".disc");
-  val disc_elim_thms = if length raw_chans = 1 then [] else get_thms thy (tyco ^ ".exhaust_disc");
+  val disc_thms = if length raw_chans = 1 then [] else get_thms thy (tyco ^ ".disc") @ get_thms thy (tyco ^ ".exhaust_disc") 
+                  @ (if length raw_chans = 2 then [] else get_thms thy (tyco ^ ".distinct_disc"));
   val ctx0 = Class.instantiation ([tyco], [], \<^sort>\<open>chantyperep\<close>) thy;
   val chans = map (fn (n, t) => (n, mk_typerep (read_typ ctx0 t))) raw_chans
   val lhs = \<^Const>\<open>chantyperep ty\<close> $ Free ("T", Term.itselfT ty);
@@ -87,10 +87,9 @@ fun chantyperep_instance name raw_chans thy =
   val eq = check_term ctx1 (HOLogic.mk_Trueprop (HOLogic.mk_eq (lhs, rhs)));
   val (_, ctx2) = Specification.definition NONE [] [] ((Binding.empty, @{attributes [chantyperep_defs]}), eq) ctx1;
   val ctx3 = Local_Theory.end_nested ctx2;
-  val ctx4 = fold (Context.proof_map o Named_Theorems.add_thm "Channel_Type.datatype_disc_intros") disc_intro_thms ctx3;
-  val ctx5 = fold (Context.proof_map o Named_Theorems.add_thm "Channel_Type.datatype_disc_elims") disc_elim_thms ctx4;
+  val ctx4 = fold (Context.proof_map o Named_Theorems.add_thm "Channel_Type.datatype_disc_thms") disc_thms ctx3;
   in
-  Class.prove_instantiation_exit (fn _ => NO_CONTEXT_TACTIC ctx5 (Method_Closure.apply_method ctx5 @{method chantyperep_inst} [] [] [] ctx5 [])) ctx5
+  Class.prove_instantiation_exit (fn _ => NO_CONTEXT_TACTIC ctx4 (Method_Closure.apply_method ctx4 @{method chantyperep_inst} [] [] [] ctx4 [])) ctx4
   end;
 
 fun compile_chantype (name, chans) thy =
@@ -100,7 +99,6 @@ fun compile_chantype (name, chans) thy =
     val ctx = Named_Target.theory_init thy;
     val ctrs = map (fn (n, t) => (((Binding.empty, Binding.name (n ^ ctor_suffix)), [(Binding.empty, t)]), Mixfix.NoSyn)) chans 
     val pnames = map fst chans
-    val tyreps = map (mk_typerep o read_typ ctx o snd) chans
     val thypfx = 
       case (Named_Target.locale_of ctx) of
         SOME loc => loc ^ "." |

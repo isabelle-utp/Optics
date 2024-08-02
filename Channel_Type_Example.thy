@@ -23,4 +23,15 @@ chantype ch_buffer2 =
   outp2 :: nat
   mod2 :: bool
 
+chantype chbig =
+  a1 :: int
+  a2 :: int
+  a3 :: int
+  a4 :: int
+  a5 :: int
+  a6 :: bool
+  a7 :: bool
+  a8 :: unit
+  a9 :: nat
+
 end

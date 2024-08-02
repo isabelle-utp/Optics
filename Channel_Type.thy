@@ -70,11 +70,10 @@ definition set_chan :: "'a chantyperep \<Rightarrow> String.literal \<Rightarrow
 definition set_chans :: "'a chantyperep \<Rightarrow> String.literal set \<Rightarrow> 'a set" where
 "set_chans ct ns = \<Union> (set_chan ct ` ns)" 
 
-named_theorems datatype_disc_elims
-named_theorems datatype_disc_intros 
+named_theorems datatype_disc_thms 
 named_theorems chantyperep_defs
 
-method wf_chantyperep = (force intro: datatype_disc_intros simp add: comp_def wf_chantyperep_def chantyperep_defs)
+method wf_chantyperep = (simp add: comp_def wf_chantyperep_def chantyperep_defs, (meson datatype_disc_thms)?)
 
 lemma foldr_disj_one_True: "foldr (\<or>) Ps False \<Longrightarrow> (\<exists> P\<in>set Ps. P)"
   by (induct Ps, auto)
@@ -102,9 +101,7 @@ class chantyperep =
   fixes chantyperep :: "'a itself \<Rightarrow> 'a raw_chantyperep"
   assumes wf_chantyperep: "wf_chantyperep (chantyperep TYPE('a))"
 
-(* The following method works, but relies too much on auto. It should be optimised *)
-
-method chantyperep_inst = (rule chantyperep_class.intro, (intro_classes)[1], rule_tac class.chantyperep.intro, insert datatype_disc_elims, auto intro!:datatype_disc_intros simp add: comp_def wf_chantyperep_def chantyperep_defs)
+method chantyperep_inst = (rule chantyperep_class.intro, (intro_classes)[1], rule_tac class.chantyperep.intro, wf_chantyperep)
 
 syntax "_chantyperep" :: "type \<Rightarrow> logic" ("CHANTYPEREP'(_')")
 translations "CHANTYPEREP('a)" == "CONST chantyperep TYPE('a)"
