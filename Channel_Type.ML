@@ -57,18 +57,50 @@ fun defs qual inds f ctx =
         in (thms @ [thm], ctx') end) inds ([], ctx)
 
 fun mk_chantyperep chans ctx = 
-  let open HOLogic; open Syntax  
-  fun mk_chanrep (n, t) = check_term ctx (const @{const_name Chanrep} $ mk_literal n $ mk_literal t $ parse_term ctx (is_prefix ^ n ^ ctor_suffix))
+  let open HOLogic; open Syntax; open Proof_Context  
+  fun mk_chanrep (n, t) =
+      let val c = 
+          case read_const {proper = false, strict = false} ctx (is_prefix ^ n ^ ctor_suffix)
+          of Free (c', _) => free c' | Const (c', _) => const c' | _ => raise Match;
+      in  
+      (* check_term ctx *) 
+        (const @{const_name Chanrep} 
+         $ mk_literal n $ t 
+         $ c)
+      end
   in
-  @{print} (mk_list dummyT (map mk_chanrep chans))
+  mk_list dummyT (map mk_chanrep chans)
   end
 
-fun compile_chantype (name, chans) ctx =
+fun chantyperep_instance name raw_chans thy =
+  let  
+  open Syntax; open HOLogic; open Global_Theory;
+  val ty = Syntax.read_typ (Named_Target.theory_init thy) name;
+  val tyco = fst (dest_Type ty);
+  val disc_intro_thms = if length raw_chans = 1 then [] else get_thms thy (tyco ^ ".disc");
+  val disc_elim_thms = if length raw_chans = 1 then [] else get_thms thy (tyco ^ ".exhaust_disc");
+  val ctx0 = Class.instantiation ([tyco], [], \<^sort>\<open>chantyperep\<close>) thy;
+  val chans = map (fn (n, t) => (n, mk_typerep (read_typ ctx0 t))) raw_chans
+  val lhs = \<^Const>\<open>chantyperep ty\<close> $ Free ("T", Term.itselfT ty);
+  val rhs = mk_chantyperep chans ctx0;
+  val ctx1 = snd (Local_Theory.begin_nested ctx0)
+  val eq = check_term ctx1 (HOLogic.mk_Trueprop (HOLogic.mk_eq (lhs, rhs)));
+  val (_, ctx2) = Specification.definition NONE [] [] ((Binding.empty, @{attributes [chantyperep_defs]}), eq) ctx1;
+  val ctx3 = Local_Theory.end_nested ctx2;
+  val ctx4 = fold (Context.proof_map o Named_Theorems.add_thm "Channel_Type.datatype_disc_intros") disc_intro_thms ctx3;
+  val ctx5 = fold (Context.proof_map o Named_Theorems.add_thm "Channel_Type.datatype_disc_elims") disc_elim_thms ctx4;
+  in
+  Class.prove_instantiation_exit (fn _ => NO_CONTEXT_TACTIC ctx5 (Method_Closure.apply_method ctx5 @{method chantyperep_inst} [] [] [] ctx5 [])) ctx5
+  end;
+
+fun compile_chantype (name, chans) thy =
   let 
     open BNF_FP_Def_Sugar; open BNF_FP_Rec_Sugar_Util; open BNF_LFP; open Ctr_Sugar
-    open Prism_Lib; open Lens_Lib; open Local_Theory; open Specification; open Syntax
+    open Prism_Lib; open Lens_Lib; open Local_Theory; open Specification; open Syntax; open HOLogic
+    val ctx = Named_Target.theory_init thy;
     val ctrs = map (fn (n, t) => (((Binding.empty, Binding.name (n ^ ctor_suffix)), [(Binding.empty, t)]), Mixfix.NoSyn)) chans 
     val pnames = map fst chans
+    val tyreps = map (mk_typerep o read_typ ctx o snd) chans
     val thypfx = 
       case (Named_Target.locale_of ctx) of
         SOME loc => loc ^ "." |
@@ -107,7 +139,9 @@ fun compile_chantype (name, chans) ctx =
        (fold (fn x => fn thy => snd (note ((Binding.qualify false name (Binding.name (x ^ wb_prism_suffix)), attrs), [wb_prism_proof x thms thy]) thy)) pnames
        #> (snd o note ((Binding.qualify false name (Binding.name codepsN), attrs), map (codep_proof thms ctx) (pairings pnames)))
        ) ctx)
-  (* #> (fn ctx => snd ((def name ("ctrep", mk_chantyperep chans ctx1)) ctx)) *))
+  #> Local_Theory.exit_global
+  (* Generate chantyperep instance *) 
+  #> chantyperep_instance name chans)
   ctx1
   end;
 
@@ -117,5 +151,5 @@ let open Parse; open Parse_Spec; open Scan in
   Outer_Syntax.command @{command_keyword chantype} "define a channel datatype"
     ((name --
       (@{keyword "="} |-- repeat1 (name -- ($$$ "::" |-- !!! typ))))
-    >> (fn x => Toplevel.local_theory NONE NONE (Channel_Type.compile_chantype x)))
+    >> (fn x => Toplevel.theory (Channel_Type.compile_chantype x)))
   end;

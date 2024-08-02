@@ -6,7 +6,7 @@ theory Channel_Type
 begin
 
 text \<open> A channel type is a simplified algebraic datatype where each constructor has exactly 
-  one parameter, and it is wrapped up as a prism. It a dual of an alphabet type. \<close>
+  one parameter, and it is wrapped up as a prism. It is a dual of an alphabet type. \<close>
 
 subsection \<open> Datatype Constructor Prisms \<close>
 
@@ -33,7 +33,7 @@ subsection \<open> Channel Type Representation \<close>
 
 text \<open> A channel is represented by a name, a type, and a predicate that determines whether the event is on this channel. \<close>
 
-datatype 'a chanrep = Chanrep (chan_name: String.literal) (chan_type: String.literal) (is_chan: "'a \<Rightarrow> bool") 
+datatype 'a chanrep = Chanrep (chan_name: String.literal) (chan_type: typerep) (is_chan: "'a \<Rightarrow> bool") 
 
 definition evs_of :: "'a chanrep \<Rightarrow> 'a set" where
 "evs_of c = {e. is_chan c e}"
@@ -55,7 +55,7 @@ definition wf_chantyperep :: "'a raw_chantyperep \<Rightarrow> bool" where
   \<and> (\<forall> c\<in>set ct. \<exists> e. is_chan c e))" \<comment> \<open> Every channel has at least one event \<close>
 
 typedef 'a chantyperep = "{ctr::'a raw_chantyperep. wf_chantyperep ctr}"
-  apply (rule_tac x="[Chanrep STR ''x'' STR ''t'' (\<lambda> x. True)]" in exI)
+  apply (rule_tac x="[Chanrep STR ''x'' TYPEREP(bool) (\<lambda> x. True)]" in exI)
   apply (auto simp add: wf_chantyperep_def)
   done
 
@@ -70,7 +70,11 @@ definition set_chan :: "'a chantyperep \<Rightarrow> String.literal \<Rightarrow
 definition set_chans :: "'a chantyperep \<Rightarrow> String.literal set \<Rightarrow> 'a set" where
 "set_chans ct ns = \<Union> (set_chan ct ` ns)" 
 
-method wf_chantyperep uses disc def = (force intro: disc simp add: wf_chantyperep_def def)
+named_theorems datatype_disc_elims
+named_theorems datatype_disc_intros 
+named_theorems chantyperep_defs
+
+method wf_chantyperep = (force intro: datatype_disc_intros simp add: comp_def wf_chantyperep_def chantyperep_defs)
 
 lemma foldr_disj_one_True: "foldr (\<or>) Ps False \<Longrightarrow> (\<exists> P\<in>set Ps. P)"
   by (induct Ps, auto)
@@ -97,6 +101,10 @@ lemma evs_of_inj: "\<lbrakk> wf_chantyperep ct; c \<in> set ct; d \<in> set ct; 
 class chantyperep = 
   fixes chantyperep :: "'a itself \<Rightarrow> 'a raw_chantyperep"
   assumes wf_chantyperep: "wf_chantyperep (chantyperep TYPE('a))"
+
+(* The following method works, but relies too much on auto. It should be optimised *)
+
+method chantyperep_inst = (rule chantyperep_class.intro, (intro_classes)[1], rule_tac class.chantyperep.intro, insert datatype_disc_elims, auto intro!:datatype_disc_intros simp add: comp_def wf_chantyperep_def chantyperep_defs)
 
 syntax "_chantyperep" :: "type \<Rightarrow> logic" ("CHANTYPEREP'(_')")
 translations "CHANTYPEREP('a)" == "CONST chantyperep TYPE('a)"
