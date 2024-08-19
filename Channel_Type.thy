@@ -29,6 +29,12 @@ lemma ctor_codep_intro:
   shows "ctor_prism ctor1 disc1 sel1 \<nabla> ctor_prism ctor2 disc2 sel2"
   by (rule prism_diff_intro, simp add: lens_defs assms)
 
+lemma dom_match_ctor_prism [simp]: 
+  "dom match\<^bsub>ctor_prism ctor disc sel\<^esub> = Collect disc"
+  by (simp add: ctor_prism_def dom_def)
+
+named_theorems chan_defs
+
 subsection \<open> Channel Type Representation \<close>
 
 text \<open> A channel is represented by a name, a type, and a predicate that determines whether the event is on this channel. \<close>
@@ -50,9 +56,16 @@ text \<open> Well-formed channel type representations \<close>
 definition wf_chantyperep :: "'a raw_chantyperep \<Rightarrow> bool" where 
 "wf_chantyperep ct = 
   (distinct (map chan_name ct) \<comment> \<open> Each channel name is unique \<close> 
-  \<and> (\<forall> x. foldr (\<or>) (map (\<lambda> c. is_chan c x) ct) False) \<comment> \<open> Every event has a channel \<close>
-  \<and> (\<forall> c1\<in>set ct. \<forall> c2\<in>set ct. \<forall> e. is_chan c1 e \<and> is_chan c2 e \<longrightarrow> c1 = c2) \<comment> \<open> Every event has exactly one channel \<close>
+  \<and> (\<forall> x. foldr (\<or>) (map (\<lambda> c. is_chan c x) ct) False) \<comment> \<open> Every event has at least one channel \<close>
+  \<and> (\<forall> c1\<in>set ct. \<forall> c2\<in>set ct. \<forall> e. is_chan c1 e \<and> is_chan c2 e \<longrightarrow> c1 = c2) \<comment> \<open> Every event has no more than one channel \<close>
   \<and> (\<forall> c\<in>set ct. \<exists> e. is_chan c e))" \<comment> \<open> Every channel has at least one event \<close>
+
+lemma wf_chantyperepI:
+  assumes "distinct (map chan_name ct)" "\<forall> x. foldr (\<or>) (map (\<lambda> c. is_chan c x) ct) False"
+    "\<forall> c1\<in>set ct. \<forall> c2\<in>set ct. \<forall> e. is_chan c1 e \<and> is_chan c2 e \<longrightarrow> c1 = c2"
+    "\<forall> c\<in>set ct. \<exists> e. is_chan c e"
+  shows "wf_chantyperep ct"
+  by (simp add: assms wf_chantyperep_def)
 
 typedef 'a chantyperep = "{ctr::'a raw_chantyperep. wf_chantyperep ctr}"
   apply (rule_tac x="[Chanrep STR ''x'' TYPEREP(bool) (\<lambda> x. True)]" in exI)
@@ -71,9 +84,19 @@ definition set_chans :: "'a chantyperep \<Rightarrow> String.literal set \<Right
 "set_chans ct ns = \<Union> (set_chan ct ` ns)" 
 
 named_theorems datatype_disc_thms 
+named_theorems disc_thms
+named_theorems exhaust_disc_thms
+
 named_theorems chantyperep_defs
 
 method wf_chantyperep = (simp add: comp_def wf_chantyperep_def chantyperep_defs, (meson datatype_disc_thms)?)
+
+method wf_chantyperep' = 
+  (rule wf_chantyperepI
+  , simp add: comp_def chantyperep_defs
+  , (simp add: comp_def chantyperep_defs; (insert exhaust_disc_thms, blast))
+  , (simp add: comp_def chantyperep_defs; blast) (* This step could do with optimising -- the simplification is very slow *)
+  , (simp add: comp_def chantyperep_defs; (insert disc_thms, blast intro: disc_thms)))
 
 lemma foldr_disj_one_True: "foldr (\<or>) Ps False \<Longrightarrow> (\<exists> P\<in>set Ps. P)"
   by (induct Ps, auto)
@@ -101,7 +124,7 @@ class chantyperep =
   fixes chantyperep :: "'a itself \<Rightarrow> 'a raw_chantyperep"
   assumes wf_chantyperep: "wf_chantyperep (chantyperep TYPE('a))"
 
-method chantyperep_inst = (rule chantyperep_class.intro, (intro_classes)[1], rule_tac class.chantyperep.intro, wf_chantyperep)
+method chantyperep_inst = (rule chantyperep_class.intro, (intro_classes)[1], rule_tac class.chantyperep.intro, wf_chantyperep')
 
 syntax "_chantyperep" :: "type \<Rightarrow> logic" ("CHANTYPEREP'(_')")
 translations "CHANTYPEREP('a)" == "CONST chantyperep TYPE('a)"
@@ -159,6 +182,8 @@ lemma prism_chanrep_eqI:
    apply simp
   using evs_of_inj wf_chantyperep apply blast
   done
+
+method prism_chanrep = (rule prism_chanrep_eqI, simp, simp add: chantyperep_defs, simp add: chan_defs)
 
 subsection \<open> Channel Type Command \<close>
 
