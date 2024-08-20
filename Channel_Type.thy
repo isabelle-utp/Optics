@@ -138,52 +138,83 @@ definition chan_names :: "'a itself \<Rightarrow> String.literal list" where
 lemma distinct_chan_names [simp]: "distinct (chan_names TYPE('a))"
   using chan_names_def local.wf_chantyperep wf_chantyperep_def by auto
   
-definition chanrep_of :: "'a \<Rightarrow> 'a chanrep" where
-"chanrep_of e = the (find_chanrep CHANTYPEREP('a) e)"
+definition ev_chanrep :: "'a \<Rightarrow> 'a chanrep" where
+"ev_chanrep e = the (find_chanrep CHANTYPEREP('a) e)"
 
-lemma range_chanrep_of: "range chanrep_of = set CHANTYPEREP('a)"
-  apply (auto simp add: chanrep_of_def image_def)
+lemma range_ev_chanrep: "range ev_chanrep = set CHANTYPEREP('a)"
+  apply (auto simp add: ev_chanrep_def image_def)
   apply (metis find_chanrep_Some local.wf_chantyperep option.sel)
   apply (metis find_Some_iff find_chanrep_Some find_chanrep_def local.wf_chantyperep option.sel wf_chantyperep_def)
   done
 
-lemma finite_chanreps: "finite (range chanrep_of)"
-  using range_chanrep_of by auto
+lemma finite_chanreps: "finite (range ev_chanrep)"
+  using range_ev_chanrep by auto
+
+definition ev_set_of :: "'a \<Rightarrow> 'a set" where
+"ev_set_of e = Collect (is_chan (ev_chanrep e))"
 
 text \<open> An independent family of events, each corresponding to one set of channels. \<close>
 
 definition ChanBasis :: "'a set set" where
-"ChanBasis = evs_of ` range chanrep_of"
+"ChanBasis = evs_of ` range ev_chanrep"
 
 lemma family_chan_basis: "\<Union> ChanBasis = UNIV"
   apply (auto simp add: ChanBasis_def evs_of_def)
-  apply (metis chantyperep_ev_has_chan image_iff local.wf_chantyperep range_chanrep_of)
+  apply (metis chantyperep_ev_has_chan image_iff local.wf_chantyperep range_ev_chanrep)
   done
 
 lemma indep_chan_basis: "\<lbrakk> A \<in> ChanBasis; B \<in> ChanBasis; A \<noteq> B \<rbrakk> \<Longrightarrow> A \<inter> B = {}"
   apply (auto simp add: ChanBasis_def evs_of_def)
-  apply (metis local.wf_chantyperep rangeI range_chanrep_of wf_chantyperep_def)+
+  apply (metis local.wf_chantyperep rangeI range_ev_chanrep wf_chantyperep_def)+
   done
 
 end
 
 subsection \<open> Prisms with a Channel Representation \<close>
 
-definition prism_chanrep :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e::chantyperep) \<Rightarrow> 'e chanrep" where
-"prism_chanrep c = (SOME d. d \<in> set CHANTYPEREP('e) \<and> evs_of d = dom (match\<^bsub>c\<^esub>))"  
+definition has_chanrep :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e::chantyperep) \<Rightarrow> bool" where 
+"has_chanrep c = (\<exists> d. d \<in> set CHANTYPEREP('e) \<and> evs_of d = dom (match\<^bsub>c\<^esub>))"
 
-lemma prism_chanrep_eqI:
+definition chanrep_of :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e::chantyperep) \<Rightarrow> 'e chanrep" where
+"chanrep_of c = (SOME d. d \<in> set CHANTYPEREP('e) \<and> evs_of d = dom (match\<^bsub>c\<^esub>))"  
+
+lemma chanrep_of_eqI:
   fixes c :: "'a \<Longrightarrow>\<^sub>\<triangle> 'e::chantyperep" and d :: "'e chanrep"
   assumes "wb_prism c" "d \<in> set CHANTYPEREP('e)" "dom match\<^bsub>c\<^esub> = evs_of d"
-  shows "prism_chanrep c = d"
+  shows "chanrep_of c = d"
   using assms
-  apply (simp add: prism_chanrep_def)
+  apply (simp add: chanrep_of_def)
   apply (rule some_equality)
    apply simp
   using evs_of_inj wf_chantyperep apply blast
   done
 
-method prism_chanrep = (rule prism_chanrep_eqI, simp, simp add: chantyperep_defs, simp add: chan_defs)
+lemma ev_chanrep_build [simp]: 
+  fixes c :: "'a \<Longrightarrow>\<^sub>\<triangle> 'e::chantyperep"
+  assumes "wb_prism c" "has_chanrep c"
+  shows "ev_chanrep (build\<^bsub>c\<^esub> v) = chanrep_of c"
+proof -
+  obtain d where d: "d \<in> set CHANTYPEREP('e)" "evs_of d = dom (match\<^bsub>c\<^esub>)"
+    by (meson assms has_chanrep_def)
+  hence chanrep_c: "chanrep_of c = d"
+    by (metis (mono_tags, lifting) chanrep_of_def evs_of_inj someI_ex wf_chantyperep)
+  have "is_chan d (build\<^bsub>c\<^esub> v)"
+    using assms(1) d(2) evs_of_def by fastforce
+  hence "find (\<lambda>Q. is_chan Q (build\<^bsub>c\<^esub> v)) CHANTYPEREP('e) = Some d"
+    by (metis d(1) find_Some_iff find_chanrep_Some find_chanrep_def wf_chantyperep wf_chantyperep_def)
+  thus ?thesis
+    by (simp add: chanrep_c ev_chanrep_def find_chanrep_def)
+qed
+
+lemma ev_set_of_build [simp]:
+  fixes c :: "'a \<Longrightarrow>\<^sub>\<triangle> 'e::chantyperep"
+  assumes "wb_prism c" "has_chanrep c"
+  shows "ev_set_of (build\<^bsub>c\<^esub> v) = Collect (is_chan (chanrep_of c))"
+  by (simp add: assms(1) assms(2) ev_set_of_def)
+
+method prism_has_chanrep for ct :: "'e chanrep" = (simp add: has_chanrep_def, rule exI[where x="ct"], rule conjI, simp add: chantyperep_defs, simp add: chan_defs)
+
+method prism_chanrep = (rule chanrep_of_eqI, simp, simp add: chantyperep_defs, simp add: chan_defs)
 
 subsection \<open> Channel Type Command \<close>
 

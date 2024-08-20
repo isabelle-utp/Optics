@@ -150,11 +150,27 @@ fun make_chantype (name, chans) thy =
   ctx1
   end;
 
+fun prism_has_chanrep n ctx =
+  let open Syntax; open HOLogic
+      val c = read_term ctx n in
+  Trueprop $ (const @{const_name has_chanrep} $ c)                              
+  end
+
+fun prism_has_chanrep_proof ctx (n, t) =
+  let open Simplifier; open Prism_Lib; open Syntax; open HOLogic
+      val d = read_term ctx ("is_" ^ n ^ "_C")
+      val ct = Syntax.check_term ctx ((const @{const_name Chanrep} $ mk_literal n $ mk_typerep (read_typ ctx t)) $ d)
+  in
+      Goal.prove ctx [] []
+      (Syntax.check_term ctx (prism_has_chanrep n ctx))
+      (fn _ => NO_CONTEXT_TACTIC ctx (Method_Closure.apply_method ctx @{method prism_has_chanrep} [ct] [] [] ctx []))
+  end
+
 fun prism_chanrep n t ctx =
   let open Syntax; open HOLogic
-      val c = read_term ctx n; val d = read_term ctx ("is_" ^ n ^ "_C") in
-  Trueprop $ (eq_const dummyT $ (const @{const_name prism_chanrep} $ c)
-                              $ ((const @{const_name Chanrep} $ mk_literal n $ mk_typerep t) $ d))
+      val c = read_term ctx n; val d = read_term ctx ("is_" ^ n ^ "_C") 
+      val ct = ((const @{const_name Chanrep} $ mk_literal n $ mk_typerep t) $ d) in
+  Trueprop $ (eq_const dummyT $ (const @{const_name chanrep_of} $ c) $ ct)
   end
 
 fun prism_chanrep_proof ctx (n, t) =
@@ -162,14 +178,14 @@ fun prism_chanrep_proof ctx (n, t) =
   in
       Goal.prove ctx [] []
       (Syntax.check_term ctx (prism_chanrep n (read_typ ctx t) ctx))
-      (fn {context = context, prems = _}
-                           => NO_CONTEXT_TACTIC ctx (Method_Closure.apply_method ctx @{method prism_chanrep} [] [] [] ctx []))
+      (fn _ => NO_CONTEXT_TACTIC ctx (Method_Closure.apply_method ctx @{method prism_chanrep} [] [] [] ctx []))
   end
 
 fun prism_chanrep_proofs (name, chans) thy =
   let val ctx = Named_Target.theory_init thy 
   in
-  Local_Theory.exit_global (snd (Local_Theory.note ((Binding.qualify false name (Binding.name "prism_chanreps"), @{attributes [simp, code_unfold]}), map (prism_chanrep_proof ctx) chans) ctx))
+  Local_Theory.exit_global (snd (Local_Theory.note ((Binding.qualify false name (Binding.name "prism_chanreps")
+                           , @{attributes [simp, code_unfold]}), map (prism_has_chanrep_proof ctx) chans @ map (prism_chanrep_proof ctx) chans) ctx))
   end
 
 

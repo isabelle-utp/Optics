@@ -8,7 +8,7 @@ chantype ch_single =
 chantype ch_two =
   chbool :: bool
   chint :: int
-                      
+
 chantype ct =
   a1 :: int
   a2 :: int
@@ -18,6 +18,8 @@ chantype ct =
   a6 :: int
   a7 :: int
   a8 :: int
+
+thm ct.prism_chanreps
 
 chantype ch_buffer =
   inp :: unit
