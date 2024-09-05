@@ -1,5 +1,11 @@
 structure Channel_Type =
 struct
+
+fun 
+  add_typerep_tfrees (Type (n, ts)) = Type (n, map add_typerep_tfrees ts) |
+  add_typerep_tfrees (TFree (n, sorts)) = TFree (n, sorts @ @{sort typerep}) |
+  add_typerep_tfrees (TVar (n, sorts)) = TVar (n, sorts @ @{sort typerep})
+
 fun prove_prism_goal thy =
   let 
     open Simplifier; open Global_Theory; open Lens_Lib
@@ -76,7 +82,7 @@ fun chantyperep_def name raw_chans ct vmap ctx =
   open Syntax; open HOLogic; open Global_Theory; open Proof_Context
   val ty = read_type_name {proper = true, strict = false} ctx name;
   fun repl_tvars ty = map_type_tfree (fn (n, s) => TFree (the (AList.lookup (op =) vmap n), s)) ty
-  val chans = @{print} (map (fn (n, t) => (n, mk_typerep (repl_tvars (read_typ ctx t)))) raw_chans)
+  val chans = map (fn (n, t) => (n, mk_typerep (repl_tvars (read_typ ctx t)))) raw_chans
   val lhs = ct $ Free ("T", Term.itselfT ty);
   val rhs = mk_chantyperep chans ctx;
   val eq = check_term ctx (HOLogic.mk_Trueprop (HOLogic.mk_eq (lhs, rhs)));
@@ -105,12 +111,13 @@ fun chantyperep_instance raw_vars vars sorts name raw_chans thy =
   Class.prove_instantiation_exit (fn _ => NO_CONTEXT_TACTIC ctx5 (Method_Closure.apply_method ctx5 @{method chantyperep_inst} [] [] [] ctx5 [])) ctx5
   end;
 
-fun make_chantype tvars vars sorts name chans thy =
+fun make_chantype tvars sorts name chans thy =
   let 
     open BNF_FP_Def_Sugar; open BNF_FP_Rec_Sugar_Util; open BNF_LFP; open Ctr_Sugar
     open Prism_Lib; open Lens_Lib; open Local_Theory; open Specification; open Syntax; open HOLogic; open Global_Theory
     val ctx = Named_Target.theory_init thy;
-    val ctrs = map (fn (n, t) => (((Binding.empty, Binding.name (n ^ ctor_suffix)), [(Binding.empty, t)]), Mixfix.NoSyn)) chans 
+    val ctrs = map (fn (n, t) => (((Binding.empty, Binding.name (n ^ ctor_suffix)), [(Binding.empty, add_typerep_tfrees (read_typ ctx t))]), Mixfix.NoSyn)) chans 
+
     val pnames = map fst chans
     val thypfx = 
       case (Named_Target.locale_of ctx) of
@@ -119,12 +126,12 @@ fun make_chantype tvars vars sorts name chans thy =
     val prefix = thypfx ^ name ^ "."
     val attrs = @{attributes [simp, code_unfold]}
     val dummy_disc = absdummy dummyT @{term True}
-    val ctx1 = co_datatype_cmd Least_FP construct_lfp 
-               ((K Plugin_Name.default_filter, true), 
-               [(((((tvars, Binding.name name), Mixfix.NoSyn), ctrs), (Binding.empty, Binding.empty, Binding.empty)),[])]) ctx
+    val cdtvars = map (fn (v, s) => (NONE, (TFree (v, []), s))) (ListPair.zip (tvars, sorts)) 
+    val ctx1 = co_datatypes Least_FP construct_lfp 
+               ((Plugin_Name.default_filter, true), [(((((cdtvars, Binding.name name), Mixfix.NoSyn), ctrs), (Binding.empty, Binding.empty, Binding.empty)),[])]) ctx
     val typ = Proof_Context.read_type_name {proper = true, strict = false} ctx1 name
     val tyco = fst (dest_Type typ);
-    val typ' = Type (tyco, map TFree (ListPair.zip (vars, sorts))) 
+    val typ' = Type (tyco, map TFree (ListPair.zip (tvars, sorts))) 
     val ptyp = prismT dummyT typ'
   in
   (
@@ -137,7 +144,7 @@ fun make_chantype tvars vars sorts name chans thy =
                 (is_prefix ^ nth pnames 1 ^ ctor_suffix) 
                 (const @{const_name comp} $ @{term Not} $ const (prefix ^ is_prefix ^ nth pnames 0 ^ ctor_suffix))) false
       else I)
-  (* The datatype also does not produce a discrimator when the length is 1 *)
+  (* The datatype also does not produce a discriminator when the length is 1 *)
   #> (if (length pnames = 1)
       then abbreviation
              Syntax.mode_default (SOME (Binding.qualify false name (Binding.name (is_prefix ^ nth pnames 0 ^ ctor_suffix)), NONE, NoSyn)) [] 
@@ -162,11 +169,6 @@ fun prism_has_chanrep n ctx =
       val c = parse_term ctx n in
   Trueprop $ (const @{const_name has_chanrep} $ c)                         
   end
-
-fun 
-  add_typerep_tfrees (Type (n, ts)) = Type (n, map add_typerep_tfrees ts) |
-  add_typerep_tfrees (TFree (n, sorts)) = TFree (n, sorts @ @{sort typerep}) |
-  add_typerep_tfrees (TVar (n, sorts)) = TVar (n, sorts @ @{sort typerep})
 
 fun prism_has_chanrep_proof ctx (n, t) =
   let open Simplifier; open Prism_Lib; open Syntax; open HOLogic
@@ -202,18 +204,18 @@ fun prism_chanrep_proofs (name, chans) thy =
 
 
 
-fun compile_chantype ((tvars, name), chans) thy =
+fun compile_chantype ((raw_tvars, name), raw_chans) thy =
   let
-  open Syntax
+  open Syntax; 
   val ctx = Named_Target.theory_init thy;
-  val vars = map (fn n => "'" ^ Char.toString (Char.chr n)) (97 upto (96 + length tvars)); 
-  val sorts = map (fn t => case snd (snd t) of SOME s => read_sort ctx s @ @{sort typerep} | NONE => @{sort typerep}) tvars
+  val tvars = map (fn n => "'" ^ Char.toString (Char.chr n)) (97 upto (96 + length raw_tvars)); 
+  val sorts = map (fn t => case snd (snd t) of SOME s => read_sort ctx s @ @{sort typerep} | NONE => @{sort typerep}) raw_tvars
   in
-  (make_chantype tvars vars sorts name chans #>
+  (make_chantype (map (fst o snd) raw_tvars) sorts name raw_chans #>
   (* Generate chantyperep instance *)
-  chantyperep_instance (map (fst o snd) tvars) vars sorts name chans #>
+  chantyperep_instance (map (fst o snd) raw_tvars) tvars sorts name raw_chans #>
   (* Generate representations for each prism (channel) *)
-  prism_chanrep_proofs (name, chans)) thy
+  prism_chanrep_proofs (name, raw_chans)) thy
   end
 
 end;

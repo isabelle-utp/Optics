@@ -48,4 +48,9 @@ chantype chbig =
   a8 :: unit
   a9 :: nat
 
+chantype ('a, 'b) ty =
+  p1 :: "'a list"
+  p2 :: "nat"
+  p3 :: bool
+
 end
