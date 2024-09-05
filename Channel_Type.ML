@@ -44,15 +44,15 @@ fun mk_def ty x v = Const ("Pure.eq", ty --> ty --> Term.propT) $ Free (x, ty) $
 val is_prefix = "is_";
 val un_prefix = "un_";
 
-fun def qual (x, tm) ctx = 
+fun def typ qual (x, tm) ctx = 
   let open Specification; open Syntax
-      val ((_, (_, thm)), d) = definition (SOME (Binding.qualify false qual (Binding.name x), NONE, NoSyn)) [] [] ((Binding.empty, @{attributes [lens_defs, chan_defs]}), mk_def dummyT x tm) ctx
+      val ((_, (_, thm)), d) = definition (SOME (Binding.qualify false qual (Binding.name x), SOME typ, NoSyn)) [] [] ((Binding.empty, @{attributes [lens_defs, chan_defs]}), mk_def typ x tm) ctx
   in (thm, d)  
   end
 
-fun defs qual inds f ctx =
+fun defs typ qual inds f ctx =
   fold (fn i => fn (thms, ctx) =>
-        let val (thm, ctx') = def qual (i, f i) ctx 
+        let val (thm, ctx') = def typ qual (i, f i) ctx 
         in (thms @ [thm], ctx') end) inds ([], ctx)
 
 fun mk_chantyperep chans ctx = 
@@ -71,25 +71,29 @@ fun mk_chantyperep chans ctx =
   mk_list dummyT (map mk_chanrep chans)
   end
 
-fun chantyperep_def name raw_chans ct ctx = 
+fun chantyperep_def name raw_chans ct vmap ctx = 
   let  
-  open Syntax; open HOLogic; open Global_Theory;
-  val ty = read_typ ctx name;
-  val chans = map (fn (n, t) => (n, mk_typerep (read_typ ctx t))) raw_chans
+  open Syntax; open HOLogic; open Global_Theory; open Proof_Context
+  val ty = read_type_name {proper = true, strict = false} ctx name;
+  fun repl_tvars ty = map_type_tfree (fn (n, s) => TFree (the (AList.lookup (op =) vmap n), s)) ty
+  val chans = @{print} (map (fn (n, t) => (n, mk_typerep (repl_tvars (read_typ ctx t)))) raw_chans)
   val lhs = ct $ Free ("T", Term.itselfT ty);
   val rhs = mk_chantyperep chans ctx;
   val eq = check_term ctx (HOLogic.mk_Trueprop (HOLogic.mk_eq (lhs, rhs)));
   in snd (Specification.definition NONE [] [] ((Binding.empty, @{attributes [chantyperep_defs]}), eq) ctx)
   end;
 
-fun chantyperep_instance name raw_chans thy =
+fun chantyperep_instance raw_vars vars sorts name raw_chans thy =
   let  
   open Syntax; open HOLogic; open Global_Theory;
-  val ty = read_typ (Named_Target.theory_init thy) name;
+  val vmap = ListPair.zip (raw_vars, vars)
+  val tvars = ListPair.zip (vars, sorts)
+  val ty = Proof_Context.read_type_name {proper = true, strict = false} (Named_Target.theory_init thy) name;
   val tyco = fst (dest_Type ty);
-  val ctx0 = Class.instantiation ([tyco], [], \<^sort>\<open>chantyperep\<close>) thy;
+  val ctx0 = Class.instantiation ([tyco], tvars, \<^sort>\<open>chantyperep\<close>) thy;
   val ctx1 = snd (Local_Theory.begin_nested ctx0)
-  val ctx2 = chantyperep_def name raw_chans \<^Const>\<open>chantyperep ty\<close> ctx1
+  val ty' = Type (tyco, map (read_typ ctx1) vars) 
+  val ctx2 = chantyperep_def name raw_chans \<^Const>\<open>chantyperep ty'\<close> vmap ctx1
   val ctx3 = Local_Theory.end_nested ctx2;
   val disc_thms = if length raw_chans = 1 then [] else get_thms thy (tyco ^ ".discI")
   val exhaust_disc_thms = if length raw_chans = 1 then [] else get_thms thy (tyco ^ ".exhaust_disc")
@@ -101,7 +105,7 @@ fun chantyperep_instance name raw_chans thy =
   Class.prove_instantiation_exit (fn _ => NO_CONTEXT_TACTIC ctx5 (Method_Closure.apply_method ctx5 @{method chantyperep_inst} [] [] [] ctx5 [])) ctx5
   end;
 
-fun make_chantype (name, chans) thy =
+fun make_chantype tvars vars sorts name chans thy =
   let 
     open BNF_FP_Def_Sugar; open BNF_FP_Rec_Sugar_Util; open BNF_LFP; open Ctr_Sugar
     open Prism_Lib; open Lens_Lib; open Local_Theory; open Specification; open Syntax; open HOLogic; open Global_Theory
@@ -117,8 +121,11 @@ fun make_chantype (name, chans) thy =
     val dummy_disc = absdummy dummyT @{term True}
     val ctx1 = co_datatype_cmd Least_FP construct_lfp 
                ((K Plugin_Name.default_filter, true), 
-               [((((([],Binding.name name), Mixfix.NoSyn), ctrs), (Binding.empty, Binding.empty, Binding.empty)),[])]) ctx
-    val typ = read_typ ctx1 name
+               [(((((tvars, Binding.name name), Mixfix.NoSyn), ctrs), (Binding.empty, Binding.empty, Binding.empty)),[])]) ctx
+    val typ = Proof_Context.read_type_name {proper = true, strict = false} ctx1 name
+    val tyco = fst (dest_Type typ);
+    val typ' = Type (tyco, map TFree (ListPair.zip (vars, sorts))) 
+    val ptyp = prismT dummyT typ'
   in
   (
   (* The datatype package does not produce a discriminator for the second constructor when
@@ -138,7 +145,7 @@ fun make_chantype (name, chans) thy =
                 (is_prefix ^ nth pnames 0 ^ ctor_suffix) 
                 (Abs ("x", typ, @{term "True"}))) false
       else I)
-  #> defs name pnames (fn x => (const @{const_name ctor_prism}
+  #> defs ptyp name pnames (fn x => (const @{const_name ctor_prism}
                          $ const (prefix ^ x ^ ctor_suffix)
                          $ (if (length pnames = 1) then dummy_disc else const (prefix ^ is_prefix ^ x ^ ctor_suffix))
                          $ const (prefix ^ un_prefix ^ x ^ ctor_suffix)))
@@ -152,14 +159,19 @@ fun make_chantype (name, chans) thy =
 
 fun prism_has_chanrep n ctx =
   let open Syntax; open HOLogic
-      val c = read_term ctx n in
-  Trueprop $ (const @{const_name has_chanrep} $ c)                              
+      val c = parse_term ctx n in
+  Trueprop $ (const @{const_name has_chanrep} $ c)                         
   end
+
+fun 
+  add_typerep_tfrees (Type (n, ts)) = Type (n, map add_typerep_tfrees ts) |
+  add_typerep_tfrees (TFree (n, sorts)) = TFree (n, sorts @ @{sort typerep}) |
+  add_typerep_tfrees (TVar (n, sorts)) = TVar (n, sorts @ @{sort typerep})
 
 fun prism_has_chanrep_proof ctx (n, t) =
   let open Simplifier; open Prism_Lib; open Syntax; open HOLogic
       val d = read_term ctx ("is_" ^ n ^ "_C")
-      val ct = Syntax.check_term ctx ((const @{const_name Chanrep} $ mk_literal n $ mk_typerep (read_typ ctx t)) $ d)
+      val ct = Syntax.check_term ctx ((const @{const_name Chanrep} $ mk_literal n $ mk_typerep (add_typerep_tfrees (read_typ ctx t))) $ d)
   in
       Goal.prove ctx [] []
       (Syntax.check_term ctx (prism_has_chanrep n ctx))
@@ -169,7 +181,7 @@ fun prism_has_chanrep_proof ctx (n, t) =
 fun prism_chanrep n t ctx =
   let open Syntax; open HOLogic
       val c = read_term ctx n; val d = read_term ctx ("is_" ^ n ^ "_C") 
-      val ct = ((const @{const_name Chanrep} $ mk_literal n $ mk_typerep t) $ d) in
+      val ct = ((const @{const_name Chanrep} $ mk_literal n $ mk_typerep (add_typerep_tfrees t)) $ d) in
   Trueprop $ (eq_const dummyT $ (const @{const_name chanrep_of} $ c) $ ct)
   end
 
@@ -190,18 +202,25 @@ fun prism_chanrep_proofs (name, chans) thy =
 
 
 
-fun compile_chantype (name, chans) =
-  make_chantype (name, chans) #> 
+fun compile_chantype ((tvars, name), chans) thy =
+  let
+  open Syntax
+  val ctx = Named_Target.theory_init thy;
+  val vars = map (fn n => "'" ^ Char.toString (Char.chr n)) (97 upto (96 + length tvars)); 
+  val sorts = map (fn t => case snd (snd t) of SOME s => read_sort ctx s @ @{sort typerep} | NONE => @{sort typerep}) tvars
+  in
+  (make_chantype tvars vars sorts name chans #>
   (* Generate chantyperep instance *)
-  chantyperep_instance name chans #>
+  chantyperep_instance (map (fst o snd) tvars) vars sorts name chans #>
   (* Generate representations for each prism (channel) *)
-  prism_chanrep_proofs (name, chans)
+  prism_chanrep_proofs (name, chans)) thy
+  end
 
 end;
 
 let open Parse; open Parse_Spec; open Scan in
   Outer_Syntax.command @{command_keyword chantype} "define a channel datatype"
-    ((name --
+    ((( BNF_Util.parse_type_args_named_constrained -- name) --
       (@{keyword "="} |-- repeat1 (name -- ($$$ "::" |-- !!! typ))))
     >> (fn x => Toplevel.theory (Channel_Type.compile_chantype x)))
   end;

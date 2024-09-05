@@ -220,4 +220,51 @@ subsection \<open> Channel Type Command \<close>
 
 ML_file "Channel_Type.ML"
 
+(*
+datatype 'a ty =
+  x "'a"
+
+ML \<open> Syntax.read_typ @{context} "'a ty"\<close>
+
+ML \<open> Syntax.check_typ @{context} (Proof_Context.read_type_name {proper = true, strict = false} @{context} "ty") \<close>
+*)
+
+declare [[show_sorts]]
+
+ML \<open>
+  open BNF_FP_Def_Sugar;
+    open BNF_FP_Def_Sugar; open BNF_FP_Rec_Sugar_Util; open BNF_LFP; open Ctr_Sugar;
+
+ \<close>
+
+ML \<open> 
+  val ctrs = [(((Binding.empty, Binding.name "MyCtr"), [(Binding.empty, @{typ int})]), NoSyn)];
+
+  (fn ctrs =>
+co_datatypes Least_FP construct_lfp 
+   ((Plugin_Name.default_filter, true), [((((([], Binding.name "myt"), Mixfix.NoSyn), ctrs), (Binding.empty, Binding.empty, Binding.empty)),[])]))
+  ctrs @{context}
+
+;  \<close>
+chantype 'a::typerep ty =
+  x :: "'a list"
+  y :: "nat"
+  z :: bool
+
+term x
+
+
+term x
+
+term "CHANTYPEREP('v::typerep ty)"
+
+lemma "has_chanrep x"
+  apply (simp add: has_chanrep_def chantyperep_ty_def)
+  apply (prism_has_chanrep "chanrep_of x")
+
+declare [[show_sorts]]
+
+term x
+
+
 end
