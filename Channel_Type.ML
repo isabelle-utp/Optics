@@ -1,4 +1,11 @@
-structure Channel_Type =
+signature CHANNEL_TYPE =
+sig
+  val ctor_suffix: string
+  val compile_chantype: ((binding option * (string * string option)) list * string) * (string * string) list -> theory -> theory
+  val make_chantype: string list -> sort list -> string -> (string * string) list -> theory -> theory
+end;
+
+structure Channel_Type : CHANNEL_TYPE =
 struct
 
 fun 
@@ -6,16 +13,7 @@ fun
   add_typerep_tfrees (TFree (n, sorts)) = TFree (n, sorts @ @{sort typerep}) |
   add_typerep_tfrees (TVar (n, sorts)) = TVar (n, sorts @ @{sort typerep})
 
-fun prove_prism_goal thy =
-  let 
-    open Simplifier; open Global_Theory; open Lens_Lib
-    val ctx = Named_Target.theory_init thy
- in
-  auto_tac (fold add_simp (get_thms thy lens_defsN) ctx)
-end
-
 val wb_prism_suffix = "_wb_prism"
-val codep_suffix = "_codeps"
 
 val ctor_suffix = "_C"
 
@@ -67,8 +65,7 @@ fun mk_chantyperep chans ctx =
       let val c = 
           case read_const {proper = false, strict = false} ctx (is_prefix ^ n ^ ctor_suffix)
           of Free (c', _) => free c' | Const (c', _) => const c' | _ => raise Match;
-      in  
-      (* check_term ctx *) 
+      in   
         (const @{const_name Chanrep} 
          $ mk_literal n $ t 
          $ c)
@@ -105,8 +102,6 @@ fun chantyperep_instance raw_vars vars sorts name raw_chans thy =
   val exhaust_disc_thms = if length raw_chans = 1 then [] else get_thms thy (tyco ^ ".exhaust_disc")
   val ctx4 = fold (Context.proof_map o Named_Theorems.add_thm "Channel_Type.disc_thms") disc_thms ctx3;
   val ctx5 = fold (Context.proof_map o Named_Theorems.add_thm "Channel_Type.exhaust_disc_thms") exhaust_disc_thms ctx4;
-
-  (* val ctx4 = fold (Context.proof_map o Named_Theorems.add_thm "Channel_Type.datatype_disc_thms") disc_thms ctx3; *)
   in                                                                                                              
   Class.prove_instantiation_exit (fn _ => NO_CONTEXT_TACTIC ctx5 (Method_Closure.apply_method ctx5 @{method chantyperep_inst} [] [] [] ctx5 [])) ctx5
   end;
@@ -201,8 +196,6 @@ fun prism_chanrep_proofs (name, chans) thy =
   Local_Theory.exit_global (snd (Local_Theory.note ((Binding.qualify false name (Binding.name "prism_chanreps")
                            , @{attributes [simp, code_unfold]}), map (prism_has_chanrep_proof ctx) chans @ map (prism_chanrep_proof ctx) chans) ctx))
   end
-
-
 
 fun compile_chantype ((raw_tvars, name), raw_chans) thy =
   let
