@@ -17,6 +17,9 @@ record ('v, 's) prism =
 type_notation
   prism (infixr "\<Longrightarrow>\<^sub>\<triangle>" 0)
 
+definition prism_matches :: "('a \<Longrightarrow>\<^sub>\<triangle> 'e) \<Rightarrow> 'e \<Rightarrow> bool" ("matches\<index>") where
+"prism_matches a e = (match\<^bsub>a\<^esub> e \<noteq> None)"
+
 locale wb_prism =
   fixes x :: "'v \<Longrightarrow>\<^sub>\<triangle> 's" (structure)
   assumes match_build: "match (build v) = Some v"
@@ -32,10 +35,14 @@ begin
   lemma inj_build: "inj build"
     by (metis injI match_build option.inject)
 
+  lemma matches_build: "matches (build v)"
+    by (simp add: prism_matches_def match_build)
+
 end
 
 declare wb_prism.match_build [simp]
 declare wb_prism.build_match [simp]
+declare wb_prism.matches_build [simp]
 
 subsection \<open> Co-dependence \<close>
 
