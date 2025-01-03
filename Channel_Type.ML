@@ -216,6 +216,6 @@ end;
 let open Parse; open Parse_Spec; open Scan in
   Outer_Syntax.command @{command_keyword chantype} "define a channel datatype"
     ((( BNF_Util.parse_type_args_named_constrained -- name) --
-      (@{keyword "="} |-- repeat1 (name -- ($$$ "::" |-- !!! typ))))
+      (@{keyword "="} |-- repeat1 (name -- ($$$ "::" |-- Parse.!!! typ))))
     >> (fn x => Toplevel.theory (Channel_Type.compile_chantype x)))
   end;

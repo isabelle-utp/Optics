@@ -79,9 +79,9 @@ let open Parse; open Parse_Spec; open Scan in
   Outer_Syntax.command @{command_keyword dataspace} "define reactive contexts"
     ((name --
       ((@{keyword "="} |-- repeat (Parse.name --| @{keyword "+"}))
-       -- optional (@{keyword "constants"} |-- repeat1 (name -- ($$$ "::" |-- !!! typ))) []
-       -- optional (@{keyword "assumes"} |-- !!! (and_list1 (opt_thm_name ":" -- repeat1 propp))) []
-       -- optional (@{keyword "variables"} |-- repeat1 (name -- ($$$ "::" |-- !!! typ))) []
-       -- optional (@{keyword "channels"} |-- repeat1 (name -- ($$$ "::" |-- !!! typ))) [])
+       -- optional (@{keyword "constants"} |-- repeat1 (name -- ($$$ "::" |-- Parse.!!! typ))) []
+       -- optional (@{keyword "assumes"} |-- Parse.!!! (and_list1 (opt_thm_name ":" -- repeat1 propp))) []
+       -- optional (@{keyword "variables"} |-- repeat1 (name -- ($$$ "::" |-- Parse.!!! typ))) []
+       -- optional (@{keyword "channels"} |-- repeat1 (name -- ($$$ "::" |-- Parse.!!! typ))) [])
     >> (fn (nm, ((((exts, cds), assms), vds), chds)) => Toplevel.theory (Dataspace.dataspace_cmd nm exts cds assms vds chds))))
 end;
