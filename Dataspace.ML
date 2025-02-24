@@ -20,7 +20,7 @@ struct
     val chfixes = map (fn (n, t) => (Binding.name n, SOME (prismT t achanT), NoSyn)) chds
     val wbs    = map (mk_wb_prism o free) chns;
     val simp   = Attrib.check_src ctx (Token.make_src ("simp", Position.none) [])
-    val imps   = map (fn e => Locale.check thy (e, Position.none)) exts
+    val imps   = map (fn e => Locale.check_global thy (e, Position.none)) exts
     (* List of prisms imported *)
     val ilnsls = map (filter (isPrismT o snd) o map fst o Locale.params_of thy) imps
     (* Codependence axioms from imports *)
@@ -45,7 +45,7 @@ struct
   let
     open Lens_Lib;
     open Syntax;
-    val imps   = map (fn e => Locale.check thy (e, Position.none)) exts
+    val imps   = map (fn e => Locale.check_global thy (e, Position.none)) exts
     (* When extending existing dataspaces, we instantiate their respective state and channel
        types to avoid ambiguity (via a locale "where" clause) *)
     val pinsts = Expression.Named 

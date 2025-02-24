@@ -17,7 +17,7 @@ struct
     val vfixes = map (fn (n, t) => (Binding.name n, SOME (lensT t astateT), NoSyn)) vds
     val vwbs   = map (mk_vwb_lens o free) vns;
     val simp   = Attrib.check_src ctx (Token.make_src ("simp", Position.none) [])
-    val imps   = map (fn e => Locale.check thy (e, Position.none)) exts
+    val imps   = map (fn e => Locale.check_global thy (e, Position.none)) exts
     (* List of lenses imported *)
     val ilnsls = map (filter (isLensT o snd) o map fst o Locale.params_of thy) imps
     (* Independence axioms from imports *)
@@ -35,13 +35,12 @@ struct
   ]
   end
 
-
   (* Compile a state space from a given state space name and list of variable declarations *)
   fun compile_statespace ssn vds exts thy =
   let
     open Lens_Lib;
     open Syntax;
-    val imps   = map (fn e => Locale.check thy (e, Position.none)) exts
+    val imps   = map (fn e => Locale.check_global thy (e, Position.none)) exts
     val locexs = map (fn i => (i, (("", false), (Expression.Positional [], [])))) imps
   in
   (Local_Theory.exit_global o snd o 
