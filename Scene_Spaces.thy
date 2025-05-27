@@ -224,7 +224,7 @@ bot_scene_space [intro]: "\<bottom>\<^sub>S \<in> scene_space" |
 Vars_scene_space [intro]: "x \<in> set Vars \<Longrightarrow> x \<in> scene_space" |
 union_scene_space [intro]: "\<lbrakk> x \<in> scene_space; y \<in> scene_space \<rbrakk> \<Longrightarrow> x \<squnion>\<^sub>S y \<in> scene_space"
 
-lemma idem_scene_space: "a \<in> scene_space \<Longrightarrow> idem_scene a"
+lemma idem_scene_space [intro, simp]: "a \<in> scene_space \<Longrightarrow> idem_scene a"
   by (induct rule: scene_space.induct) auto
 
 lemma set_Vars_scene_space [simp]: "set Vars \<subseteq> scene_space"
@@ -372,12 +372,12 @@ proof (rule scene_union_indep_uniq[where Z="foldr (\<squnion>\<^sub>S) xs \<bott
        (metis \<open>idem_scene (- \<Squnion>\<^sub>S xs)\<close> local.span_Vars scene_span_def scene_union_compl uminus_scene_twice)
 qed
 
-lemma scene_space_uminus: "\<lbrakk> a \<in> scene_space \<rbrakk> \<Longrightarrow> - a \<in> scene_space"
+lemma scene_space_uminus [intro, simp]: "\<lbrakk> a \<in> scene_space \<rbrakk> \<Longrightarrow> - a \<in> scene_space"
   by (auto simp add: scene_space_vars_decomp_iff uminus_vars_other_vars)
      (metis filter_is_subset)
 
 lemma scene_space_inter: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
-  by (simp add: inf_scene_def scene_space.union_scene_space scene_space_uminus)
+  by (simp add: inf_scene_def scene_space.union_scene_space)
 
 lemma scene_union_foldr_remove_element:
   assumes "set xs \<subseteq> set Vars"
@@ -595,7 +595,7 @@ qed
 lemma scene_union_inter_minus:
   assumes "a \<in> scene_space" "b \<in> scene_space"
   shows "a \<squnion>\<^sub>S (b \<sqinter>\<^sub>S - a) = a \<squnion>\<^sub>S b"
-  by (metis assms(1) assms(2) bot_idem_scene idem_scene_space idem_scene_uminus local.scene_union_inter_distrib scene_demorgan1 scene_space_uminus scene_union_compl scene_union_unit(1) uminus_scene_twice)
+  by (simp add: assms scene_union_inter_distrib scene_union_compl)
 
 lemma scene_union_foldr_minus_element:
   assumes "a \<in> scene_space" "set xs \<subseteq> scene_space"

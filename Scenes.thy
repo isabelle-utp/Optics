@@ -221,6 +221,9 @@ lemma scene_equiv_sym [simp]: "idem_scene a \<Longrightarrow> s\<^sub>1 \<approx
 lemma scene_union_unit [simp]: "X \<squnion>\<^sub>S \<bottom>\<^sub>S = X" "\<bottom>\<^sub>S \<squnion>\<^sub>S X = X"
   by (transfer, simp)+
 
+lemma scene_inter_unit [simp]: "X \<sqinter>\<^sub>S \<top>\<^sub>S = X" "\<top>\<^sub>S \<sqinter>\<^sub>S X = X"
+  by (simp_all add: inf_scene_def uminus_scene_twice)
+
 lemma scene_indep_bot [simp]: "X \<bowtie>\<^sub>S \<bottom>\<^sub>S"
   by (transfer, simp)
 
@@ -283,7 +286,7 @@ lemma scene_union_indep_uniq:
 lemma scene_union_idem: "X \<squnion>\<^sub>S X = X"
   by (transfer, simp)
 
-lemma scene_union_compl: "idem_scene X \<Longrightarrow> X \<squnion>\<^sub>S - X = \<top>\<^sub>S"
+lemma scene_union_compl [intro]: "idem_scene X \<Longrightarrow> X \<squnion>\<^sub>S - X = \<top>\<^sub>S"
   by (transfer, auto)
 
 lemma scene_inter_idem: "X \<sqinter>\<^sub>S X = X"
