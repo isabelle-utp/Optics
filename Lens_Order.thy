@@ -92,7 +92,7 @@ text \<open>Using our preorder, we can also derive an equivalence on lenses as f
 definition lens_equiv :: "('a \<Longrightarrow> 'c) \<Rightarrow> ('b \<Longrightarrow> 'c) \<Rightarrow> bool" (infix "\<approx>\<^sub>L" 51) where
 [lens_defs]: "lens_equiv X Y = (X \<subseteq>\<^sub>L Y \<and> Y \<subseteq>\<^sub>L X)"
 
-lemma lens_equivI [intro]:
+lemma lens_equivI [intro?]:
   "\<lbrakk> X \<subseteq>\<^sub>L Y; Y \<subseteq>\<^sub>L X \<rbrakk> \<Longrightarrow> X \<approx>\<^sub>L Y"
   by (simp add: lens_equiv_def)
 

@@ -773,8 +773,13 @@ abbreviation (input) ebasis_lens :: "('a::two \<Longrightarrow> 's::scene_space)
 lemma basis_then_var [simp]: "basis_lens x \<Longrightarrow> var_lens x"
   using basis_lens.lens_in_basis basis_lens_def var_lens_axioms_def var_lens_def by blast
 
-lemma basis_lens_intro: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars \<rbrakk> \<Longrightarrow> basis_lens x"
+lemma basis_lens_intro [intro]: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars \<rbrakk> \<Longrightarrow> basis_lens x"
   using basis_lens.intro basis_lens_axioms.intro by blast
+
+lemma basis_lensE [elim]:
+  assumes "basis_lens x"
+  obtains "vwb_lens x" "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars"
+  by (simp add: assms)
 
 subsection \<open> Composite lenses \<close>
 
@@ -782,10 +787,10 @@ locale composite_lens = vwb_lens +
   assumes comp_in_Vars: "(\<lambda> a. a ;\<^sub>S x) ` set Vars \<subseteq> set Vars"
 begin
 
-lemma Vars_closed_comp: "a \<in> set Vars \<Longrightarrow> a ;\<^sub>S x \<in> set Vars"
+lemma Vars_closed_comp [intro]: "a \<in> set Vars \<Longrightarrow> a ;\<^sub>S x \<in> set Vars"
   using comp_in_Vars by blast
 
-lemma scene_space_closed_comp:
+lemma scene_space_closed_comp [intro]:
   assumes "a \<in> scene_space"
   shows "a ;\<^sub>S x \<in> scene_space"
 proof -
@@ -808,6 +813,16 @@ qed
 
 end
 
+lemma composite_lensI [intro]:
+  assumes "vwb_lens x" "(\<lambda> a. a ;\<^sub>S x) ` set Vars \<subseteq> set Vars"
+  shows "composite_lens x"
+  by (intro composite_lens.intro composite_lens_axioms.intro; simp add: assms)
+
+lemma composite_lensE [elim]:
+  assumes "composite_lens x"
+  obtains "vwb_lens x" "(\<lambda> a. a ;\<^sub>S x) ` set Vars \<subseteq> set Vars"
+  using assms composite_lens.Vars_closed_comp composite_lens_def by blast
+
 lemma composite_implies_var_lens [simp]:
   "composite_lens x \<Longrightarrow> var_lens x"
   by (metis composite_lens.axioms(1) composite_lens.scene_space_closed_comp scene_comp_top_scene top_scene_space var_lens_axioms.intro var_lens_def)
@@ -820,14 +835,15 @@ lemma composite_lens_comp [simp]:
 
 lemma comp_composite_lens [simp]:
   "\<lbrakk> composite_lens a; composite_lens x \<rbrakk> \<Longrightarrow> composite_lens (x ;\<^sub>L a)"
-  by (auto intro!: composite_lens.intro simp add: composite_lens_axioms_def)
-     (metis composite_lens.Vars_closed_comp composite_lens.axioms(1) scene_comp_assoc)
+  apply (auto intro!: composite_lensI elim!: composite_lensE simp: image_subset_iff)
+  apply (metis scene_comp_assoc)
+  done
 
 text \<open> A basis lens within a composite lens remains a basis lens (i.e. it remains atomic) \<close>
 
 lemma composite_lens_basis_comp [simp]:
   "\<lbrakk> composite_lens a; basis_lens x \<rbrakk> \<Longrightarrow> basis_lens (x ;\<^sub>L a)"
-  by (metis basis_lens.lens_in_basis basis_lens_def basis_lens_intro comp_vwb_lens composite_lens.Vars_closed_comp composite_lens_def lens_scene_comp)
+  using lens_scene_comp by blast
 
 lemma id_composite_lens: "composite_lens 1\<^sub>L"
   by (force intro: composite_lens.intro composite_lens_axioms.intro)
@@ -836,6 +852,7 @@ lemma fst_composite_lens: "composite_lens fst\<^sub>L"
   by (rule composite_lens.intro, simp add: fst_vwb_lens, rule composite_lens_axioms.intro, simp add: Vars_prod_def)
 
 lemma snd_composite_lens: "composite_lens snd\<^sub>L"
-  by (rule composite_lens.intro, simp add: snd_vwb_lens, rule composite_lens_axioms.intro, simp add: Vars_prod_def)
+  by (intro composite_lens.intro composite_lens_axioms.intro;
+      simp add: snd_vwb_lens Vars_prod_def)
 
 end
