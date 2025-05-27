@@ -342,7 +342,7 @@ lemma frame_equiv_sym [simp]: "s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on a \<Long
      (metis idem_scene_space scene_override_idem scene_override_overshadow_right)
 
 lemma frame_equiv_trans_gen [simp]: "\<lbrakk> s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on a; s\<^sub>2 \<approx>\<^sub>F s\<^sub>3 on b \<rbrakk> \<Longrightarrow> s\<^sub>1 \<approx>\<^sub>F s\<^sub>3 on (a \<inter>\<^sub>F b)"
-proof (transfer, simp add: scene_override_inter scene_space_compat scene_space_uminus)
+proof (transfer)
   fix a b :: "'a scene" and s\<^sub>1 s\<^sub>2 s\<^sub>3 :: "'a"
   assume 
     a:"a \<in> scene_space" and b: "b \<in> scene_space" and
@@ -361,9 +361,9 @@ proof (transfer, simp add: scene_override_inter scene_space_compat scene_space_u
   also have "... = s\<^sub>1 \<oplus>\<^sub>S s\<^sub>1 on b"
     using 2 by auto
   also have "... = s\<^sub>1"
-    by (simp add: b idem_scene_space)
+    by (simp add: b)
   finally show "s\<^sub>1 \<approx>\<^sub>S s\<^sub>3 on a \<sqinter>\<^sub>S b"
-    by (simp add: a b scene_equiv_def scene_override_inter scene_space_compat scene_space_uminus)
+    by (simp add: a b scene_equiv_def scene_override_inter scene_space_compat)
 qed
 
 lemma frame_equiv_trans: "\<lbrakk> s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on a; s\<^sub>2 \<approx>\<^sub>F s\<^sub>3 on a \<rbrakk> \<Longrightarrow> s\<^sub>1 \<approx>\<^sub>F s\<^sub>3 on a"

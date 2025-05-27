@@ -263,7 +263,7 @@ next
     using scene_union_pres_compat by blast
 qed
 
-lemma scene_space_compat: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a ##\<^sub>S b"
+lemma scene_space_compat [intro]: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a ##\<^sub>S b"
 proof (induct rule: scene_space.induct)
   case bot_scene_space
   then show ?case
@@ -376,7 +376,7 @@ lemma scene_space_uminus [intro, simp]: "\<lbrakk> a \<in> scene_space \<rbrakk>
   by (auto simp add: scene_space_vars_decomp_iff uminus_vars_other_vars)
      (metis filter_is_subset)
 
-lemma scene_space_inter: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
+lemma scene_space_inter [intro]: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
   by (simp add: inf_scene_def scene_space.union_scene_space)
 
 lemma scene_union_foldr_remove_element:
