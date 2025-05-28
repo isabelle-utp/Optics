@@ -773,7 +773,7 @@ abbreviation (input) ebasis_lens :: "('a::two \<Longrightarrow> 's::scene_space)
 lemma basis_then_var [simp]: "basis_lens x \<Longrightarrow> var_lens x"
   using basis_lens.lens_in_basis basis_lens_def var_lens_axioms_def var_lens_def by blast
 
-lemma basis_lensI [intro]: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars \<rbrakk> \<Longrightarrow> basis_lens x"
+lemma basis_lensI: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars \<rbrakk> \<Longrightarrow> basis_lens x"
   using basis_lens.intro basis_lens_axioms.intro by blast
 
 lemma basis_lensE [elim]:
@@ -836,7 +836,7 @@ text \<open> A basis lens within a composite lens remains a basis lens (i.e. it 
 
 lemma composite_lens_basis_comp [simp]:
   "\<lbrakk> composite_lens a; basis_lens x \<rbrakk> \<Longrightarrow> basis_lens (x ;\<^sub>L a)"
-  using lens_scene_comp by force
+  using lens_scene_comp by (force intro: basis_lensI)
 
 lemma id_composite_lens: "composite_lens 1\<^sub>L"
   by (force intro: composite_lens.intro composite_lens_axioms.intro)
