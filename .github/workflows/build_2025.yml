@@ -7,6 +7,6 @@ jobs:
       - uses: actions/checkout@v3
       - uses: lexbailey/isabelle-theory-build-github-action@v8
         with:
-          isabelle-url: 'https://github.com/seL4/isabelle/archive/refs/tags/Isabelle2023.tar.gz'
+          isabelle-url: 'https://github.com/seL4/isabelle/archive/refs/tags/Isabelle2025.tar.gz'
           report_url: 'https://isabelle-utp-ci-dashboard.link/submit_job_log'
           report_secret: ${{ secrets.DashboardReportKey }}
