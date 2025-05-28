@@ -18,7 +18,7 @@ lemma UNIV_frame_scene_space: "UNIV = mk_frame ` scene_space"
   by (metis of_frame of_frame_inverse UNIV_eq_I imageI)
 
 lemma idem_scene_frame [simp]: "idem_scene \<lbrakk>A\<rbrakk>\<^sub>F"
-  by (simp add: idem_scene_space of_frame)
+  by (simp add: of_frame)
 
 lemma compat_frames [simp]: "\<lbrakk>A\<rbrakk>\<^sub>F ##\<^sub>S \<lbrakk>B\<rbrakk>\<^sub>F"
   by (simp add: of_frame scene_space_compat)
@@ -357,7 +357,7 @@ proof (transfer)
   have "s\<^sub>1 \<oplus>\<^sub>S (s\<^sub>1 \<oplus>\<^sub>S s\<^sub>3 on a) on b = s\<^sub>1 \<oplus>\<^sub>S (s\<^sub>1 \<oplus>\<^sub>S (s\<^sub>3 \<oplus>\<^sub>S s\<^sub>2 on b) on a) on b"
     using "1" by auto
   also from 1 2 3 a b have "... = s\<^sub>1 \<oplus>\<^sub>S (s\<^sub>1 \<oplus>\<^sub>S s\<^sub>2 on a) on b"
-    by (metis scene_inter_commute scene_override_inter scene_override_overshadow_right scene_space_compat scene_space_uminus)
+    by (smt (verit) scene_inter_commute scene_override_inter scene_override_overshadow_right scene_space_compat scene_space_uminus)
   also have "... = s\<^sub>1 \<oplus>\<^sub>S s\<^sub>1 on b"
     using 2 by auto
   also have "... = s\<^sub>1"
@@ -369,7 +369,6 @@ qed
 lemma frame_equiv_trans: "\<lbrakk> s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on a; s\<^sub>2 \<approx>\<^sub>F s\<^sub>3 on a \<rbrakk> \<Longrightarrow> s\<^sub>1 \<approx>\<^sub>F s\<^sub>3 on a"
   by (transfer)
      (metis scene_equiv_def scene_override_overshadow_right)
-
 
 lemma put_eq_ebasis_lens_notin:
   "\<lbrakk> ebasis_lens x; s\<^sub>1 \<approx>\<^sub>F s\<^sub>2 on A; x \<notin>\<^sub>F A \<rbrakk> \<Longrightarrow> put\<^bsub>x\<^esub> s\<^sub>1 v \<approx>\<^sub>F put\<^bsub>x\<^esub> s\<^sub>2 v on A"

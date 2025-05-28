@@ -9,6 +9,7 @@ alphabet test =
   y :: nat 
   z :: "int list"
 
+(* TODO: figure out why it's re-declaring the intro rule *)
 alphabet_scene_space test
 
 lemma "UNIV\<^sub>F(test) = \<lbrace>x, y, z\<rbrace>\<^sub>F"
