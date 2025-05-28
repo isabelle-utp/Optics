@@ -101,10 +101,24 @@ using assms proof (induct xs arbitrary: ys)
     by simp
 next
   case (Cons a xs)
-  hence ys: "set ys = insert a (set (removeAll a ys))"
-    by (auto)
+  consider (a_in) "a \<in> set xs" | (a_notin) "a \<notin> set xs"
+    by blast
   then show ?case
-    by (metis (no_types, lifting) Cons.hyps Cons.prems(1) Cons.prems(2) Diff_insert_absorb foldr_scene_union_removeAll insertCI insert_absorb list.simps(15) pairwise_insert set_removeAll)
+  proof cases
+    case a_in
+    then show ?thesis
+      by (metis Cons remdups.simps(2) set_remdups)
+  next
+    case a_notin
+    then have *: "\<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S (removeAll a ys)"
+      using Cons(2,3) by (auto intro!: Cons(1) simp: pairwise_insert)
+    then have "\<Squnion>\<^sub>S (a#xs) = (\<Squnion>\<^sub>S xs) \<squnion>\<^sub>S a"
+      by (simp add: scene_union_commute)
+    also have "... = \<Squnion>\<^sub>S (removeAll a ys) \<squnion>\<^sub>S a"
+      using * by simp
+    finally show ?thesis
+      using foldr_scene_union_removeAll Cons(2,3) by auto
+  qed
 qed
 
 lemma foldr_scene_removeAll:
