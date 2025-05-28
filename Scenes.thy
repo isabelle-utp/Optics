@@ -60,22 +60,14 @@ lemma equiv_region: "equiv UNIV (region X)"
   done
 
 lemma equiv_coregion: "equiv UNIV (coregion X)"
-  apply (transfer)
-  apply (rule equivI)
-    apply (rule refl_onI)
-     apply (auto)
-   apply (rule symI)
-   apply (auto)
-  apply (rule transI)
-  apply (auto)
-  done
+  by (transfer) (auto intro!: equivI refl_onI symI transI)
 
 lemma region_coregion_Id:
   "idem_scene X \<Longrightarrow> region X \<inter> coregion X = Id"
   by (transfer, auto, metis idem_overrider.ovr_idem)
 
 lemma state_eq_iff: "idem_scene S \<Longrightarrow> x = y \<longleftrightarrow> (x, y) \<in> region S \<and> (x, y) \<in> coregion S"
-  by (metis IntE IntI pair_in_Id_conv region_coregion_Id)
+  using region_coregion_Id by auto
 
 lift_definition scene_override :: "'a \<Rightarrow> 'a \<Rightarrow> ('a scene) \<Rightarrow> 'a" ("_ \<oplus>\<^sub>S _ on _" [95,0,96] 95)
 is "\<lambda> s\<^sub>1 s\<^sub>2 F. F s\<^sub>1 s\<^sub>2" .
