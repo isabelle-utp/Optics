@@ -12,11 +12,9 @@ struct
   let
     open Lens_Lib;
     open Syntax;
-    val ctx = Named_Target.theory_init thy
     val vns = map fst vds 
     val vfixes = map (fn (n, t) => (Binding.name n, SOME (lensT t astateT), NoSyn)) vds
     val vwbs   = map (mk_vwb_lens o free) vns;
-    val simp   = Attrib.check_src ctx (Token.make_src ("simp", Position.none) [])
     val imps   = map (fn e => Locale.check_global thy (e, Position.none)) exts
     (* List of lenses imported *)
     val ilnsls = map (filter (isLensT o snd) o map fst o Locale.params_of thy) imps
@@ -28,9 +26,9 @@ struct
   (* Fix each of the variables as lenses *)
   [ Element.Fixes vfixes 
   (* Assume that all lenses are very well-behaved and independent (as in a product space) *)
-  , Element.Assumes [((Binding.name "vwbs", [simp])
+  , Element.Assumes [((Binding.name "vwbs", @{attributes [simp, lens]})
                      , map (fn vwb => (vwb, [])) vwbs),
-                     ((Binding.name "indeps", [simp])
+                     ((Binding.name "indeps", @{attributes [simp, lens]})
                      , map (fn vwb => (vwb, [])) indeps)]
   ]
   end
