@@ -101,10 +101,24 @@ using assms proof (induct xs arbitrary: ys)
     by simp
 next
   case (Cons a xs)
-  hence ys: "set ys = insert a (set (removeAll a ys))"
-    by (auto)
+  consider (a_in) "a \<in> set xs" | (a_notin) "a \<notin> set xs"
+    by blast
   then show ?case
-    by (metis (no_types, lifting) Cons.hyps Cons.prems(1) Cons.prems(2) Diff_insert_absorb foldr_scene_union_removeAll insertCI insert_absorb list.simps(15) pairwise_insert set_removeAll)
+  proof cases
+    case a_in
+    then show ?thesis
+      by (metis Cons remdups.simps(2) set_remdups)
+  next
+    case a_notin
+    then have *: "\<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S (removeAll a ys)"
+      using Cons(2,3) by (auto intro!: Cons(1) simp: pairwise_insert)
+    then have "\<Squnion>\<^sub>S (a#xs) = (\<Squnion>\<^sub>S xs) \<squnion>\<^sub>S a"
+      by (simp add: scene_union_commute)
+    also have "... = \<Squnion>\<^sub>S (removeAll a ys) \<squnion>\<^sub>S a"
+      using * by simp
+    finally show ?thesis
+      using foldr_scene_union_removeAll Cons(2,3) by auto
+  qed
 qed
 
 lemma foldr_scene_removeAll:
@@ -224,7 +238,7 @@ bot_scene_space [intro]: "\<bottom>\<^sub>S \<in> scene_space" |
 Vars_scene_space [intro]: "x \<in> set Vars \<Longrightarrow> x \<in> scene_space" |
 union_scene_space [intro]: "\<lbrakk> x \<in> scene_space; y \<in> scene_space \<rbrakk> \<Longrightarrow> x \<squnion>\<^sub>S y \<in> scene_space"
 
-lemma idem_scene_space: "a \<in> scene_space \<Longrightarrow> idem_scene a"
+lemma idem_scene_space [intro, simp]: "a \<in> scene_space \<Longrightarrow> idem_scene a"
   by (induct rule: scene_space.induct) auto
 
 lemma set_Vars_scene_space [simp]: "set Vars \<subseteq> scene_space"
@@ -263,7 +277,7 @@ next
     using scene_union_pres_compat by blast
 qed
 
-lemma scene_space_compat: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a ##\<^sub>S b"
+lemma scene_space_compat [intro]: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a ##\<^sub>S b"
 proof (induct rule: scene_space.induct)
   case bot_scene_space
   then show ?case
@@ -372,12 +386,12 @@ proof (rule scene_union_indep_uniq[where Z="foldr (\<squnion>\<^sub>S) xs \<bott
        (metis \<open>idem_scene (- \<Squnion>\<^sub>S xs)\<close> local.span_Vars scene_span_def scene_union_compl uminus_scene_twice)
 qed
 
-lemma scene_space_uminus: "\<lbrakk> a \<in> scene_space \<rbrakk> \<Longrightarrow> - a \<in> scene_space"
+lemma scene_space_uminus [intro, simp]: "\<lbrakk> a \<in> scene_space \<rbrakk> \<Longrightarrow> - a \<in> scene_space"
   by (auto simp add: scene_space_vars_decomp_iff uminus_vars_other_vars)
      (metis filter_is_subset)
 
-lemma scene_space_inter: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
-  by (simp add: inf_scene_def scene_space.union_scene_space scene_space_uminus)
+lemma scene_space_inter [intro]: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
+  by (simp add: inf_scene_def scene_space.union_scene_space)
 
 lemma scene_union_foldr_remove_element:
   assumes "set xs \<subseteq> set Vars"
@@ -595,7 +609,7 @@ qed
 lemma scene_union_inter_minus:
   assumes "a \<in> scene_space" "b \<in> scene_space"
   shows "a \<squnion>\<^sub>S (b \<sqinter>\<^sub>S - a) = a \<squnion>\<^sub>S b"
-  by (metis assms(1) assms(2) bot_idem_scene idem_scene_space idem_scene_uminus local.scene_union_inter_distrib scene_demorgan1 scene_space_uminus scene_union_compl scene_union_unit(1) uminus_scene_twice)
+  by (simp add: assms scene_union_inter_distrib scene_union_compl)
 
 lemma scene_union_foldr_minus_element:
   assumes "a \<in> scene_space" "set xs \<subseteq> scene_space"
@@ -773,31 +787,31 @@ abbreviation (input) ebasis_lens :: "('a::two \<Longrightarrow> 's::scene_space)
 lemma basis_then_var [simp]: "basis_lens x \<Longrightarrow> var_lens x"
   using basis_lens.lens_in_basis basis_lens_def var_lens_axioms_def var_lens_def by blast
 
-lemma basis_lens_intro: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars \<rbrakk> \<Longrightarrow> basis_lens x"
+lemma basis_lensI: "\<lbrakk> vwb_lens x; \<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars \<rbrakk> \<Longrightarrow> basis_lens x"
   using basis_lens.intro basis_lens_axioms.intro by blast
 
-subsection \<open> Composite lenses \<close>
+lemma basis_lensE [elim]:
+  assumes "basis_lens x"
+  obtains "vwb_lens x" "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> set Vars"
+  by (simp add: assms)
 
+subsection \<open> Composite lenses \<close>
 locale composite_lens = vwb_lens +
-  assumes comp_in_Vars: "(\<lambda> a. a ;\<^sub>S x) ` set Vars \<subseteq> set Vars"
+  assumes comp_in_Vars: "\<And>a. a \<in> set Vars \<Longrightarrow> a ;\<^sub>S x \<in> set Vars"
 begin
 
-lemma Vars_closed_comp: "a \<in> set Vars \<Longrightarrow> a ;\<^sub>S x \<in> set Vars"
-  using comp_in_Vars by blast
-
-lemma scene_space_closed_comp:
+lemma scene_space_closed_comp [intro]:
   assumes "a \<in> scene_space"
   shows "a ;\<^sub>S x \<in> scene_space"
 proof -
-  obtain xs where xs: "a = \<Squnion>\<^sub>S xs" "set xs \<subseteq> set Vars"
-    using assms scene_space_vars_decomp by blast
-  have "(\<Squnion>\<^sub>S xs) ;\<^sub>S x = \<Squnion>\<^sub>S (map (\<lambda> a. a ;\<^sub>S x) xs)"
-    by (metis foldr_compat_dist pairwise_subset scene_space_compats xs(2))
-  also have "... \<in> scene_space"
-    by (auto simp add: scene_space_vars_decomp_iff)
-       (metis comp_in_Vars image_Un le_iff_sup le_supE list.set_map xs(2))
-  finally show ?thesis
-    by (simp add: xs)
+  obtain xs where xs: "set xs \<subseteq> set Vars" "a = \<Squnion>\<^sub>S xs"
+    using scene_space_vars_decomp_iff assms by blast
+  then have "b \<in> set xs \<Longrightarrow> b ;\<^sub>S x \<in> scene_space" for b
+    using comp_in_Vars by blast
+  then have "\<Squnion>\<^sub>S (map (\<lambda>y. y ;\<^sub>S x) xs) \<in> scene_space"
+    by (auto intro!: scene_space_foldr)
+  then show "a ;\<^sub>S x \<in> scene_space"
+    by (simp add: xs foldr_compat_dist pairwise_compat_Vars_subset)
 qed
 
 sublocale var_lens
@@ -805,8 +819,17 @@ proof
   show "\<lbrakk>x\<rbrakk>\<^sub>\<sim> \<in> scene_space"
     by (metis scene_comp_top_scene scene_space_closed_comp top_scene_space vwb_lens_axioms)
 qed
-
 end
+
+lemma composite_lensI:
+  assumes "vwb_lens x" "\<And>a. a \<in> set Vars \<Longrightarrow> a ;\<^sub>S x \<in> set Vars"
+  shows "composite_lens x"
+  by (intro composite_lens.intro composite_lens_axioms.intro; simp add: assms)
+
+lemma composite_lensE [elim]:
+  assumes "composite_lens x"
+  shows "((\<And>a. a \<in> set Vars \<Longrightarrow> a ;\<^sub>S x \<in> set Vars) \<Longrightarrow> vwb_lens x \<Longrightarrow> P) \<Longrightarrow> P"
+  using assms composite_lens.axioms(1) composite_lens.comp_in_Vars by blast
 
 lemma composite_implies_var_lens [simp]:
   "composite_lens x \<Longrightarrow> var_lens x"
@@ -816,18 +839,18 @@ text \<open> The extension of any lens in the scene space remains in the scene s
 
 lemma composite_lens_comp [simp]:
   "\<lbrakk> composite_lens a; var_lens x \<rbrakk> \<Longrightarrow> var_lens (x ;\<^sub>L a)"
-  by (metis comp_vwb_lens composite_lens.scene_space_closed_comp composite_lens_def lens_scene_comp var_lens_axioms_def var_lens_def)
+  by (metis comp_vwb_lens composite_lens.scene_space_closed_comp composite_lens_def lens_scene_comp
+      var_lens_axioms_def var_lens_def)
 
 lemma comp_composite_lens [simp]:
   "\<lbrakk> composite_lens a; composite_lens x \<rbrakk> \<Longrightarrow> composite_lens (x ;\<^sub>L a)"
-  by (auto intro!: composite_lens.intro simp add: composite_lens_axioms_def)
-     (metis composite_lens.Vars_closed_comp composite_lens.axioms(1) scene_comp_assoc)
+  by (metis comp_vwb_lens composite_lens_axioms_def composite_lens_def scene_comp_assoc)
 
 text \<open> A basis lens within a composite lens remains a basis lens (i.e. it remains atomic) \<close>
 
 lemma composite_lens_basis_comp [simp]:
   "\<lbrakk> composite_lens a; basis_lens x \<rbrakk> \<Longrightarrow> basis_lens (x ;\<^sub>L a)"
-  by (metis basis_lens.lens_in_basis basis_lens_def basis_lens_intro comp_vwb_lens composite_lens.Vars_closed_comp composite_lens_def lens_scene_comp)
+  using lens_scene_comp by (force intro: basis_lensI)
 
 lemma id_composite_lens: "composite_lens 1\<^sub>L"
   by (force intro: composite_lens.intro composite_lens_axioms.intro)
@@ -836,6 +859,7 @@ lemma fst_composite_lens: "composite_lens fst\<^sub>L"
   by (rule composite_lens.intro, simp add: fst_vwb_lens, rule composite_lens_axioms.intro, simp add: Vars_prod_def)
 
 lemma snd_composite_lens: "composite_lens snd\<^sub>L"
-  by (rule composite_lens.intro, simp add: snd_vwb_lens, rule composite_lens_axioms.intro, simp add: Vars_prod_def)
+  by (intro composite_lens.intro composite_lens_axioms.intro;
+      simp add: snd_vwb_lens Vars_prod_def)
 
 end

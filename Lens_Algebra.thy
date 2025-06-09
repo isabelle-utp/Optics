@@ -123,7 +123,7 @@ lemma id_vwb_lens [simp]: "vwb_lens 1\<^sub>L"
 lemma unit_vwb_lens [simp]: "vwb_lens 0\<^sub>L"
   by (unfold_locales, simp_all add: zero_lens_def)
 
-lemma comp_vwb_lens: "\<lbrakk> vwb_lens x; vwb_lens y \<rbrakk> \<Longrightarrow> vwb_lens (x ;\<^sub>L y)"
+lemma comp_vwb_lens [intro]: "\<lbrakk> vwb_lens x; vwb_lens y \<rbrakk> \<Longrightarrow> vwb_lens (x ;\<^sub>L y)"
   by (unfold_locales, simp_all add: lens_comp_def weak_lens.put_closure)
 
 lemma unit_ief_lens: "ief_lens 0\<^sub>L"

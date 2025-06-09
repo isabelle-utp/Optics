@@ -125,11 +125,10 @@ lemmas scene_space_lemmas =
    lens_indep_left_ext lens_indep_right_ext
 
 method basis_lens uses defs =
-  (rule basis_lens_intro, simp_all add: scene_space_defs alpha_scene_space_def alpha_scene_space'_def scene_space_lemmas)
+  (auto intro!: basis_lensI simp: scene_space_defs alpha_scene_space_def alpha_scene_space'_def scene_space_lemmas)
 
 method composite_lens =
-  (rule composite_lens.intro, simp, rule composite_lens_axioms.intro
-  ,simp add: scene_space_defs alpha_scene_space_def alpha_scene_space'_def scene_space_lemmas image_comp)
+  (auto intro!: composite_lensI simp add: scene_space_defs alpha_scene_space_def alpha_scene_space'_def scene_space_lemmas image_comp)
 
 method more_frame = 
   ((simp add: frame_scene_top frame_scene_foldr)?
