@@ -984,6 +984,9 @@ interpretation ss_clat: complete_lattice scene_gorder
   and "Lattice.sup scene_gorder = (\<Union>\<^sub>S)" and "Lattice.inf scene_gorder = (\<Inter>\<^sub>S)" and "Lattice.join scene_gorder = (\<union>\<^sub>S)"
   by (auto simp add: scene_space_complete_lattice elem_def set_eq_def sup_scene_space_def fun_eq_iff join_def ss_union_def sup_scene_space_eq inf_scene_space_eq)
 
+declare ss_clat.refl [simp del]
+declare ss_clat.mem_imp_elem [simp del]
+
 subsection \<open> Scene space and basis lenses \<close>
 
 locale var_lens = vwb_lens +
