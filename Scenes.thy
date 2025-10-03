@@ -191,6 +191,9 @@ lemma uminus_bot_scene [simp]: "- \<bottom>\<^sub>S = \<top>\<^sub>S"
 lemma uminus_scene_twice: "- (- (X :: 's scene)) = X"
   by (transfer, simp)
 
+lemma inj_uminus_scene: "inj (uminus :: 'a scene \<Rightarrow> 'a scene)"
+  by (metis injI uminus_scene_twice)
+
 lemma scene_override_id [simp]: "S\<^sub>1 \<oplus>\<^sub>S S\<^sub>2 on \<top>\<^sub>S = S\<^sub>2"
   by (transfer, simp)
 

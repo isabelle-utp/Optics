@@ -1,7 +1,7 @@
 section \<open> Scene Spaces \<close>
 
 theory Scene_Spaces            
-  imports Scenes
+  imports "HOL-Algebra.Complete_Lattice" Scenes
 begin
 
 subsection \<open> Preliminaries \<close>
@@ -376,6 +376,9 @@ lemma scene_space_uminus: "\<lbrakk> a \<in> scene_space \<rbrakk> \<Longrightar
   by (auto simp add: scene_space_vars_decomp_iff uminus_vars_other_vars)
      (metis filter_is_subset)
 
+lemma uminus_image_scene_space: "uminus ` scene_space = scene_space"
+  by (metis (mono_tags, opaque_lifting) Set.set_eqI image_subset_iff scene_space_uminus subset_eq uminus_scene_twice)
+
 lemma scene_space_inter: "\<lbrakk> a \<in> scene_space; b \<in> scene_space \<rbrakk> \<Longrightarrow> a \<sqinter>\<^sub>S b \<in> scene_space"
   by (simp add: inf_scene_def scene_space.union_scene_space scene_space_uminus)
 
@@ -745,6 +748,241 @@ instance proof
 qed  
 
 end
+
+subsection \<open> Complete lattice of scenes \<close>
+
+definition Sup_scene :: "'a::scene_space scene set \<Rightarrow> 'a scene" where 
+"Sup_scene A = \<Squnion>\<^sub>S (SOME xs. set xs = (A \<inter> scene_space))"
+
+lemma Sup_scene_is_foldr_scene:
+  assumes "set xs \<subseteq> scene_space"
+  shows "Sup_scene (set xs) = \<Squnion>\<^sub>S xs"
+proof -
+  have "set (SOME ys. set ys = set xs) = set xs"
+    by (rule someI[where x="xs"], simp)
+  thus ?thesis
+    by (metis Sup_scene_def assms foldr_scene_union_eq_scene_space inf.absorb_iff1)
+qed
+
+lemma Sup_scene_closed: "Sup_scene A \<in> scene_space"
+  unfolding Sup_scene_def proof -
+  fix A :: "'a scene set"
+  obtain xs where A: "A \<inter> scene_space = set xs"
+    by (metis finite_Int finite_list finite_scene_space)
+  hence "\<Squnion>\<^sub>S xs \<in> scene_space"
+    using scene_space_foldr by auto
+  moreover have "\<Squnion>\<^sub>S (SOME xs. set xs = A \<inter> scene_space) = \<Squnion>\<^sub>S xs"
+    by (metis (mono_tags, lifting) A Int_iff foldr_scene_union_eq_scene_space someI subsetI)
+  ultimately show "\<Squnion>\<^sub>S (SOME xs. set xs = A \<inter> scene_space) \<in> scene_space"
+    by simp
+qed
+
+notation Sup_scene ("\<Union>\<^sub>S")
+
+lemma Sup_scene_bot [simp]: "\<Union>\<^sub>S {} = bot"
+  by (simp add: Sup_scene_def)
+
+definition Inf_scene :: "'a::scene_space scene set \<Rightarrow> 'a scene" where
+ "Inf_scene A = - (Sup_scene (uminus ` A))"
+
+notation Inf_scene ("\<Inter>\<^sub>S")
+
+lemma Inf_scene_top:  "\<Inter>\<^sub>S {} = top_class.top"
+  by (simp add: Inf_scene_def)
+
+lemma uminus_scene_Inf: "- \<Inter>\<^sub>S A = \<Union>\<^sub>S (uminus ` A)"
+  by (simp add: Inf_scene_def uminus_scene_twice)
+
+lemma uminus_scene_Sup: "- \<Union>\<^sub>S A = \<Inter>\<^sub>S (uminus ` A)"
+  by (metis (no_types, lifting) ext image_ident image_image uminus_scene_Inf uminus_scene_twice)
+  
+definition scene_gorder :: "'a::scene_space scene gorder" where 
+"scene_gorder = \<lparr> carrier = scene_space, eq = (=), le = (\<le>) \<rparr>"
+
+lemma carrier_scene_gorder [simp]: "carrier scene_gorder = scene_space"
+  by (simp add: scene_gorder_def)
+
+lemma eq_scene_gorder [simp]: "eq scene_gorder = (=)"
+  by (simp add: scene_gorder_def)
+
+lemma le_scene_gorder [simp]: "le scene_gorder = (\<subseteq>\<^sub>S)"
+  by (simp add: scene_gorder_def)
+
+lemma Sup_scene_props:
+  assumes "A \<subseteq> scene_space"
+  shows le_Sup_scene: "x \<in> A \<Longrightarrow> x \<subseteq>\<^sub>S \<Union>\<^sub>S A" 
+  and Sup_scene_le: "\<lbrakk> z \<in> scene_space; \<And>x. x \<in> A \<Longrightarrow> x \<subseteq>\<^sub>S z \<rbrakk> \<Longrightarrow> \<Union>\<^sub>S A \<subseteq>\<^sub>S z"
+proof -  
+  obtain xs where xs: "A = set xs"
+    by (metis assms(1) finite_list finite_scene_space rev_finite_subset)
+  have xs_ss: "set xs \<subseteq> scene_space"
+    using assms(1) xs by auto
+  show 1: "x \<in> A \<Longrightarrow> x \<le> \<Union>\<^sub>S A"
+    by (simp add: Sup_scene_is_foldr_scene scene_space_in_foldr xs xs_ss)
+  show 2: "\<lbrakk> z \<in> scene_space; \<And>x. x \<in> A \<Longrightarrow> x \<le> z \<rbrakk> \<Longrightarrow> \<Union>\<^sub>S A \<le> z"
+    by (simp add: Upper_def Sup_scene_is_foldr_scene xs xs_ss)
+       (meson scene_space_foldr_lb subset_iff xs_ss)    
+qed
+
+lemma Sup_scene_lub: "A \<subseteq> scene_space \<Longrightarrow> is_lub scene_gorder (\<Union>\<^sub>S A) A"
+  by (rule_tac least_UpperI) 
+     (auto simp add: Upper_def intro!: Sup_scene_props Sup_scene_closed)
+
+definition ss_union :: "'a::scene_space scene \<Rightarrow> 'a scene \<Rightarrow> 'a scene" (infixl \<open>\<union>\<^sub>S\<close> 65) where
+"ss_union x y = Sup_scene {x, y}"
+
+lemma sup_scene_union: 
+  assumes "x \<in> scene_space" "y \<in> scene_space"
+  shows "x \<union>\<^sub>S y = x \<squnion>\<^sub>S y"
+proof -
+  have "x \<union>\<^sub>S y = \<Squnion>\<^sub>S [x, y]"
+    by (metis ss_union_def Sup_scene_is_foldr_scene assms(1,2) bot.extremum insert_subset list.set(1) list.simps(15))
+  thus ?thesis
+    by simp
+qed
+
+lemma Inf_scene_glb:
+  assumes "A \<subseteq> scene_space"
+  shows "is_glb scene_gorder (\<Inter>\<^sub>S A) A"
+proof (rule greatest_LowerI, simp_all add: Lower_def assms)
+  fix x :: \<open>'a scene\<close>
+  assume xA: \<open>x \<in> A\<close>
+  have "\<Inter>\<^sub>S A \<le> x \<longleftrightarrow> (- \<Union>\<^sub>S (uminus ` A) \<le> x)"
+    by (simp add: Inf_scene_def)
+  also have "... \<longleftrightarrow> (- x \<le> \<Union>\<^sub>S (uminus ` A))"
+    using scene_indep_sym scene_le_iff_indep_inv by blast
+  also have "..."
+    by (metis assms image_eqI image_subset_iff in_mono le_Sup_scene scene_space_uminus xA)
+  finally show "\<Inter>\<^sub>S A \<le> x" .
+next
+  fix y
+  assume a:"(\<forall>x. x \<in> A \<and> x \<in> scene_space \<longrightarrow> y \<subseteq>\<^sub>S x) \<and> y \<in> scene_space"
+  have "y \<le> \<Inter>\<^sub>S A \<longleftrightarrow> \<Union>\<^sub>S (uminus ` A) \<le> - y"
+    by (metis Inf_scene_def scene_indep_sym scene_le_iff_indep_inv uminus_scene_twice)
+  also from assms a have "..."
+    using scene_space_uminus scene_compl_subset_iff
+    by (force intro!: Sup_scene_le)
+  finally show "y \<subseteq>\<^sub>S \<Inter>\<^sub>S A"
+    by blast
+next 
+  show "\<Inter>\<^sub>S A \<in> scene_space"
+    by (metis Inf_scene_def Sup_scene_closed scene_space_uminus)
+qed
+
+lemma scene_space_complete_lattice: "complete_lattice scene_gorder"
+proof (unfold_locales, simp_all add: scene_gorder_def)
+  fix x :: \<open>'a scene\<close>
+  assume \<open>x \<in> scene_space\<close>
+  show \<open>x \<subseteq>\<^sub>S x\<close>
+    by (simp add: subscene_refl) 
+next
+  fix x :: \<open>'a scene\<close> and y :: \<open>'a scene\<close>
+  assume 
+    \<open>x \<subseteq>\<^sub>S y\<close> and
+    \<open>y \<subseteq>\<^sub>S x\<close> and
+    \<open>x \<in> scene_space\<close> and
+    \<open>y \<in> scene_space\<close>
+  thus \<open>x = y\<close>
+    using idem_scene_space subscene_antisym by auto 
+next
+  fix x :: \<open>'a scene\<close> and y :: \<open>'a scene\<close> and z :: \<open>'a scene\<close>
+  assume 
+    \<open>x \<subseteq>\<^sub>S y\<close> and
+    \<open>y \<subseteq>\<^sub>S z\<close> and
+    \<open>x \<in> scene_space\<close> and
+    \<open>y \<in> scene_space\<close> and
+    \<open>z \<in> scene_space\<close>
+  thus \<open>x \<subseteq>\<^sub>S z\<close>
+    using idem_scene_space subscene_trans by auto 
+next
+  fix A :: \<open>'a scene set\<close>
+  assume A: \<open>A \<subseteq> scene_space\<close>
+  
+  hence "is_lub \<lparr>carrier = scene_space, eq = (=), le = (\<subseteq>\<^sub>S)\<rparr> (\<Union>\<^sub>S A) A"
+    by (rule_tac least_UpperI) 
+       (auto simp add: Upper_def intro!: Sup_scene_props Sup_scene_closed)
+  thus "\<exists>s. is_lub \<lparr>carrier = scene_space, eq = (=), le = (\<subseteq>\<^sub>S)\<rparr> s A"
+    by blast
+next
+  fix A :: \<open>'a scene set\<close>
+  assume A: \<open>A \<subseteq> scene_space\<close>
+  have "is_glb \<lparr>carrier = scene_space, eq = (=), le = (\<subseteq>\<^sub>S)\<rparr> (\<Inter>\<^sub>S A) A"
+    by (metis A Inf_scene_glb scene_gorder_def)
+  thus "\<exists>i. is_glb \<lparr>carrier = scene_space, eq = (=), le = (\<subseteq>\<^sub>S)\<rparr> i A"
+    by blast
+qed
+
+  
+lemma (in complete_lattice) is_lub_modulo_carrier:
+  "is_lub L x A \<longleftrightarrow> is_lub L x (A \<inter> carrier L)"
+  by (simp add: Upper_def)
+
+lemma (in complete_lattice) is_glb_modulo_carrier:
+  "is_glb L x A \<longleftrightarrow> is_glb L x (A \<inter> carrier L)"
+  by (simp add: Lower_def)
+
+lemma sup_scene_space:
+  assumes "A \<subseteq> scene_space"
+  shows "Lattice.sup scene_gorder A = \<Union>\<^sub>S A"
+proof -
+  interpret ss_clat: complete_lattice scene_gorder
+    by (simp add: scene_space_complete_lattice)
+  show ?thesis
+    by (metis Sup_scene_lub assms carrier_scene_gorder ss_clat.least_unique ss_clat.sup_lub)
+qed
+
+lemma sup_scene_space_eq: "Lattice.sup scene_gorder A = \<Union>\<^sub>S A"
+proof -  
+  have "Lattice.sup scene_gorder A = Lattice.sup scene_gorder (A \<inter> scene_space)"
+    by (metis Eps_cong carrier_scene_gorder complete_lattice.is_lub_modulo_carrier scene_space_complete_lattice sup_def)
+  also have "... = \<Union>\<^sub>S (A \<inter> scene_space)"
+    by (simp add: sup_scene_space)
+  also have "... = \<Union>\<^sub>S A"
+    by (simp add: Sup_scene_def)
+  finally show ?thesis .
+qed
+
+lemma sup_scene_space_def: "Lattice.sup scene_gorder = \<Union>\<^sub>S"
+  using sup_scene_space_eq by auto
+
+lemma inf_scene_space:
+  assumes "A \<subseteq> scene_space"
+  shows "Lattice.inf scene_gorder A = \<Inter>\<^sub>S A"
+proof -
+  interpret ss_clat: complete_lattice scene_gorder
+    by (simp add: scene_space_complete_lattice)
+  show ?thesis
+    by (metis Inf_scene_glb assms carrier_scene_gorder ss_clat.greatest_unique ss_clat.inf_glb)
+qed
+
+lemma inf_scene_space_eq: "Lattice.inf scene_gorder A = \<Inter>\<^sub>S A"
+proof -
+  have "Lattice.inf scene_gorder A = Lattice.inf scene_gorder (A \<inter> scene_space)"
+    by (metis Eps_cong carrier_scene_gorder complete_lattice.is_glb_modulo_carrier scene_space_complete_lattice inf_def)
+  also have "... = \<Inter>\<^sub>S (A \<inter> scene_space)"
+    by (simp add: inf_scene_space)
+  also have "... = \<Inter>\<^sub>S A"
+    by (simp add: Inf_scene_def inj_uminus_scene image_Int Sup_scene_def uminus_image_scene_space)
+  finally show ?thesis .
+qed
+
+lemma scene_gorder_eqs [simp]:
+  "\<top>\<^bsub>scene_gorder\<^esub> = \<top>\<^sub>S"
+  "\<bottom>\<^bsub>scene_gorder\<^esub> = \<bottom>\<^sub>S"
+proof -
+  interpret ss_clat: complete_lattice scene_gorder
+    by (simp add: scene_space_complete_lattice)
+  show "\<top>\<^bsub>scene_gorder\<^esub> = \<top>\<^sub>S"
+    by (metis gorder.simps(1) partial_object.simps(1) scene_gorder_def scene_top_greatest ss_clat.le_antisym ss_clat.top_closed ss_clat.top_higher top_scene_space)
+  show "\<bottom>\<^bsub>scene_gorder\<^esub> = \<bottom>\<^sub>S"
+    by (metis gorder.simps(1) partial_object.simps(1) scene_bot_least scene_gorder_def scene_space.intros(1) ss_clat.bottom_lower ss_clat.le_antisym ss_clat.weak_partial_order_bottom_axioms
+        weak_partial_order_bottom.bottom_closed)
+qed
+
+interpretation ss_clat: complete_lattice scene_gorder  
+  rewrites "carrier scene_gorder = scene_space" and "elem scene_gorder = (\<in>)"  and "le scene_gorder = (\<subseteq>\<^sub>S)" and "eq scene_gorder = (=)" and  "\<top>\<^bsub>scene_gorder\<^esub> = \<top>\<^sub>S" and "\<bottom>\<^bsub>scene_gorder\<^esub> = \<bottom>\<^sub>S"
+  and "Lattice.sup scene_gorder = (\<Union>\<^sub>S)" and "Lattice.inf scene_gorder = (\<Inter>\<^sub>S)" and "Lattice.join scene_gorder = (\<union>\<^sub>S)"
+  by (auto simp add: scene_space_complete_lattice elem_def set_eq_def sup_scene_space_def fun_eq_iff join_def ss_union_def sup_scene_space_eq inf_scene_space_eq)
 
 subsection \<open> Scene space and basis lenses \<close>
 
