@@ -13,6 +13,7 @@ session "Optics" (AFP) = "HOL-Eisbach" +
   options [timeout = 600]
   sessions
     "HOL-Library"
+    "HOL-Algebra"
   theories
     Interp
     Two

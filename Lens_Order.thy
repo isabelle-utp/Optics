@@ -153,6 +153,12 @@ lemma lens_quotient_plus_den1:
 lemma lens_quotient_plus_den2: "\<lbrakk> weak_lens x; weak_lens z; x \<bowtie> z; y \<subseteq>\<^sub>L z \<rbrakk> \<Longrightarrow> y /\<^sub>L (x +\<^sub>L z) = (y /\<^sub>L z) ;\<^sub>L snd\<^sub>L "
   by (auto simp add: lens_defs prod.case_eq_if fun_eq_iff lens_indep.lens_put_irr2)
 
+lemma lens_quotient_plus_den3: 
+  assumes "weak_lens x" "weak_lens z" "x \<bowtie> z" "y \<subseteq>\<^sub>L z"
+  shows "y /\<^sub>L (z +\<^sub>L x) = (y /\<^sub>L z) ;\<^sub>L fst\<^sub>L "
+  using assms
+  by (auto simp add: lens_defs prod.case_eq_if fun_eq_iff lens_indep.lens_put_irr1 lens_indep.lens_put_irr2)
+
 text \<open>There follows a number of laws relating sublens and summation. Firstly, sublens is preserved
   by summation. \<close>
   
@@ -228,6 +234,11 @@ text \<open>Any composite lens is larger than an element of the lens, as demonst
     
 lemma lens_plus_ub [simp]: "wb_lens Y \<Longrightarrow> X \<subseteq>\<^sub>L X +\<^sub>L Y"
   by (metis fst_lens_plus fst_vwb_lens sublens_def)
+
+lemma lens_plus_left_sublens: 
+  assumes "vwb_lens Y" "Y \<bowtie> Z" "X \<subseteq>\<^sub>L Z" 
+  shows "X \<subseteq>\<^sub>L Z +\<^sub>L Y"
+  using lens_plus_ub sublens_trans vwb_lens_def assms by blast
 
 lemma lens_plus_right_sublens:
   "\<lbrakk> vwb_lens Y; Y \<bowtie> Z; X \<subseteq>\<^sub>L Z \<rbrakk> \<Longrightarrow> X \<subseteq>\<^sub>L Y +\<^sub>L Z"
