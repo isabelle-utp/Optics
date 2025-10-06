@@ -230,6 +230,9 @@ lemma idem_scene_space: "a \<in> scene_space \<Longrightarrow> idem_scene a"
 lemma set_Vars_scene_space [simp]: "set Vars \<subseteq> scene_space"
   by blast
 
+lemma mem_Vars_scene_space [simp]: "A \<subseteq> set Vars \<Longrightarrow> A \<subseteq> scene_space"
+  by blast
+
 lemma pairwise_compat_Vars_subset: "set xs \<subseteq> set Vars \<Longrightarrow> pairwise (##\<^sub>S) (set xs)"
   using pairwise_subset scene_space_compats by blast
 
@@ -308,8 +311,8 @@ next
 qed
 
 lemma scene_space_vars_decomp_iff: "a \<in> scene_space \<longleftrightarrow> (\<exists>xs. set xs \<subseteq> set Vars \<and> a = foldr (\<squnion>\<^sub>S) xs \<bottom>\<^sub>S)"
-  apply (auto simp add: scene_space_vars_decomp scene_space.Vars_scene_space scene_space_foldr)
-   apply (simp add: scene_space.Vars_scene_space scene_space_foldr subset_eq)
+  apply (rule iffI)
+   apply (simp add: scene_space_foldr subset_eq)
   using scene_space_vars_decomp apply auto[1]
   by (meson dual_order.trans scene_space_foldr set_Vars_scene_space)
 
@@ -712,9 +715,54 @@ lemma le_vars_then_equal: "\<lbrakk> x \<in> set Vars; y \<in> set Vars; x \<le>
 
 end
 
+lemma scene_union_le_iff: 
+  assumes "a \<in> scene_space" "b \<in> scene_space"
+  shows "a \<squnion>\<^sub>S b \<le> c \<longleftrightarrow> a \<le> c \<and> b \<le> c"
+  by (metis assms idem_scene_space idem_scene_union scene_space_compat
+      scene_space_ub scene_union_commute scene_union_mono subscene_trans)
+
 lemma foldr_scene_union_eq_scene_space: 
   "\<lbrakk> set xs \<subseteq> scene_space; set xs = set ys \<rbrakk> \<Longrightarrow> \<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S ys"
   by (metis foldr_scene_union_eq_sets pairwise_def pairwise_subset scene_space_compat)
+
+lemma foldr_scene_le_then_subset:
+  assumes "set xs \<subseteq> set Vars" "set ys \<subseteq> set Vars" "\<Squnion>\<^sub>S xs \<le> \<Squnion>\<^sub>S ys" "\<bottom>\<^sub>S \<notin> set xs"
+  shows "set xs \<subseteq> set ys"
+  using assms proof (induct xs arbitrary: ys)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a xs)
+  then show ?case 
+    apply (simp add: scene_union_le_iff scene_space_foldr)
+    apply (metis (mono_tags, lifting) Vars_indep_foldr bot_idem_scene foldr_scene_union_filter
+        removeAll_id scene_bot_least scene_indep_pres_compat scene_le_iff_indep_inv
+        scene_space_compats subscene_antisym top_scene_eq uminus_bot_scene
+        uminus_vars_other_vars)
+    done
+qed
+
+lemma foldr_scene_eq_then_eq:
+  assumes "set xs \<subseteq> set Vars" "set ys \<subseteq> set Vars" "\<Squnion>\<^sub>S xs = \<Squnion>\<^sub>S ys" "\<bottom>\<^sub>S \<notin> set xs" "\<bottom>\<^sub>S \<notin> set ys"
+  shows "set xs = set ys"
+  by (simp add: assms dual_order.eq_iff foldr_scene_le_then_subset scene_union_foldr_subset)
+
+definition "scene_decomp a = (THE B. B \<subseteq> set Vars \<and> \<bottom>\<^sub>S \<notin> B \<and> (\<exists> xs. B = set xs \<and> a = \<Squnion>\<^sub>S xs))"
+
+lemma 
+  assumes "a \<in> scene_space" 
+  shows "scene_decomp a \<subseteq> set Vars"
+proof -
+  obtain B where B:"B \<subseteq> set Vars" "\<exists> xs. B = set xs \<and> a = \<Squnion>\<^sub>S xs"
+    by (metis assms scene_space_vars_decomp_iff)
+  from B show ?thesis
+  apply (simp add: scene_decomp_def)
+    apply (rule theI2[where a="B - {\<bottom>\<^sub>S}"])
+    apply auto
+    apply (metis scene_union_foldr_remove_element scene_union_unit(2)
+        set_removeAll)
+    apply (metis foldr_scene_le_then_subset scene_union_foldr_subset subset_iff)
+    oops
 
 subsection \<open> Mapping a lens over a scene list \<close>
 
@@ -942,7 +990,27 @@ next
     by blast
 qed
 
-  
+lemma basis_scene_decomposition:
+  assumes "a \<in> scene_space"
+  shows "\<exists> B\<subseteq>set Vars. a = \<Union>\<^sub>S B"
+  by (metis Sup_scene_is_foldr_scene assms scene_space_vars_decomp_iff set_Vars_scene_space subset_trans)
+
+lemma 
+    assumes "x \<in> set Vars" "A \<subseteq> set Vars"
+    shows "x \<le> \<Union>\<^sub>S A \<longleftrightarrow> (x = \<bottom>\<^sub>S \<or> x \<in> A)"
+  oops
+
+lemma 
+  assumes "A \<subseteq> set Vars" "B \<subseteq> set Vars" "\<Union>\<^sub>S A = \<Union>\<^sub>S B" "x \<in> A"
+  shows "x \<in> B"
+  oops
+
+lemma 
+  assumes "a \<in> scene_space"
+  shows "scene_decomp a \<subseteq> set Vars"
+  oops
+
+
 lemma (in complete_lattice) is_lub_modulo_carrier:
   "is_lub L x A \<longleftrightarrow> is_lub L x (A \<inter> carrier L)"
   by (simp add: Upper_def)
@@ -1042,7 +1110,7 @@ lemma scene_union_dist:
   shows "A \<union>\<^sub>S (B \<inter>\<^sub>S C) = (A \<union>\<^sub>S B) \<inter>\<^sub>S (A \<union>\<^sub>S C)"
   by (metis assms(1,2,3) inf_scene_inter scene_space_class.scene_union_inter_distrib ss_clat.join_closed ss_clat.meet_closed sup_scene_union)
 
-lemma Sup_scene_dist: 
+lemma Sup_scene_dist:
   assumes "a \<in> scene_space" "B \<subseteq> scene_space"
   shows "a \<union>\<^sub>S (\<Inter>\<^sub>S B) = \<Inter>\<^sub>S {a \<union>\<^sub>S b | b. b \<in> B}"
 proof -
@@ -1083,6 +1151,11 @@ lemma scene_inter_dist:
   assumes "A \<in> scene_space" "B \<in> scene_space" "C \<in> scene_space"
   shows "A \<inter>\<^sub>S (B \<union>\<^sub>S C) = (A \<inter>\<^sub>S B) \<union>\<^sub>S (A \<inter>\<^sub>S C)"
   by (metis (no_types, opaque_lifting) Sup_scene_closed assms(1,2,3) inf_scene_inter scene_inter_union_distrib ss_clat.meet_closed ss_union_def sup_scene_union)
+
+lemma Inf_scene_dist:
+  assumes "a \<in> scene_space" "B \<subseteq> scene_space"
+  shows "a \<inter>\<^sub>S (\<Union>\<^sub>S B) = \<Union>\<^sub>S {a \<inter>\<^sub>S b | b. b \<in> B}"
+  oops
 
 lemma scene_union_diff: 
   assumes "A \<in> scene_space" "B \<in> scene_space" "C \<in> scene_space"
