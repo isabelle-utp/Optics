@@ -905,8 +905,6 @@ next
     by (simp add: scene_decomp_union scene_space_foldr)
 qed
 
-lemmas scene_decomp_transfer = scene_decomp_top scene_decomp_bot scene_decomp_union scene_decomp_uminus scene_decomp_inter
-
 subsection \<open> Mapping a lens over a scene list \<close>
 
 definition map_lcomp :: "'b scene list \<Rightarrow> ('b \<Longrightarrow> 'a) \<Rightarrow> 'a scene list" where
@@ -1004,8 +1002,6 @@ definition Inf_scene :: "'a::scene_space scene set \<Rightarrow> 'a scene" where
 
 notation Inf_scene ("\<Inter>\<^sub>S")
 
-find_theorems uminus "(\<Union>)"
-
 lemma Inf_scene_decomp_transfer:
   assumes "A \<subseteq> scene_space" "A \<noteq> {}"
   shows "\<lbrakk>\<Inter>\<^sub>S A\<rbrakk>\<^sub>S = (\<Inter>x\<in>A. \<lbrakk>x\<rbrakk>\<^sub>S)" 
@@ -1036,6 +1032,10 @@ proof -
     by (metis INF_eq_const INT_E decomp_nbot in_mono inf.order_iff subset_Compl_singleton)
   finally show ?thesis .
 qed
+
+lemmas scene_decomp_transfer = 
+  scene_decomp_top scene_decomp_bot scene_decomp_union scene_decomp_uminus scene_decomp_inter
+  Sup_scene_decomp_transfer Inf_scene_decomp_transfer
 
 lemma Inf_scene_top:  "\<Inter>\<^sub>S {} = top_class.top"
   by (simp add: Inf_scene_def)
@@ -1186,22 +1186,6 @@ lemma basis_scene_decomposition:
   shows "\<exists> B\<subseteq>set Vars. a = \<Union>\<^sub>S B"
   by (metis Sup_scene_is_foldr_scene assms scene_space_vars_decomp_iff set_Vars_scene_space subset_trans)
 
-lemma 
-    assumes "x \<in> set Vars" "A \<subseteq> set Vars"
-    shows "x \<le> \<Union>\<^sub>S A \<longleftrightarrow> (x = \<bottom>\<^sub>S \<or> x \<in> A)"
-  oops
-
-lemma 
-  assumes "A \<subseteq> set Vars" "B \<subseteq> set Vars" "\<Union>\<^sub>S A = \<Union>\<^sub>S B" "x \<in> A"
-  shows "x \<in> B"
-  oops
-
-lemma 
-  assumes "a \<in> scene_space"
-  shows "scene_decomp a \<subseteq> set Vars"
-  oops
-
-
 lemma (in complete_lattice) is_lub_modulo_carrier:
   "is_lub L x A \<longleftrightarrow> is_lub L x (A \<inter> carrier L)"
   by (simp add: Upper_def)
@@ -1346,6 +1330,10 @@ lemma scene_inter_dist:
 lemma Inf_scene_dist:
   assumes "a \<in> scene_space" "B \<subseteq> scene_space"
   shows "a \<inter>\<^sub>S (\<Union>\<^sub>S B) = \<Union>\<^sub>S {a \<inter>\<^sub>S b | b. b \<in> B}"
+proof -
+  have "{a \<inter>\<^sub>S b |b. b \<in> B} \<subseteq> scene_space"
+    using assms(1,2) ss_clat.meet_closed by auto
+  thus ?thesis
   oops
 
 lemma scene_union_diff: 
