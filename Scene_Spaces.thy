@@ -747,22 +747,47 @@ lemma foldr_scene_eq_then_eq:
   shows "set xs = set ys"
   by (simp add: assms dual_order.eq_iff foldr_scene_le_then_subset scene_union_foldr_subset)
 
-definition "scene_decomp a = (THE B. B \<subseteq> set Vars \<and> \<bottom>\<^sub>S \<notin> B \<and> (\<exists> xs. B = set xs \<and> a = \<Squnion>\<^sub>S xs))"
+definition scene_decomp :: "'a::scene_space scene \<Rightarrow> 'a scene set" ("\<lbrakk>_\<rbrakk>\<^sub>S") where
+  "scene_decomp a = (THE B. B \<subseteq> set Vars \<and> \<bottom>\<^sub>S \<notin> B \<and> (\<exists> xs. B = set xs \<and> a = \<Squnion>\<^sub>S xs))"
 
-lemma 
+lemma scene_decomp:
   assumes "a \<in> scene_space" 
-  shows "scene_decomp a \<subseteq> set Vars"
+  shows decomp_Vars: "scene_decomp a \<subseteq> set Vars" (is "?A")
+  and decomp_nbot: "\<bottom>\<^sub>S \<notin> scene_decomp a" (is "?B")
+  and decomp_foldr_scene: "\<exists> xs. scene_decomp a = set xs \<and> a = \<Squnion>\<^sub>S xs" (is "?C")
 proof -
   obtain B where B:"B \<subseteq> set Vars" "\<exists> xs. B = set xs \<and> a = \<Squnion>\<^sub>S xs"
     by (metis assms scene_space_vars_decomp_iff)
-  from B show ?thesis
-  apply (simp add: scene_decomp_def)
-    apply (rule theI2[where a="B - {\<bottom>\<^sub>S}"])
+  hence sd: "scene_decomp a = B - {\<bottom>\<^sub>S}"
+    unfolding scene_decomp_def
+    apply (rule_tac the_equality)
+    apply (metis (no_types, lifting) Diff_empty Diff_iff Diff_insert0 Diff_subset
+        dual_order.trans foldr_scene_union_removeAll insertCI pairwise_subset
+        scene_space_compats scene_union_unit(1) set_removeAll)
     apply auto
-    apply (metis scene_union_foldr_remove_element scene_union_unit(2)
+    apply (metis (no_types, lifting) foldr_scene_le_then_subset subscene_refl
+        subset_iff)
+    apply (metis (mono_tags, lifting) Vars_indep_foldr foldr_scene_union_filter
+        idem_scene_space removeAll_id scene_bot_least scene_in_foldr scene_indep_pres_compat
+        scene_le_iff_indep_inv scene_space_class.scene_space.Vars_scene_space
+        scene_space_compats subscene_antisym subset_iff top_scene_eq uminus_bot_scene
+        uminus_vars_other_vars)
+    done    
+
+  from sd B show ?A
+    by force
+  from sd B show ?B
+    by force
+  from sd B show ?C
+    by (metis foldr_scene_removeAll pairwise_compat_Vars_subset scene_union_unit(2)
         set_removeAll)
-    apply (metis foldr_scene_le_then_subset scene_union_foldr_subset subset_iff)
-    oops
+qed
+
+lemma scene_decomp_transfer:
+  assumes "a \<in> scene_space" "b \<in> scene_space" "scene_decomp a = scene_decomp b"
+  shows "a = b"
+  by (metis assms(1,2,3) decomp_Vars decomp_foldr_scene foldr_scene_union_eq_scene_space
+      mem_Vars_scene_space)
 
 subsection \<open> Mapping a lens over a scene list \<close>
 
