@@ -753,7 +753,7 @@ definition scene_decomp :: "'a::scene_space scene \<Rightarrow> 'a scene set" ("
 lemma scene_decomp:
   assumes "a \<in> scene_space" 
   shows decomp_Vars: "scene_decomp a \<subseteq> set Vars" (is "?A")
-  and decomp_nbot: "\<bottom>\<^sub>S \<notin> scene_decomp a" (is "?B")
+  and decomp_nbot [simp]: "\<bottom>\<^sub>S \<notin> scene_decomp a" (is "?B")
   and decomp_foldr_scene: "\<exists> xs. scene_decomp a = set xs \<and> a = \<Squnion>\<^sub>S xs" (is "?C")
 proof -
   obtain B where B:"B \<subseteq> set Vars" "\<exists> xs. B = set xs \<and> a = \<Squnion>\<^sub>S xs"
@@ -783,11 +783,129 @@ proof -
         set_removeAll)
 qed
 
-lemma scene_decomp_transfer:
-  assumes "a \<in> scene_space" "b \<in> scene_space" "scene_decomp a = scene_decomp b"
+lemma scene_decomp_mem_Vars [simp]: 
+  "\<lbrakk> a \<in> scene_space; x \<in> scene_decomp a \<rbrakk> \<Longrightarrow> x \<in> set Vars"
+  by (metis decomp_Vars subset_iff)
+
+lemma scene_decomp_eq_transfer:
+  assumes "a \<in> scene_space" "b \<in> scene_space" "\<lbrakk>a\<rbrakk>\<^sub>S = \<lbrakk>b\<rbrakk>\<^sub>S"
   shows "a = b"
   by (metis assms(1,2,3) decomp_Vars decomp_foldr_scene foldr_scene_union_eq_scene_space
       mem_Vars_scene_space)
+
+lemma scene_decomp_le_transfer:
+  assumes "a \<in> scene_space" "b \<in> scene_space" "\<lbrakk>a\<rbrakk>\<^sub>S \<subseteq> \<lbrakk>b\<rbrakk>\<^sub>S"
+  shows "a \<le> b"
+  by (metis assms(1,2,3) decomp_Vars decomp_foldr_scene scene_union_foldr_subset)
+
+lemma scene_foldr_decomp_le_Vars:
+  assumes "set xs \<subseteq> scene_space" "set ys \<subseteq> set Vars" "\<Squnion>\<^sub>S xs \<le> \<Squnion>\<^sub>S ys" "a \<in> set xs" "b \<in> \<lbrakk>a\<rbrakk>\<^sub>S"
+  shows "b \<in> set ys"
+proof -
+  have bV: "b \<in> set Vars"
+    using assms(1,4,5) scene_decomp_mem_Vars by blast
+  obtain zs where zs: "\<lbrakk>a\<rbrakk>\<^sub>S = set zs" "a = \<Squnion>\<^sub>S zs"
+    using assms(1,4) decomp_foldr_scene by blast
+  have zs_Vars: "set zs \<subseteq> set Vars"
+    by (metis assms(1,4) decomp_Vars subset_iff zs(1))
+  have zs_le_xs: "\<Squnion>\<^sub>S zs \<le> \<Squnion>\<^sub>S ys"
+    by (metis assms(1,3,4) idem_scene_space scene_space_foldr scene_space_in_foldr subscene_trans zs(2))
+  show ?thesis
+    by (metis (no_types) assms(1,2,4,5) decomp_nbot foldr_scene_le_then_subset subset_iff zs(1) zs_Vars zs_le_xs)
+qed
+
+
+lemma scene_foldr_decomp_le_iff:
+  assumes "set xs \<subseteq> scene_space" "set ys \<subseteq> set Vars"
+  shows "\<Squnion>\<^sub>S xs \<le> \<Squnion>\<^sub>S ys \<longleftrightarrow> (\<forall> a\<in>set xs. \<forall> b\<in>\<lbrakk>a\<rbrakk>\<^sub>S. b \<in> set ys)"
+  apply (rule iffI)
+  using assms(1,2) scene_foldr_decomp_le_Vars apply blast
+  apply (rule scene_space_foldr_lb)
+  using assms(2) scene_space_vars_decomp_iff apply blast
+  using assms(1) apply blast
+  apply (metis assms(1,2) decomp_foldr_scene scene_union_foldr_subset subset_iff)
+  done
+
+lemma scene_decomp_foldr:
+  assumes "set xs \<subseteq> set Vars" "\<bottom>\<^sub>S \<notin> set xs"
+  shows "\<lbrakk>\<Squnion>\<^sub>S xs\<rbrakk>\<^sub>S = set xs"
+  by (metis assms(1,2) decomp_Vars decomp_foldr_scene decomp_nbot foldr_scene_eq_then_eq mem_Vars_scene_space scene_space_foldr)
+
+lemma scene_decomp_foldr_nbot:
+  assumes "set xs \<subseteq> set Vars" 
+  shows "\<lbrakk>\<Squnion>\<^sub>S xs\<rbrakk>\<^sub>S = set xs - {\<bottom>\<^sub>S}"
+  by (metis Diff_iff assms insert_Diff insert_subset removeAll_id scene_decomp_foldr scene_union_foldr_remove_element scene_union_unit(2) set_removeAll singletonI)
+
+lemma scene_decomp_top:
+  "\<lbrakk>\<top>\<^sub>S\<rbrakk>\<^sub>S = set Vars - {\<bottom>\<^sub>S}"
+  by (metis Diff_empty Diff_iff Diff_insert0 Diff_subset insertCI scene_decomp_foldr set_removeAll top_scene_eq uminus_bot_scene uminus_var_other_vars)
+
+lemma scene_decomp_bot:
+  "\<lbrakk>\<bottom>\<^sub>S\<rbrakk>\<^sub>S = {}"
+  by (metis bot.extremum empty_iff foldr.simps(1) id_apply list.set(1) scene_decomp_foldr)
+
+lemma scene_decomp_union:
+  assumes "a \<in> scene_space" "b \<in> scene_space"
+  shows "\<lbrakk>a \<squnion>\<^sub>S b\<rbrakk>\<^sub>S = \<lbrakk>a\<rbrakk>\<^sub>S \<union> \<lbrakk>b\<rbrakk>\<^sub>S"
+proof -
+  obtain xs where xs:"set xs \<subseteq> set Vars" "\<bottom>\<^sub>S \<notin> set xs" "a = \<Squnion>\<^sub>S xs"
+    by (metis assms(1) decomp_Vars decomp_foldr_scene decomp_nbot foldr_scene_union_remdups set_remdups)
+  obtain ys where ys:"set ys \<subseteq> set Vars" "\<bottom>\<^sub>S \<notin> set ys" "b = \<Squnion>\<^sub>S ys"
+    by (metis assms(2) decomp_Vars decomp_foldr_scene decomp_nbot foldr_scene_union_remdups set_remdups)
+  from xs ys have "\<Squnion>\<^sub>S xs \<squnion>\<^sub>S \<Squnion>\<^sub>S ys = \<Squnion>\<^sub>S (xs @ ys)"
+    using union_scene_space_foldrs by blast
+  with xs ys have "\<lbrakk>a \<squnion>\<^sub>S b\<rbrakk>\<^sub>S = set xs \<union> set ys"
+    by (metis Un_iff le_sup_iff scene_decomp_foldr set_append)
+  also have "... = \<lbrakk>a\<rbrakk>\<^sub>S \<union> \<lbrakk>b\<rbrakk>\<^sub>S"
+    by (simp add: scene_decomp_foldr xs ys)
+  finally show ?thesis .
+qed
+
+lemma scene_decomp_uminus:
+  assumes "a \<in> scene_space"
+  shows "\<lbrakk>- a\<rbrakk>\<^sub>S = set Vars - \<lbrakk>a\<rbrakk>\<^sub>S - {\<bottom>\<^sub>S}"
+proof -
+  obtain xs where xs:"set xs \<subseteq> set Vars" "\<bottom>\<^sub>S \<notin> set xs" "a = \<Squnion>\<^sub>S xs"
+    by (metis assms(1) decomp_Vars decomp_foldr_scene decomp_nbot foldr_scene_union_remdups set_remdups)
+  thm uminus_vars_other_vars
+  hence "\<lbrakk>- a\<rbrakk>\<^sub>S = \<lbrakk>\<Squnion>\<^sub>S (filter (\<lambda>x. x \<notin> set xs) Vars)\<rbrakk>\<^sub>S"
+    by (simp add: uminus_vars_other_vars)
+  also have "... = set(filter (\<lambda>x. x \<notin> set xs) Vars) - {\<bottom>\<^sub>S}"
+    by (metis (no_types, lifting) Diff_iff filter_filter filter_is_subset insertCI scene_decomp_foldr scene_union_foldr_remove_element scene_union_unit(2) set_minus_filter_out
+        set_removeAll)
+  also have "... = set Vars - \<lbrakk>a\<rbrakk>\<^sub>S - {\<bottom>\<^sub>S}"
+    by (metis (full_types) scene_decomp_foldr set_diff_eq set_filter xs)
+  finally show ?thesis .
+qed
+
+lemma scene_decomp_inter:
+  assumes "a \<in> scene_space" "b \<in> scene_space"
+  shows "\<lbrakk>a \<sqinter>\<^sub>S b\<rbrakk>\<^sub>S = \<lbrakk>a\<rbrakk>\<^sub>S \<inter> \<lbrakk>b\<rbrakk>\<^sub>S"
+proof -
+  have "\<lbrakk>a \<sqinter>\<^sub>S b\<rbrakk>\<^sub>S = \<lbrakk>- (- a \<squnion>\<^sub>S - b)\<rbrakk>\<^sub>S"
+    by (simp add: inf_scene_def)
+  also have "... = set Vars - (set Vars - \<lbrakk>a\<rbrakk>\<^sub>S - {\<bottom>\<^sub>S} \<union> (set Vars - \<lbrakk>b\<rbrakk>\<^sub>S - {\<bottom>\<^sub>S})) - {\<bottom>\<^sub>S}"
+    by (simp add: scene_decomp_uminus scene_decomp_union assms union_scene_space scene_space_uminus )
+  also have "... = \<lbrakk>a\<rbrakk>\<^sub>S \<inter> \<lbrakk>b\<rbrakk>\<^sub>S"
+    using assms decomp_Vars by force
+  finally show ?thesis .
+qed
+
+lemma scene_decomp_foldr_scene:
+  assumes "set xs \<subseteq> scene_space"
+  shows "\<lbrakk>\<Squnion>\<^sub>S xs\<rbrakk>\<^sub>S = \<Union> (scene_decomp ` set xs)"
+  using assms
+proof (induct xs)
+  case Nil
+  then show ?case
+    by (simp add: scene_decomp_bot)
+next
+  case (Cons a xs)
+  then show ?case
+    by (simp add: scene_decomp_union scene_space_foldr)
+qed
+
+lemmas scene_decomp_transfer = scene_decomp_top scene_decomp_bot scene_decomp_union scene_decomp_uminus scene_decomp_inter
 
 subsection \<open> Mapping a lens over a scene list \<close>
 
@@ -850,6 +968,21 @@ proof -
     by (metis Sup_scene_def assms foldr_scene_union_eq_scene_space inf.absorb_iff1)
 qed
 
+lemma Sup_scene_decomp_transfer:
+  assumes "A \<subseteq> scene_space"
+  shows "\<lbrakk>\<Union>\<^sub>S A\<rbrakk>\<^sub>S = (\<Union>x\<in>A. \<lbrakk>x\<rbrakk>\<^sub>S)" 
+proof -
+  obtain xs where xs: "set xs = A"
+    by (metis assms finite_list finite_scene_space rev_finite_subset)
+  have "\<lbrakk>\<Union>\<^sub>S A\<rbrakk>\<^sub>S = \<lbrakk>\<Squnion>\<^sub>S xs\<rbrakk>\<^sub>S"
+    by (metis Sup_scene_is_foldr_scene assms xs)
+  also have "... = \<Union> (scene_decomp ` set xs)"
+    using assms scene_decomp_foldr_scene xs by blast
+  also have "... = (\<Union>x\<in>A. \<lbrakk>x\<rbrakk>\<^sub>S)"
+    by (simp add: Setcompr_eq_image xs)
+  finally show ?thesis .
+qed
+
 lemma Sup_scene_closed: "\<Union>\<^sub>S A \<in> scene_space"
   unfolding Sup_scene_def proof -
   fix A :: "'a scene set"
@@ -870,6 +1003,39 @@ definition Inf_scene :: "'a::scene_space scene set \<Rightarrow> 'a scene" where
  "Inf_scene A = - (\<Union>\<^sub>S (uminus ` A))"
 
 notation Inf_scene ("\<Inter>\<^sub>S")
+
+find_theorems uminus "(\<Union>)"
+
+lemma Inf_scene_decomp_transfer:
+  assumes "A \<subseteq> scene_space" "A \<noteq> {}"
+  shows "\<lbrakk>\<Inter>\<^sub>S A\<rbrakk>\<^sub>S = (\<Inter>x\<in>A. \<lbrakk>x\<rbrakk>\<^sub>S)" 
+proof -
+  have "\<lbrakk>\<Inter>\<^sub>S A\<rbrakk>\<^sub>S = \<lbrakk>- (\<Union>\<^sub>S (uminus ` A))\<rbrakk>\<^sub>S"
+    by (simp add: Inf_scene_def)
+  also have "... = set Vars - \<Union> {\<lbrakk>a\<rbrakk>\<^sub>S |a. a \<in> uminus ` A} - {\<bottom>\<^sub>S}"
+  proof -
+    have "uminus ` A \<subseteq> scene_space"
+      by (metis assms(1) image_mono uminus_image_scene_space)
+    thus ?thesis
+      by (auto simp add: scene_decomp_uminus Sup_scene_decomp_transfer Sup_scene_closed assms)
+  qed
+  also have "... = set Vars \<inter> - \<Union> ((scene_decomp \<circ> uminus) ` A) \<inter> - {\<bottom>\<^sub>S}"
+    by auto
+  also from assms scene_decomp_uminus have "... = (set Vars \<inter> (\<Inter>x\<in>A. \<lbrakk>x\<rbrakk>\<^sub>S)) \<inter> - {\<bottom>\<^sub>S}"
+    by auto
+  also from assms scene_decomp_uminus have "... = (\<Inter>x\<in>A. \<lbrakk>x\<rbrakk>\<^sub>S) \<inter> - {\<bottom>\<^sub>S}"
+  proof -
+    have "\<forall> x\<in>A. \<lbrakk>x\<rbrakk>\<^sub>S \<subseteq> set Vars"
+      using assms decomp_Vars by blast
+    with assms(2) have "(\<Inter>x\<in>A. \<lbrakk>x\<rbrakk>\<^sub>S) \<subseteq> set Vars"
+      by blast
+    thus ?thesis
+      by auto
+  qed
+  also from assms have "... = (\<Inter>x\<in>A. \<lbrakk>x\<rbrakk>\<^sub>S)"
+    by (metis INF_eq_const INT_E decomp_nbot in_mono inf.order_iff subset_Compl_singleton)
+  finally show ?thesis .
+qed
 
 lemma Inf_scene_top:  "\<Inter>\<^sub>S {} = top_class.top"
   by (simp add: Inf_scene_def)
