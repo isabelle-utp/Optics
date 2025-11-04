@@ -619,6 +619,16 @@ lemma scene_put_preserved_iff:
   shows "(put\<^bsub>x\<^esub> s v \<approx>\<^sub>S s' on y) \<longleftrightarrow> s \<approx>\<^sub>S s' on y"
   by (metis assms(1,2) put_scene_override_indep scene_equiv_def scene_indep_sym vwb_lens.put_eq)
 
+lemma scene_le_equiv:
+  assumes "idem_scene B" "s \<approx>\<^sub>S s' on A" "B \<le> A" 
+  shows "s \<approx>\<^sub>S s' on B"
+  by (metis assms(1,2,3) less_eq_scene_def scene_equiv_def scene_override_idem)
+
+lemma scene_equiv_union_decomp:
+  assumes "a ##\<^sub>S b"
+  shows "s \<approx>\<^sub>S s' on (a \<squnion>\<^sub>S b) \<longleftrightarrow> (s \<approx>\<^sub>S s' on a \<and> s \<approx>\<^sub>S s' on b)"
+  by (metis assms scene_compat_refl scene_compat_sym scene_equiv_def scene_override_union scene_union_commute scene_union_idem)
+
 subsection \<open> Function Domain Scene \<close>
 
 lift_definition fun_dom_scene :: "'a set \<Rightarrow> ('a \<Rightarrow> 'b::two) scene" ("fds") is

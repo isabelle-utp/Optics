@@ -316,8 +316,22 @@ lemma scene_space_vars_decomp_iff: "a \<in> scene_space \<longleftrightarrow> (\
   using scene_space_vars_decomp apply auto[1]
   by (meson dual_order.trans scene_space_foldr set_Vars_scene_space)
 
-lemma "fold (\<squnion>\<^sub>S) (map (\<lambda>x. x ;\<^sub>S a) Vars) b = \<lbrakk>a\<rbrakk>\<^sub>\<sim> \<squnion>\<^sub>S b"
-  oops
+lemma scene_space_equiv_union:
+  assumes "a \<in> scene_space" "b \<in> scene_space"
+  shows "s \<approx>\<^sub>S s' on (a \<squnion>\<^sub>S b) \<longleftrightarrow> (s \<approx>\<^sub>S s' on a \<and> s \<approx>\<^sub>S s' on b)"
+  by (meson assms(1,2) scene_equiv_union_decomp scene_space_compat)
+
+lemma scene_space_equiv_foldr:
+  assumes "set xs \<subseteq> scene_space"
+  shows "s \<approx>\<^sub>S s' on (\<Squnion>\<^sub>S xs) \<longleftrightarrow> (\<forall> a\<in>set xs. s \<approx>\<^sub>S s' on a)"
+using assms proof (induct xs)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a xs)
+  then show ?case
+    by (simp add: scene_space_equiv_union scene_space_foldr)
+qed
 
 lemma Vars_indep_foldr: 
   assumes "x \<in> set Vars" "set xs \<subseteq> set Vars"
@@ -905,6 +919,22 @@ next
     by (simp add: scene_decomp_union scene_space_foldr)
 qed
 
+lemma scene_decomp_atom:
+  assumes "a \<in> set Vars"
+  shows "\<lbrakk>a\<rbrakk>\<^sub>S = {a} - {\<bottom>\<^sub>S}"
+proof -
+  have "\<lbrakk>a\<rbrakk>\<^sub>S = \<lbrakk>\<Squnion>\<^sub>S [a]\<rbrakk>\<^sub>S"
+    by simp
+  also have "... = {a} - {\<bottom>\<^sub>S}"
+    by (metis assms empty_set empty_subsetI insert_subset list.simps(15) scene_decomp_foldr_nbot)
+  finally show ?thesis .
+qed
+
+lemma scene_equiv_decomp:
+  assumes "a \<in> scene_space"
+  shows "s \<approx>\<^sub>S s' on a \<longleftrightarrow> (\<forall> b \<in> \<lbrakk>a\<rbrakk>\<^sub>S. s \<approx>\<^sub>S s' on b)"
+  by (metis assms decomp_Vars decomp_foldr_scene mem_Vars_scene_space scene_space_equiv_foldr)
+
 subsection \<open> Mapping a lens over a scene list \<close>
 
 definition map_lcomp :: "'b scene list \<Rightarrow> ('b \<Longrightarrow> 'a) \<Rightarrow> 'a scene list" where
@@ -978,6 +1008,19 @@ proof -
     using assms scene_decomp_foldr_scene xs by blast
   also have "... = (\<Union>x\<in>A. \<lbrakk>x\<rbrakk>\<^sub>S)"
     by (simp add: Setcompr_eq_image xs)
+  finally show ?thesis .
+qed
+
+lemma Sup_scene_decomp_Vars_transfer:
+  assumes "A \<subseteq> set Vars"
+  shows "\<lbrakk>\<Union>\<^sub>S A\<rbrakk>\<^sub>S = A - {\<bottom>\<^sub>S}" 
+proof -
+  have "\<lbrakk>\<Union>\<^sub>S A\<rbrakk>\<^sub>S = (\<Union>x\<in>A. \<lbrakk>x\<rbrakk>\<^sub>S)"
+    by (simp add: Sup_scene_decomp_transfer assms)
+  also have "... = (\<Union>x\<in>A. {x} - {\<bottom>\<^sub>S})"
+    by (meson Sup.SUP_cong assms scene_decomp_atom subset_iff)
+  also have "... = A - {\<bottom>\<^sub>S}"
+    by blast
   finally show ?thesis .
 qed
 
@@ -1181,10 +1224,15 @@ next
     by blast
 qed
 
+lemma Sup_scene_decomp:
+  assumes "a \<in> scene_space"
+  shows "\<Union>\<^sub>S \<lbrakk>a\<rbrakk>\<^sub>S = a"
+  by (metis Sup_scene_is_foldr_scene assms decomp_Vars decomp_foldr_scene mem_Vars_scene_space)
+
 lemma basis_scene_decomposition:
   assumes "a \<in> scene_space"
   shows "\<exists> B\<subseteq>set Vars. a = \<Union>\<^sub>S B"
-  by (metis Sup_scene_is_foldr_scene assms scene_space_vars_decomp_iff set_Vars_scene_space subset_trans)
+  by (metis Sup_scene_decomp assms decomp_Vars)
 
 lemma (in complete_lattice) is_lub_modulo_carrier:
   "is_lub L x A \<longleftrightarrow> is_lub L x (A \<inter> carrier L)"
@@ -1331,10 +1379,17 @@ lemma Inf_scene_dist:
   assumes "a \<in> scene_space" "B \<subseteq> scene_space"
   shows "a \<inter>\<^sub>S (\<Union>\<^sub>S B) = \<Union>\<^sub>S {a \<inter>\<^sub>S b | b. b \<in> B}"
 proof -
-  have "{a \<inter>\<^sub>S b |b. b \<in> B} \<subseteq> scene_space"
+  have 1: "{a \<inter>\<^sub>S b |b. b \<in> B} \<subseteq> scene_space"
     using assms(1,2) ss_clat.meet_closed by auto
-  thus ?thesis
-  oops
+  have "\<lbrakk>a\<rbrakk>\<^sub>S \<inter> \<Union> (scene_decomp ` B) = (\<Union> b\<in>B. \<lbrakk>a\<rbrakk>\<^sub>S \<inter> \<lbrakk>b\<rbrakk>\<^sub>S)"
+    by blast
+  also have "... = (\<Union> b\<in>B. \<lbrakk>a \<inter>\<^sub>S b\<rbrakk>\<^sub>S)"
+    by (metis (no_types, lifting) SUP_cong assms(1,2) inf_scene_inter scene_decomp_inter subset_eq)
+  also have "... = \<Union> (scene_decomp ` {a \<inter>\<^sub>S b |b. b \<in> B})"
+    by auto
+  finally show ?thesis
+    by (force intro: scene_decomp_eq_transfer simp add: scene_decomp_transfer Sup_scene_closed scene_space_inter inf_scene_inter assms 1)
+qed
 
 lemma scene_union_diff: 
   assumes "A \<in> scene_space" "B \<in> scene_space" "C \<in> scene_space"
