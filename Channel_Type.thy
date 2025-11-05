@@ -168,6 +168,14 @@ lemma indep_chan_basis: "\<lbrakk> A \<in> ChanBasis; B \<in> ChanBasis; A \<not
   apply (metis local.wf_chantyperep rangeI range_ev_chanrep wf_chantyperep_def)+
   done
 
+lemma nempty_chan_basis: "{} \<notin> ChanBasis"
+  apply (auto simp add: ChanBasis_def)
+  apply (metis Collect_empty_eq evs_of_def local.wf_chantyperep rangeI range_ev_chanrep wf_chantyperep_def)
+  done
+
+lemma finite_chan_basis: "finite ChanBasis"
+  by (auto simp add: ChanBasis_def range_ev_chanrep)
+
 end
 
 subsection \<open> Prisms with a Channel Representation \<close>
