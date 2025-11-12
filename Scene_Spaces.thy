@@ -4,6 +4,13 @@ theory Scene_Spaces
   imports "HOL-Algebra.Complete_Lattice" Scenes
 begin
 
+(* Remove HOL-Algebra notation that may clash *)
+
+no_notation Order.le (infixl \<open>\<sqsubseteq>\<index>\<close> 50)
+no_notation Order.lless (infixl \<open>\<sqsubset>\<index>\<close> 50)
+no_notation Order.top (\<open>\<top>\<index>\<close>)
+no_notation Order.bottom (\<open>\<bottom>\<index>\<close>)
+
 subsection \<open> Preliminaries \<close>
 
 abbreviation foldr_scene :: "'a scene list \<Rightarrow> 'a scene" ("\<Squnion>\<^sub>S") where
@@ -1288,20 +1295,20 @@ proof -
 qed
 
 lemma scene_gorder_eqs [simp]:
-  "\<top>\<^bsub>scene_gorder\<^esub> = \<top>\<^sub>S"
-  "\<bottom>\<^bsub>scene_gorder\<^esub> = \<bottom>\<^sub>S"
+  "Order.top scene_gorder = \<top>\<^sub>S"
+  "Order.bottom scene_gorder = \<bottom>\<^sub>S"
 proof -
   interpret ss_clat: complete_lattice scene_gorder
     by (simp add: scene_space_complete_lattice)
-  show "\<top>\<^bsub>scene_gorder\<^esub> = \<top>\<^sub>S"
+  show "Order.top scene_gorder = \<top>\<^sub>S"
     by (metis gorder.simps(1) partial_object.simps(1) scene_gorder_def scene_top_greatest ss_clat.le_antisym ss_clat.top_closed ss_clat.top_higher top_scene_space)
-  show "\<bottom>\<^bsub>scene_gorder\<^esub> = \<bottom>\<^sub>S"
+  show "Order.bottom scene_gorder = \<bottom>\<^sub>S"
     by (metis gorder.simps(1) partial_object.simps(1) scene_bot_least scene_gorder_def scene_space.intros(1) ss_clat.bottom_lower ss_clat.le_antisym ss_clat.weak_partial_order_bottom_axioms
         weak_partial_order_bottom.bottom_closed)
 qed
 
 interpretation ss_clat: complete_lattice scene_gorder  
-  rewrites "carrier scene_gorder = scene_space" and "elem scene_gorder = (\<in>)"  and "le scene_gorder = (\<subseteq>\<^sub>S)" and "eq scene_gorder = (=)" and  "\<top>\<^bsub>scene_gorder\<^esub> = \<top>\<^sub>S" and "\<bottom>\<^bsub>scene_gorder\<^esub> = \<bottom>\<^sub>S"
+  rewrites "carrier scene_gorder = scene_space" and "elem scene_gorder = (\<in>)"  and "le scene_gorder = (\<subseteq>\<^sub>S)" and "eq scene_gorder = (=)" and "Order.top scene_gorder = \<top>\<^sub>S" and "Order.bottom scene_gorder = \<bottom>\<^sub>S"
   and "Lattice.sup scene_gorder = (\<Union>\<^sub>S)" and "Lattice.inf scene_gorder = (\<Inter>\<^sub>S)" and "Lattice.join scene_gorder = (\<union>\<^sub>S)" and "Lattice.meet scene_gorder = (\<inter>\<^sub>S)"
   by (auto simp add: scene_space_complete_lattice elem_def set_eq_def sup_scene_space_def fun_eq_iff join_def meet_def ss_union_def ss_inter_def sup_scene_space_eq inf_scene_space_eq)
 
