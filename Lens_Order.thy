@@ -30,23 +30,18 @@ text \<open>Sublens is a preorder as the following two theorems show.\<close>
     
 lemma sublens_refl [simp]:
   "X \<subseteq>\<^sub>L X"
-  using id_vwb_lens sublens_def by fastforce
+  unfolding sublens_def by (auto intro: exI[where x="1\<^sub>L"])
 
 lemma sublens_trans [trans]:
   "\<lbrakk> X \<subseteq>\<^sub>L Y; Y \<subseteq>\<^sub>L Z \<rbrakk> \<Longrightarrow> X \<subseteq>\<^sub>L Z"
-  apply (auto simp add: sublens_def lens_comp_assoc)
-  apply (rename_tac Z\<^sub>1 Z\<^sub>2)
-  apply (rule_tac x="Z\<^sub>1 ;\<^sub>L Z\<^sub>2" in exI)
-  apply (simp add: lens_comp_assoc)
-  using comp_vwb_lens apply blast
-done
+  by (auto simp add: sublens_def lens_comp_assoc)
 
 text \<open>Sublens has a least element -- @{text "0\<^sub>L"} -- and a greatest element -- @{text "1\<^sub>L"}. 
   Intuitively, this shows that sublens orders how large a portion of the source type a particular
   lens views, with @{text "0\<^sub>L"} observing the least, and @{text "1\<^sub>L"} observing the most.\<close>
   
 lemma sublens_least: "wb_lens X \<Longrightarrow> 0\<^sub>L \<subseteq>\<^sub>L X"
-  using sublens_def unit_vwb_lens by fastforce
+  unfolding sublens_def by (auto intro: exI[where x="0\<^sub>L"])
 
 lemma sublens_greatest: "vwb_lens X \<Longrightarrow> X \<subseteq>\<^sub>L 1\<^sub>L"
   by (simp add: sublens_def)
@@ -97,7 +92,7 @@ text \<open>Using our preorder, we can also derive an equivalence on lenses as f
 definition lens_equiv :: "('a \<Longrightarrow> 'c) \<Rightarrow> ('b \<Longrightarrow> 'c) \<Rightarrow> bool" (infix "\<approx>\<^sub>L" 51) where
 [lens_defs]: "lens_equiv X Y = (X \<subseteq>\<^sub>L Y \<and> Y \<subseteq>\<^sub>L X)"
 
-lemma lens_equivI [intro]:
+lemma lens_equivI [intro?]:
   "\<lbrakk> X \<subseteq>\<^sub>L Y; Y \<subseteq>\<^sub>L X \<rbrakk> \<Longrightarrow> X \<approx>\<^sub>L Y"
   by (simp add: lens_equiv_def)
 
@@ -283,7 +278,7 @@ lemma lens_plus_left_unit: "0\<^sub>L +\<^sub>L X \<approx>\<^sub>L X"
   by (simp add: lens_equivI lens_unit_plus_sublens_1 lens_unit_prod_sublens_2)
 
 lemma lens_plus_right_unit: "X +\<^sub>L 0\<^sub>L \<approx>\<^sub>L X"
-  using lens_equiv_trans lens_indep_sym lens_plus_comm lens_plus_left_unit zero_lens_indep by blast
+  using lens_equiv_trans lens_plus_comm lens_plus_left_unit zero_lens_indep' by blast
 
 text \<open>We can also show that both sublens and equivalence are congruences with respect to lens plus
   and lens product.\<close>
@@ -453,25 +448,12 @@ text \<open>Consequently, if composition of two lenses $X$ and $Y$ yields @{text
   
 lemma bij_lens_via_comp_id_left:
   "\<lbrakk> wb_lens X; wb_lens Y; X ;\<^sub>L Y = 1\<^sub>L \<rbrakk> \<Longrightarrow> bij_lens X"
-  apply (cases Y)
-  apply (cases X)
-  apply (auto simp add: lens_comp_def comp_def id_lens_def fun_eq_iff)
-  apply (unfold_locales)
-   apply (simp_all)
-   using vwb_lens_wb wb_lens_weak weak_lens.put_get apply fastforce
-  apply (metis select_convs(1) select_convs(2) wb_lens_weak weak_lens.put_get)
-done
+  by (smt (z3) bij_lens.intro bij_lens_axioms.intro id_lens_def lens_comp_def lens_comp_right_id
+      select_convs(1,2) wb_lens_weak weak_lens.put_get)
 
 lemma bij_lens_via_comp_id_right:
   "\<lbrakk> wb_lens X; wb_lens Y; X ;\<^sub>L Y = 1\<^sub>L \<rbrakk> \<Longrightarrow> bij_lens Y"
-  apply (cases Y)
-  apply (cases X)
-  apply (auto simp add: lens_comp_def comp_def id_lens_def fun_eq_iff)
-  apply (unfold_locales)
-   apply (simp_all)
-   using vwb_lens_wb wb_lens_weak weak_lens.put_get apply fastforce
-  apply (metis select_convs(1) select_convs(2) wb_lens_weak weak_lens.put_get)
-done
+  by (metis bij_lens_via_comp_id_left lens_comp_assoc lens_comp_right_id lens_id_unique wb_lens_weak)
 
 text \<open>Importantly, an equivalence between two lenses can be demonstrated by showing that one lens
   can be converted to the other by application of a suitable bijective lens $Z$. This $Z$ lens
@@ -480,13 +462,7 @@ text \<open>Importantly, an equivalence between two lenses can be demonstrated b
 lemma lens_equiv_via_bij:
   assumes "bij_lens Z" "X = Z ;\<^sub>L Y"
   shows "X \<approx>\<^sub>L Y"
-  using assms
-  apply (auto simp add: lens_equiv_def sublens_def)
-   using bij_lens_vwb apply blast
-  apply (rule_tac x="lens_inv Z" in exI)
-  apply (auto simp add: lens_comp_assoc bij_lens_inv_left)
-   using bij_lens_vwb lens_inv_bij apply blast
-done
+  by (metis assms(1,2) bij_lens_equiv_id lens_comp_cong_1 lens_comp_left_id)
 
 text \<open>Indeed, we actually have a stronger result than this -- the equivalent lenses are precisely
   those than can be converted to one another through a suitable bijective lens. Bijective lenses
@@ -495,20 +471,12 @@ text \<open>Indeed, we actually have a stronger result than this -- the equivale
 lemma lens_equiv_iff_bij:
   assumes "weak_lens Y"
   shows "X \<approx>\<^sub>L Y \<longleftrightarrow> (\<exists> Z. bij_lens Z \<and> X = Z ;\<^sub>L Y)"
-  apply (rule iffI)
-   apply (auto simp add: lens_equiv_def sublens_def lens_id_unique)[1]
-   apply (rename_tac Z\<^sub>1 Z\<^sub>2)
-   apply (rule_tac x="Z\<^sub>1" in exI)
-   apply (simp)
-   apply (subgoal_tac "Z\<^sub>2 ;\<^sub>L Z\<^sub>1 = 1\<^sub>L")
-    apply (meson bij_lens_via_comp_id_right vwb_lens_wb)
-   apply (metis assms lens_comp_assoc lens_id_unique)
-  using lens_equiv_via_bij apply blast
-done
+  by (smt (verit, best) assms bij_lens_equiv_id lens_comp_assoc lens_equiv_def lens_equiv_via_bij
+      lens_id_unique sublens_def)
 
 lemma pbij_plus_commute:
   "\<lbrakk> a \<bowtie> b; mwb_lens a; mwb_lens b; pbij_lens (b +\<^sub>L a) \<rbrakk> \<Longrightarrow> pbij_lens (a +\<^sub>L b)"
-  apply (unfold_locales, simp_all add:lens_defs lens_indep_sym prod.case_eq_if)
+  apply (unfold_locales, simp_all add: lens_defs lens_indep_sym prod.case_eq_if)
   using lens_indep.lens_put_comm pbij_lens.put_det apply fastforce
   done
 

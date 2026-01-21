@@ -60,22 +60,14 @@ lemma equiv_region: "equiv UNIV (region X)"
   done
 
 lemma equiv_coregion: "equiv UNIV (coregion X)"
-  apply (transfer)
-  apply (rule equivI)
-    apply (rule refl_onI)
-     apply (auto)
-   apply (rule symI)
-   apply (auto)
-  apply (rule transI)
-  apply (auto)
-  done
+  by (transfer) (auto intro!: equivI refl_onI symI transI)
 
 lemma region_coregion_Id:
   "idem_scene X \<Longrightarrow> region X \<inter> coregion X = Id"
   by (transfer, auto, metis idem_overrider.ovr_idem)
 
 lemma state_eq_iff: "idem_scene S \<Longrightarrow> x = y \<longleftrightarrow> (x, y) \<in> region S \<and> (x, y) \<in> coregion S"
-  by (metis IntE IntI pair_in_Id_conv region_coregion_Id)
+  using region_coregion_Id by auto
 
 lift_definition scene_override :: "'a \<Rightarrow> 'a \<Rightarrow> ('a scene) \<Rightarrow> 'a" ("_ \<oplus>\<^sub>S _ on _" [95,0,96] 95)
 is "\<lambda> s\<^sub>1 s\<^sub>2 F. F s\<^sub>1 s\<^sub>2" .
@@ -221,6 +213,9 @@ lemma scene_equiv_sym [simp]: "idem_scene a \<Longrightarrow> s\<^sub>1 \<approx
 lemma scene_union_unit [simp]: "X \<squnion>\<^sub>S \<bottom>\<^sub>S = X" "\<bottom>\<^sub>S \<squnion>\<^sub>S X = X"
   by (transfer, simp)+
 
+lemma scene_inter_unit [simp]: "X \<sqinter>\<^sub>S \<top>\<^sub>S = X" "\<top>\<^sub>S \<sqinter>\<^sub>S X = X"
+  by (simp_all add: inf_scene_def uminus_scene_twice)
+
 lemma scene_indep_bot [simp]: "X \<bowtie>\<^sub>S \<bottom>\<^sub>S"
   by (transfer, simp)
 
@@ -283,7 +278,7 @@ lemma scene_union_indep_uniq:
 lemma scene_union_idem: "X \<squnion>\<^sub>S X = X"
   by (transfer, simp)
 
-lemma scene_union_compl: "idem_scene X \<Longrightarrow> X \<squnion>\<^sub>S - X = \<top>\<^sub>S"
+lemma scene_union_compl [intro]: "idem_scene X \<Longrightarrow> X \<squnion>\<^sub>S - X = \<top>\<^sub>S"
   by (transfer, auto)
 
 lemma scene_inter_idem: "X \<sqinter>\<^sub>S X = X"
