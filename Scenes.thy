@@ -218,7 +218,7 @@ lemma scene_equiv_bot [simp]: "a \<approx>\<^sub>S b on \<bottom>\<^sub>S"
 lemma scene_equiv_refl [simp]: "idem_scene a \<Longrightarrow> s \<approx>\<^sub>S s on a"
   by (simp add: scene_equiv_def)
 
-lemma scene_equiv_sym [simp]: "idem_scene a \<Longrightarrow> s\<^sub>1 \<approx>\<^sub>S s\<^sub>2 on a \<Longrightarrow> s\<^sub>2 \<approx>\<^sub>S s\<^sub>1 on a"
+lemma scene_equiv_sym: "idem_scene a \<Longrightarrow> s\<^sub>1 \<approx>\<^sub>S s\<^sub>2 on a \<Longrightarrow> s\<^sub>2 \<approx>\<^sub>S s\<^sub>1 on a"
   by (metis scene_equiv_def scene_override_idem scene_override_overshadow_right)
 
 lemma scene_union_unit [simp]: "X \<squnion>\<^sub>S \<bottom>\<^sub>S = X" "\<bottom>\<^sub>S \<squnion>\<^sub>S X = X"
