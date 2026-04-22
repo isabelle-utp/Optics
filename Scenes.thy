@@ -629,6 +629,12 @@ lemma scene_equiv_union_decomp:
   shows "s \<approx>\<^sub>S s' on (a \<squnion>\<^sub>S b) \<longleftrightarrow> (s \<approx>\<^sub>S s' on a \<and> s \<approx>\<^sub>S s' on b)"
   by (metis assms scene_compat_refl scene_compat_sym scene_equiv_def scene_override_union scene_union_commute scene_union_idem)
 
+lemma state_eq_iff_partition:
+  assumes "idem_scene a"
+  shows "s = s' \<longleftrightarrow> (s \<approx>\<^sub>S s' on a \<and> s \<approx>\<^sub>S s' on -a)"
+  by (metis assms scene_equiv_def scene_equiv_refl scene_equiv_sym
+      scene_override_commute)
+
 subsection \<open> Function Domain Scene \<close>
 
 lift_definition fun_dom_scene :: "'a set \<Rightarrow> ('a \<Rightarrow> 'b::two) scene" ("fds") is
